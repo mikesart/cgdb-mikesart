@@ -105,6 +105,10 @@ enum cgdb_key {
     CGDB_KEY_CTRL_Y,
     CGDB_KEY_CTRL_Z,
 
+    /* Readline pass through */
+    CGDB_KEY_BACKWARD_WORD,
+    CGDB_KEY_FORWARD_WORD,
+
     CGDB_KEY_ERROR
 };
 

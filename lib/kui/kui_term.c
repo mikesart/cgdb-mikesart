@@ -117,6 +117,14 @@ struct keydata {
     CGDB_KEY_LEFT, "\033OD"}, {
     CGDB_KEY_HOME, "\033OH"}, {
     CGDB_KEY_END, "\033OF"},
+            /* Passed through to readline */
+    {
+    CGDB_KEY_BACKWARD_WORD, "\033[1;5D"}, {
+    CGDB_KEY_FORWARD_WORD, "\033[1;5C"}, {
+    CGDB_KEY_BACKWARD_WORD, "\033[1;3D"}, {
+    CGDB_KEY_FORWARD_WORD, "\033[1;3C"}, {
+    CGDB_KEY_BACKWARD_WORD, "\033b"}, {
+    CGDB_KEY_FORWARD_WORD, "\033f"},
             /* Ctrl bindings */
     {
     CGDB_KEY_CTRL_A, "\001"}, {
@@ -216,6 +224,8 @@ struct cgdb_keycode_data {
     CGDB_KEY_F10, "<F10>", "CGDB_KEY_F10"}, {
     CGDB_KEY_F11, "<F11>", "CGDB_KEY_F11"}, {
     CGDB_KEY_F12, "<F12>", "CGDB_KEY_F12"}, {
+    CGDB_KEY_BACKWARD_WORD, "<BACKWARD-WORD>", "CGDB_KEY_BACKWARD_WORD"}, {
+    CGDB_KEY_FORWARD_WORD, "<FORWARD-WORD>", "CGDB_KEY_FORWARD_WORD"}, {
     CGDB_KEY_CTRL_A, "<C-a>", "CGDB_KEY_CTRL_A"}, {
     CGDB_KEY_CTRL_B, "<C-b>", "CGDB_KEY_CTRL_B"}, {
     CGDB_KEY_CTRL_C, "<C-c>", "CGDB_KEY_CTRL_C"}, {
