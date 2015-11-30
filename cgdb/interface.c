@@ -1131,7 +1131,7 @@ static void source_input(struct sviewer *sview, int key)
 		     * This check prevents overflowing the buffer, which allows 
 		     * for the unchecked versions of the strlen function
 		     */
-		    if(strlen(line_num_buff) < sizeof(line_num_buff)){
+		    if(strlen(line_num_buff) < sizeof(line_num_buff) - 1){
 			    line_num_buff[strlen(line_num_buff)] = (char)key;
 		    }
 		    return;
