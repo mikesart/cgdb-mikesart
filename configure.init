@@ -92,16 +92,22 @@ AC_CHECK_PROG([HAS_MAKEINFO], [makeinfo], [yes], [no])
 AC_CHECK_PROG([HAS_HELP2MAN], [help2man], [yes], [no])
 dnl Default variables
 dnl If ncurses is yes after arguments, than use ncurses. Otherwise, use curses
+opt_with_gdbwire_prefix=yes
 opt_with_readline_prefix=no
 use_ncurses_library=yes
 opt_with_ncurses_prefix=no
 opt_with_curses_prefix=no
 
 dnl argument to configure
+AC_ARG_WITH(gdbwire, AC_HELP_STRING([--with-gdbwire=PREFIX], [Use system installed gdbwire library]), opt_with_gdbwire_prefix=$withval)
 AC_ARG_WITH(readline, AC_HELP_STRING([--with-readline=PREFIX], [Use system installed readline library]), opt_with_readline_prefix=$withval)
 AC_ARG_WITH(ncurses, AC_HELP_STRING([--with-ncurses=PREFIX], [Use system installed ncurses library]), opt_with_ncurses_prefix=$withval)
 AC_ARG_WITH(curses, AC_HELP_STRING([--with-curses=PREFIX], [Use system installed curses library]), opt_with_curses_prefix=$withval use_ncurses_library=no)
 
+# If set to "yes", it is on the compilers include path.
+if test "$opt_with_gdbwire_prefix" != "yes"; then
+  LDFLAGS="-L$opt_with_gdbwire_prefix/lib $LDFLAGS" CFLAGS="-I$opt_with_gdbwire_prefix/include -I$opt_with_gdbwire_prefix/include/gdbwire $CFLAGS" CPPFLAGS="-I$opt_with_gdbwire_prefix/include -I$opt_with_gdbwire_prefix/include/gdbwire $CPPFLAGS"
+fi
 
 if test "$opt_with_readline_prefix" != "no"; then
   # If set to "yes", it is on the compilers include path.
@@ -151,7 +157,11 @@ dnl     Check for ncurses (for CGDB)
 dnl     Check for curses (for CGDB)
 dnl     If found ncurses or curses, continue. Otherwise quit.
 dnl
-dnl   Part 2: Detecting tgetent
+dnl   Part 2: Detecting gdbwire
+dnl     Check for gdbwire (for CGDB)
+dnl     If found gdbwire, continue. Otherwise quit.
+dnl
+dnl   Part 3: Detecting tgetent
 dnl     Check for tgetent in ncurses or curses (the one found above)
 dnl     Check for tgetent in tinfo
 dnl     Check for tgetent in libc
@@ -189,6 +199,11 @@ if test "$use_ncurses_library" = "no"; then
 	curses_lib_name="curses"
 fi
 
+dnl Detecting gdbwire library
+AC_CHECK_LIB(gdbwire, gdbmi_parser_create,
+        [AC_DEFINE(HAVE_GDBWIRE, 1, gdbwire library)],
+        AC_MSG_ERROR([cgdb needs gdbwire libs to build. Install or use --with-gdbwire=<gdbwire-prefix>]))
+
 dnl Make sure there is a version of readline that CGDB supports.
 dnl Simply putting 5.1* -> 5.9* just to take into account future versions.
 RL_LIB_READLINE_VERSION
@@ -204,8 +219,8 @@ esac
 dnl This will DEFINE the readline headers.
 RL_LIB_READLINE_INCLUDES
 
-dnl Made it this far, add the readline and termcap LIBS
-LIBS="-lreadline $TERMCAP_LIB $LIBS"
+dnl Made it this far, add the gdbwire, readline and termcap LIBS
+LIBS="-lgdbwire -lreadline $TERMCAP_LIB $LIBS"
 dnl Add the ncurses/curses lib, if it's not the same as the termcap lib
 if test "$TERMCAP_LIB" != "-l$curses_lib_name"; then
   LIBS="-l$curses_lib_name $LIBS"
