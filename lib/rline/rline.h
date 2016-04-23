@@ -62,7 +62,7 @@ typedef int completion_cb(int, int);
  * NULL on error, a valid context on success.
  */
 struct rline *rline_initialize(int slavefd, command_cb * command,
-        completion_cb * completion, char *TERM);
+        completion_cb * completion, const char *TERM);
 
 /**
  * This will terminate a librline session. No functions should be called on

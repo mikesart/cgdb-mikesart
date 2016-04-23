@@ -149,7 +149,7 @@ static struct ConfigVariable {
 "wrapscan", "ws", CONFIG_TYPE_BOOL,
                 &cgdbrc_config_options[CGDBRC_WRAPSCAN].variant.int_val},};
 
-static int command_do_tgdbcommand(int param);
+static int command_do_tgdbcommand(enum tgdb_command_type param);
 
 static int command_focus_cgdb(int param);
 static int command_focus_gdb(int param);
@@ -458,7 +458,7 @@ int command_do_bang(int param)
     return 0;
 }
 
-int command_do_tgdbcommand(int param)
+int command_do_tgdbcommand(enum tgdb_command_type param)
 {
     tgdb_request_ptr request_ptr;
 
