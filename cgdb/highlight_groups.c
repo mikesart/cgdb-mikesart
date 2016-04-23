@@ -391,7 +391,7 @@ hl_groups_ptr hl_groups_initialize(void)
         struct hl_group_info *info;
 
         info = &hl_groups->groups[i];
-        info->kind = i + 1;
+        info->kind = (enum hl_group_kind) (i + 1);
         info->mono_attrs = 0;
         info->mono_attrs = 0;
         info->color_pair = 0;

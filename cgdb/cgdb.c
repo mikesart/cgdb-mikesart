@@ -884,7 +884,7 @@ static int user_input(void)
 
     /* Process the key */
     if (kui_term_is_cgdb_key(key)) {
-        char *seqbuf = kui_term_get_ascii_char_sequence_from_key(key);
+        const char *seqbuf = kui_term_get_ascii_char_sequence_from_key(key);
 
         if (seqbuf == NULL) {
             logger_write_pos(logger, __FILE__, __LINE__,

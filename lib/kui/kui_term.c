@@ -438,7 +438,7 @@ int kui_term_is_cgdb_key(int key)
     return 0;
 }
 
-char *kui_term_get_ascii_char_sequence_from_key(int key)
+const char *kui_term_get_ascii_char_sequence_from_key(int key)
 {
     int i;
 

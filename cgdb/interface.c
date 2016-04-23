@@ -152,7 +152,8 @@ static enum StatusBarCommandKind sbc_kind;
  */
 static int init_curses()
 {
-    if (putenv("ESCDELAY=0") == -1)
+    char escdelay[] = "ESCDELAY=0";
+    if (putenv(escdelay) == -1)
         fprintf(stderr, "(%s:%d) putenv failed\r\n", __FILE__, __LINE__);
 
     initscr();                  /* Start curses mode */
@@ -607,7 +608,7 @@ static void increase_win_height(int jump_or_tty)
             /* no tty window */
             if (cur_win_split == WIN_SPLIT_FREE) {
                 /* cur position is not on mark, find nearest mark */
-                cur_win_split = (int) (2 * window_height_shift) / height;
+                cur_win_split = (WIN_SPLIT_TYPE) ((2 * window_height_shift) / height);
 
                 /* handle rounding on either side of mid-way mark */
                 if (window_height_shift > 0) {
@@ -668,7 +669,7 @@ static void decrease_win_height(int jump_or_tty)
             /* no tty window */
             if (cur_win_split == WIN_SPLIT_FREE) {
                 /* cur position is not on mark, find nearest mark */
-                cur_win_split = (int) (2 * window_height_shift) / height;
+                cur_win_split = (WIN_SPLIT_TYPE) ((2 * window_height_shift) / height);
 
                 /* handle rounding on either side of mid-way mark */
                 if (window_height_shift < 0) {
@@ -1017,7 +1018,7 @@ toggle_breakpoint(struct sviewer *sview, enum tgdb_breakpoint_action t)
 
     return 0;
 }
-char line_num_buff[8] = "\0\0\0\0\0\0\0\0";
+char line_num_buff[8] = {0};
 /* source_input: Handles user input to the source window.
  * -------------
  *
