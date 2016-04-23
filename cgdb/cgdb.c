@@ -1651,7 +1651,7 @@ int add_readline_key_sequence(const char *readline_str, enum cgdb_key key)
 {
     int ret_val;
 
-    std_list keyseq_list = std_list_create(destroyReadlineKeySeq);
+    std_list_ptr keyseq_list = std_list_create(destroyReadlineKeySeq);
 
     ret_val = rline_get_keyseq(rline, readline_str, keyseq_list);
     if (ret_val == -1) {

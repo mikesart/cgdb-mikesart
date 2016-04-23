@@ -308,7 +308,7 @@ int rline_get_rl_completion_query_items(struct rline *rline);
  * 0 on success or -1 on error
  */
 int rline_get_keyseq(struct rline *rline, const char *named_function,
-        std_list keyseq_list);
+        std_list_ptr keyseq_list);
 
 /*@}*/
 /* }}}*/

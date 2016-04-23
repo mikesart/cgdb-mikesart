@@ -16,7 +16,13 @@
 #include <stdlib.h>
 
 /* term.h prototypes */
-extern int tgetnum();
+#ifdef __cplusplus
+#define EXTERN_C extern "C"
+#else
+#define EXTERN_C extern
+#endif
+
+EXTERN_C int tgetnum(const char *);
 
 /* internal {{{*/
 

@@ -209,7 +209,7 @@ struct kui_map_set {
     struct kui_tree *ktree;
 
     /* A linked list of the maps being checked for. */
-    std_list maps;
+    std_list_ptr maps;
 };
 
 static int kui_map_destroy_callback(void *data)
@@ -356,17 +356,17 @@ struct kuictx {
     /**
 	 * The list of kui_map_set structures.
 	 */
-    std_list kui_map_set_list;
+    std_list_ptr kui_map_set_list;
 
     /**
 	 * A list of characters, used as a buffer for stdin.
 	 */
-    std_list buffer;
+    std_list_ptr buffer;
 
     /**
 	 * A volitale buffer. This is reset upon every call to kui_getkey.
 	 */
-    std_list volatile_buffer;
+    std_list_ptr volatile_buffer;
 
     /**
 	 * The callback function used to get data read in.
@@ -472,7 +472,7 @@ int kui_destroy(struct kuictx *kctx)
     return ret;
 }
 
-std_list kui_get_map_sets(struct kuictx * kctx)
+std_list_ptr kui_get_map_sets(struct kuictx * kctx)
 {
     if (!kctx)
         return NULL;
@@ -1182,7 +1182,7 @@ int kui_manager_destroy(struct kui_manager *kuim)
     return ret;
 }
 
-std_list kui_manager_get_map_sets(struct kui_manager * kuim)
+std_list_ptr kui_manager_get_map_sets(struct kui_manager * kuim)
 {
     if (!kuim)
         return NULL;
@@ -1280,11 +1280,11 @@ kui_manager_set_key_mapping_timeout(struct kui_manager *kuim, unsigned int msec)
 
 int
 kui_manager_get_terminal_keys_kui_map(struct kui_manager *kuim,
-        enum cgdb_key key, std_list kui_map_set)
+        enum cgdb_key key, std_list_ptr kui_map_set)
 {
     struct kui_map_set *map_set;
     struct kuictx *terminalkeys;
-    std_list map_sets;
+    std_list_ptr map_sets;
     std_list_iterator iter, kui_map_set_iter;
     void *data;
     const char *keycode_str;

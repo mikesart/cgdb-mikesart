@@ -122,8 +122,6 @@ enum cgdbrc_option_kind {
 struct cgdbrc_config_option {
     enum cgdbrc_option_kind option_kind;
     union {
-        /* option_kind == CGDBRC_ARROWSTYLE */
-        enum ArrowStyle arrow_style;
         /* option_kind == CGDBRC_AUTOSOURCERELOAD */
         /* option_kind == CGDBRC_CGDB_MODE_KEY */
         /* option_kind == CGDBRC_IGNORECASE */
@@ -136,6 +134,8 @@ struct cgdbrc_config_option {
         /* option_kind == CGDBRC_WINMINHEIGHT */
         /* option_kind == CGDBRC_WRAPSCAN */
         int int_val;
+        /* option_kind == CGDBRC_ARROWSTYLE */
+        enum ArrowStyle arrow_style;
         /* option_kind == CGDBRC_SYNTAX */
         enum tokenizer_language_support language_support_val;
         /* option_kind == CGDBRC_WINSPLIT */

@@ -878,7 +878,7 @@ commands_prepare_for_command(struct annotate_two *a2,
             (enum annotate_commands *) com->tgdb_client_private_data;
 
     /* Set the commands state to nothing */
-    commands_set_state(c, VOID, NULL);
+    commands_set_state(c, VOID_COMMAND, NULL);
 
     /* The list command is no longer running */
     global_list_finished(a2->g);

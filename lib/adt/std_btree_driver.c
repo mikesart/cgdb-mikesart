@@ -26,11 +26,11 @@
  */
 
 /* Tests */
-static int test_add(std_btree tree);
-static int test_remove(std_btree tree);
-static int test_replace(std_btree tree);
-static int test_isroot(std_btree tree);
-static int test_isleaf(std_btree tree);
+static int test_add(std_btree_ptr tree);
+static int test_remove(std_btree_ptr tree);
+static int test_replace(std_btree_ptr tree);
+static int test_isroot(std_btree_ptr tree);
+static int test_isleaf(std_btree_ptr tree);
 
 /* Destructor method used by tree */
 static int destructor(char *string);
@@ -41,7 +41,7 @@ static int destructor(char *string);
  */
 int main(int argc, char *argv[])
 {
-    std_btree tree = NULL;
+    std_btree_ptr tree = NULL;
     int result = 0;
 
     /* Create a tree */
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
  * Local function implementations
  */
 
-static int test_add(std_btree tree)
+static int test_add(std_btree_ptr tree)
 {
     std_btree_iterator i = NULL;
 
@@ -114,7 +114,7 @@ static int test_add(std_btree tree)
     return 0;
 }
 
-static int test_remove(std_btree tree)
+static int test_remove(std_btree_ptr tree)
 {
     std_btree_iterator i = std_btree_root(tree);
 
@@ -140,7 +140,7 @@ static int test_remove(std_btree tree)
     return 0;
 }
 
-static int test_replace(std_btree tree)
+static int test_replace(std_btree_ptr tree)
 {
     std_btree_iterator i = std_btree_root(tree);
 
@@ -155,7 +155,7 @@ static int test_replace(std_btree tree)
     return 0;
 }
 
-static int test_isroot(std_btree tree)
+static int test_isroot(std_btree_ptr tree)
 {
     std_btree_iterator i = std_btree_root(tree);
 
@@ -175,7 +175,7 @@ static int test_isroot(std_btree tree)
     return 0;
 }
 
-static int test_isleaf(std_btree tree)
+static int test_isleaf(std_btree_ptr tree)
 {
     std_btree_iterator i = std_btree_root(tree);
 

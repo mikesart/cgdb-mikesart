@@ -209,19 +209,19 @@ int print_gdbmi_oc(gdbmi_oc_ptr param)
  * \param orig
  * The string to convert
  *
- * \param new
- * The new string, the memory will be allocated in this function and passed back.
+ * \param new_str
+ * The new_str string, the memory will be allocated in this function and passed back.
  *
  * \return
  * 0 on success, -1 on error.
  */
-static int convert_cstring(const char *orig, char **new)
+static int convert_cstring(const char *orig, char **new_str)
 {
     int length;
     char *nstring;
     int i, cur;
 
-    if (!orig || !new)
+    if (!orig || !new_str)
         return -1;
 
     length = strlen(orig);
@@ -257,7 +257,7 @@ static int convert_cstring(const char *orig, char **new)
     }
     nstring[cur] = '\0';
 
-    *new = nstring;
+    *new_str = nstring;
 
     return 0;
 }

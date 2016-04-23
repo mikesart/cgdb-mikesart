@@ -419,7 +419,7 @@ int rline_get_rl_completion_query_items(struct rline *rline)
 
 int
 rline_get_keyseq(struct rline *rline, const char *named_function,
-        std_list keyseq_list)
+        std_list_ptr keyseq_list)
 {
     rl_command_func_t *func;
     char **invoking_keyseqs = NULL;

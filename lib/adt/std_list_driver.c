@@ -25,7 +25,7 @@ int compare_ints(const void *a, const void *b);
 int main(int argc, char **argv)
 {
 
-    std_list l;
+    std_list_ptr l;
     std_list_iterator iter;
     int i;
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 int sorted_test()
 {
     int data_array[10] = { 5, 3, 2, 5, 1, -50, 0, 100, -1, 99 };
-    std_list l = std_list_create(NULL);
+    std_list_ptr l = std_list_create(NULL);
     std_list_iterator iter;
     int *current = 0, *previous = 0;
     int sorted = 1;

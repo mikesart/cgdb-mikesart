@@ -27,6 +27,8 @@
 
 extern struct tgdb *tgdb;
 
+typedef struct yy_buffer_state *YY_BUFFER_STATE;
+
 /**
  * The general idea is that the configuration will read in the users ~/.cgdbrc
  * file, or ~/.cgdb/config or whatever, and execute each command.  This will
@@ -791,7 +793,6 @@ int command_parse_set(void)
 
 int command_parse_string(const char *buffer)
 {
-    typedef struct yy_buffer_state *YY_BUFFER_STATE;
     extern YY_BUFFER_STATE yy_scan_string(const char *yy_str);
     extern void yy_delete_buffer(YY_BUFFER_STATE state);
     int rv = 1;
