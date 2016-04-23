@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 
     /* Add 1000 items */
     for (i = 0; i < 1000; ++i) {
-        int *data = malloc(sizeof (int));
+        int *data = (int *)malloc(sizeof (int));
 
         *data = i;
         if (std_list_append(l, data) == -1) {

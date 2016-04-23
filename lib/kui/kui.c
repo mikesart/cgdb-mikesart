@@ -853,7 +853,7 @@ static int kui_update_buffer(struct kuictx *kctx,
             iter != std_list_end(kctx->volatile_buffer);
             iter = std_list_next(iter)) {
 
-        int *val = malloc(sizeof (int));
+        int *val = (int *)malloc(sizeof (int));
         void *data;
 
         if (!val)
@@ -876,7 +876,7 @@ static int kui_update_buffer(struct kuictx *kctx,
         length = intlen(the_map_found->literal_value);
 
         for (i = length - 1; i >= 0; --i) {
-            int *val = malloc(sizeof (int));
+            int *val = (int *)malloc(sizeof (int));
 
             if (!val)
                 return -1;
@@ -946,7 +946,7 @@ static int kui_findkey(struct kuictx *kctx, int *was_map_found)
             break;
 
         /* Append to the list */
-        val = malloc(sizeof (int));
+        val = (int *)malloc(sizeof (int));
         if (!val)
             return -1;
         *val = key;
@@ -1315,7 +1315,7 @@ kui_manager_get_terminal_keys_kui_map(struct kui_manager *kuim,
             kui_map_set_iter = std_list_next(kui_map_set_iter)) {
         if (std_list_get_data(kui_map_set_iter, &data) == -1)
             return -1;
-        kui_ms_register_map(map_set, data, keycode_str);
+        kui_ms_register_map(map_set, (const char *)data, keycode_str);
     }
 
     return 0;
