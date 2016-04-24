@@ -319,6 +319,339 @@ gdbmi_get_output_command(gdbmi_output_ptr output_ptr, gdbmi_oc_ptr * oc_ptr)
     return 0;
 }
 
+static int handle_file_list_exec_source_file(gdbmi_output_ptr output_ptr,
+        gdbmi_oc_ptr oc_ptr)
+{
+    gdbmi_result_ptr result_ptr = output_ptr->result_record->result;
+
+    while (result_ptr) {
+        if (strcmp(result_ptr->variable, "line") == 0) {
+            char *nline;
+
+            if (convert_cstring(result_ptr->value->option.cstring, &nline) == -1) {
+                fprintf(stderr, "%s:%d\n", __FILE__, __LINE__);
+                return -1;
+            }
+
+            oc_ptr->input_commands.file_list_exec_source_file.line = atoi(nline);
+            free(nline);
+            nline = NULL;
+        } else if (strcmp(result_ptr->variable, "file") == 0) {
+            char *nline;
+
+            if (convert_cstring(result_ptr->value->option.cstring, &nline) == -1) {
+                fprintf(stderr, "%s:%d\n", __FILE__, __LINE__);
+                return -1;
+            }
+
+            oc_ptr->input_commands.file_list_exec_source_file.file = nline;
+        } else if (strcmp(result_ptr->variable, "fullname") == 0) {
+            char *nline;
+
+            if (convert_cstring(result_ptr->value->option.cstring,
+                            &nline) == -1) {
+                fprintf(stderr, "%s:%d\n", __FILE__, __LINE__);
+                return -1;
+            }
+            oc_ptr->input_commands.file_list_exec_source_file.fullname = nline;
+        }
+
+        result_ptr = result_ptr->next;
+    }
+
+    return 0;
+}
+
+static int handle_file_list_exec_source_files(gdbmi_output_ptr output_ptr,
+        gdbmi_oc_ptr oc_ptr)
+{
+    gdbmi_result_ptr result_ptr = output_ptr->result_record->result;
+
+    while (result_ptr) {
+        if (strcmp(result_ptr->variable, "files") == 0) {
+            if (result_ptr->value->value_choice == GDBMI_LIST) {
+                gdbmi_list_ptr list = result_ptr->value->option.list;
+
+                while (list) {
+                    if (list->list_choice == GDBMI_VALUE) {
+                        gdbmi_value_ptr value_ptr = list->option.value;
+
+                        while (value_ptr) {
+                            if (value_ptr->value_choice == GDBMI_TUPLE) {
+                                gdbmi_oc_file_path_info_ptr ptr = create_gdbmi_file_path_info();
+                                gdbmi_result_ptr result = value_ptr->option.tuple->result;
+                                while (result) {
+                                    if (strcmp(result->variable, "file") == 0) {
+                                        if (convert_cstring(result->
+                                                        value->option.
+                                                        cstring,
+                                                        &(ptr->file)) == -1) {
+                                            fprintf(stderr, "%s:%d\n", __FILE__, __LINE__);
+                                            return -1;
+                                        }
+                                    } else if (strcmp(result->variable, "fullname") == 0) {
+                                        if (convert_cstring(result->
+                                                        value->option.
+                                                        cstring,
+                                                        &(ptr->fullname)) == -1) {
+                                            fprintf(stderr, "%s:%d\n", __FILE__, __LINE__);
+                                            return -1;
+                                        }
+                                    }
+                                    result = result->next;
+                                }
+
+                                oc_ptr->input_commands.
+                                        file_list_exec_source_files.
+                                        file_name_pair =
+                                        append_gdbmi_file_path_info
+                                        (oc_ptr->input_commands.
+                                        file_list_exec_source_files.
+                                        file_name_pair, ptr);
+                            }
+                            value_ptr = value_ptr->next;
+                        }
+                    }
+
+                    list = list->next;
+                }
+            }
+        }
+
+        result_ptr = result_ptr->next;
+    }
+
+    return 0;
+}
+
+static int handle_break_list(gdbmi_output_ptr output_ptr, gdbmi_oc_ptr oc_ptr)
+{
+    gdbmi_result_ptr result_ptr = output_ptr->result_record->result;
+
+    if (strcmp(result_ptr->variable, "BreakpointTable") == 0) {
+        if (result_ptr->value->value_choice == GDBMI_TUPLE) {
+            result_ptr = result_ptr->value->option.tuple->result;
+            while (result_ptr) {
+                if (strcmp(result_ptr->variable, "body") == 0) {
+                    if (result_ptr->value->value_choice == GDBMI_LIST) {
+                        gdbmi_list_ptr list_ptr = result_ptr->value->option.list;
+                        if (list_ptr && list_ptr->list_choice == GDBMI_RESULT) {
+                            gdbmi_result_ptr list_result_ptr = list_ptr->option.result;
+                            while (list_result_ptr) {
+                                if (strcmp(list_result_ptr->variable, "bkpt") == 0) {
+                                    gdbmi_oc_breakpoint_ptr ptr = create_gdbmi_breakpoint();
+
+                                    gdbmi_value_ptr value_ptr =
+                                            list_result_ptr->value;
+                                    if (value_ptr->value_choice == GDBMI_TUPLE) {
+                                        gdbmi_result_ptr tuple_result_ptr =
+                                                value_ptr->option.tuple->result;
+                                        while (tuple_result_ptr) {
+                                            if (strcmp(tuple_result_ptr->variable,
+                                                            "number") == 0) {
+                                                if (tuple_result_ptr->value->value_choice ==
+                                                        GDBMI_CSTRING) {
+                                                    char *nstr;
+
+                                                    if (convert_cstring
+                                                            (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    &nstr) == -1) {
+                                                        fprintf(stderr, "%s:%d\n",
+                                                                __FILE__, __LINE__);
+                                                        return -1;
+                                                    }
+
+                                                    ptr->number = atoi(nstr);
+                                                    free(nstr);
+                                                    nstr = NULL;
+                                                }
+                                            } else if (strcmp (tuple_result_ptr->
+                                                            variable, "type") == 0) {
+                                                if (tuple_result_ptr->value->value_choice ==
+                                                        GDBMI_CSTRING) {
+                                                    if (strcmp (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    "\"breakpoint\"")
+                                                            == 0)
+                                                        ptr->type =
+                                                                GDBMI_BREAKPOINT;
+                                                    else if (strcmp (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    "\"watchpoint\"")
+                                                            == 0)
+                                                        ptr->type = GDBMI_WATCHPOINT;
+                                                }
+                                            } else if (strcmp (tuple_result_ptr->variable,
+                                                            "disp") == 0) {
+                                                if (tuple_result_ptr->value->value_choice ==
+                                                        GDBMI_CSTRING) {
+                                                    if (strcmp
+                                                            (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    "\"keep\"") == 0)
+                                                        ptr->disposition = GDBMI_KEEP;
+                                                    else if (strcmp (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    "\"nokeep\"") == 0)
+                                                        ptr->disposition = GDBMI_NOKEEP;
+                                                }
+                                            } else if (strcmp (tuple_result_ptr->variable,
+                                                            "enabled") == 0) {
+                                                if (tuple_result_ptr->value->value_choice ==
+                                                        GDBMI_CSTRING) {
+                                                    if (strcmp (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    "\"y\"") == 0)
+                                                        ptr->enabled = 1;
+                                                    else
+                                                        ptr->enabled = 0;
+                                                }
+                                            } else if (strcmp (tuple_result_ptr->
+                                                            variable, "addr") == 0) {
+                                                if (tuple_result_ptr->value->
+                                                        value_choice ==
+                                                        GDBMI_CSTRING) {
+                                                    if (convert_cstring
+                                                            (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    &ptr->
+                                                                    address) == -1) {
+                                                        fprintf(stderr, "%s:%d\n",
+                                                                __FILE__, __LINE__);
+                                                        return -1;
+                                                    }
+                                                }
+                                            } else if (strcmp (tuple_result_ptr-> variable,
+                                                            "func") == 0) {
+                                                if (tuple_result_ptr->value->
+                                                        value_choice == GDBMI_CSTRING) {
+                                                    if (convert_cstring
+                                                            (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    &ptr->
+                                                                    func) == -1) {
+                                                        fprintf(stderr, "%s:%d\n",
+                                                                __FILE__, __LINE__);
+                                                        return -1;
+                                                    }
+                                                }
+                                            } else if (strcmp (tuple_result_ptr->variable,
+                                                            "file") == 0) {
+                                                if (tuple_result_ptr->value->value_choice ==
+                                                        GDBMI_CSTRING) {
+                                                    if (convert_cstring
+                                                            (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    &ptr->
+                                                                    file) == -1) {
+                                                        fprintf(stderr, "%s:%d\n",
+                                                                __FILE__, __LINE__);
+                                                        return -1;
+                                                    }
+                                                }
+                                            } else if (strcmp (tuple_result_ptr->variable,
+                                                            "fullname") == 0) {
+                                                if (tuple_result_ptr->value->value_choice ==
+                                                        GDBMI_CSTRING) {
+                                                    if (convert_cstring
+                                                            (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    &ptr->
+                                                                    fullname) == -1) {
+                                                        fprintf(stderr, "%s:%d\n",
+                                                                __FILE__, __LINE__);
+                                                        return -1;
+                                                    }
+                                                }
+                                            } else if (strcmp (tuple_result_ptr->variable,
+                                                            "line") == 0) {
+                                                if (tuple_result_ptr->value->
+                                                        value_choice == GDBMI_CSTRING) {
+                                                    char *nstr;
+
+                                                    if (convert_cstring
+                                                            (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    &nstr) == -1) {
+                                                        fprintf(stderr, "%s:%d\n",
+                                                                __FILE__, __LINE__);
+                                                        return -1;
+                                                    }
+
+                                                    ptr->line = atoi(nstr);
+                                                    free(nstr);
+                                                    nstr = NULL;
+                                                }
+                                            } else if (strcmp (tuple_result_ptr->
+                                                            variable, "times") == 0) {
+                                                if (tuple_result_ptr->value->value_choice ==
+                                                        GDBMI_CSTRING) {
+                                                    char *nstr;
+
+                                                    if (convert_cstring
+                                                            (tuple_result_ptr->
+                                                                    value->
+                                                                    option.
+                                                                    cstring,
+                                                                    &nstr) == -1) {
+                                                        fprintf(stderr, "%s:%d\n",
+                                                                __FILE__, __LINE__);
+                                                        return -1;
+                                                    }
+
+                                                    ptr->times = atoi(nstr);
+                                                    free(nstr);
+                                                    nstr = NULL;
+                                                }
+                                            }
+
+                                            tuple_result_ptr = tuple_result_ptr->next;
+                                        }
+                                    }
+
+                                    oc_ptr->input_commands.break_list.
+                                            breakpoint_ptr =
+                                            append_gdbmi_breakpoint
+                                            (oc_ptr->input_commands.
+                                            break_list.breakpoint_ptr,
+                                            ptr);
+                                }
+                                list_result_ptr = list_result_ptr->next;
+                            }
+                        }
+                    }
+                }
+                result_ptr = result_ptr->next;
+            }
+        }
+    }
+
+    return 0;
+}
+
 static int
 gdbmi_get_specific_output_command(gdbmi_output_ptr output_ptr,
         gdbmi_oc_ptr oc_ptr, gdbmi_oc_cstring_ll_ptr mi_input_cmds)
@@ -338,427 +671,11 @@ gdbmi_get_specific_output_command(gdbmi_output_ptr output_ptr,
     oc_ptr->input_command = mi_input_cmd_kind;
     switch (mi_input_cmd_kind) {
         case GDBMI_FILE_LIST_EXEC_SOURCE_FILE:
-        {
-            gdbmi_result_ptr result_ptr = output_ptr->result_record->result;
-
-            while (result_ptr) {
-                if (strcmp(result_ptr->variable, "line") == 0) {
-                    char *nline;
-
-                    if (convert_cstring(result_ptr->value->option.cstring,
-                                    &nline) == -1) {
-                        fprintf(stderr, "%s:%d\n", __FILE__, __LINE__);
-                        return -1;
-                    }
-
-                    oc_ptr->input_commands.file_list_exec_source_file.line =
-                            atoi(nline);
-                    free(nline);
-                    nline = NULL;
-                } else if (strcmp(result_ptr->variable, "file") == 0) {
-                    char *nline;
-
-                    if (convert_cstring(result_ptr->value->option.cstring,
-                                    &nline) == -1) {
-                        fprintf(stderr, "%s:%d\n", __FILE__, __LINE__);
-                        return -1;
-                    }
-
-                    oc_ptr->input_commands.file_list_exec_source_file.file =
-                            nline;
-                } else if (strcmp(result_ptr->variable, "fullname") == 0) {
-                    char *nline;
-
-                    if (convert_cstring(result_ptr->value->option.cstring,
-                                    &nline) == -1) {
-                        fprintf(stderr, "%s:%d\n", __FILE__, __LINE__);
-                        return -1;
-                    }
-                    oc_ptr->input_commands.file_list_exec_source_file.fullname =
-                            nline;
-                }
-
-                result_ptr = result_ptr->next;
-            }
-        }
-            break;
+            return handle_file_list_exec_source_file(output_ptr, oc_ptr);
         case GDBMI_FILE_LIST_EXEC_SOURCE_FILES:
-        {
-            gdbmi_result_ptr result_ptr = output_ptr->result_record->result;
-
-            while (result_ptr) {
-                if (strcmp(result_ptr->variable, "files") == 0) {
-                    if (result_ptr->value->value_choice == GDBMI_LIST) {
-                        gdbmi_list_ptr list = result_ptr->value->option.list;
-
-                        while (list) {
-                            if (list->list_choice == GDBMI_VALUE) {
-                                gdbmi_value_ptr value_ptr = list->option.value;
-
-                                while (value_ptr) {
-                                    if (value_ptr->value_choice == GDBMI_TUPLE) {
-                                        gdbmi_oc_file_path_info_ptr ptr =
-                                                create_gdbmi_file_path_info();
-                                        gdbmi_result_ptr result =
-                                                value_ptr->option.tuple->result;
-                                        while (result) {
-                                            if (strcmp(result->variable,
-                                                            "file") == 0) {
-                                                if (convert_cstring(result->
-                                                                value->option.
-                                                                cstring,
-                                                                &(ptr->file)) ==
-                                                        -1) {
-                                                    fprintf(stderr, "%s:%d\n",
-                                                            __FILE__, __LINE__);
-                                                    return -1;
-                                                }
-                                            } else if (strcmp(result->variable,
-                                                            "fullname") == 0) {
-                                                if (convert_cstring(result->
-                                                                value->option.
-                                                                cstring,
-                                                                &(ptr->fullname)) == -1) {
-                                                    fprintf(stderr, "%s:%d\n",
-                                                            __FILE__, __LINE__);
-                                                    return -1;
-                                                }
-                                            }
-                                            result = result->next;
-                                        }
-
-                                        oc_ptr->input_commands.
-                                                file_list_exec_source_files.
-                                                file_name_pair =
-                                                append_gdbmi_file_path_info
-                                                (oc_ptr->input_commands.
-                                                file_list_exec_source_files.
-                                                file_name_pair, ptr);
-                                    }
-                                    value_ptr = value_ptr->next;
-                                }
-                            }
-
-                            list = list->next;
-                        }
-                    }
-                }
-
-                result_ptr = result_ptr->next;
-            }
-        }
-            break;
+            return handle_file_list_exec_source_files(output_ptr, oc_ptr);
         case GDBMI_BREAK_LIST:
-        {
-            gdbmi_result_ptr result_ptr = output_ptr->result_record->result;
-
-            if (strcmp(result_ptr->variable, "BreakpointTable") == 0) {
-                if (result_ptr->value->value_choice == GDBMI_TUPLE) {
-                    result_ptr = result_ptr->value->option.tuple->result;
-                    while (result_ptr) {
-                        if (strcmp(result_ptr->variable, "body") == 0) {
-                            if (result_ptr->value->value_choice == GDBMI_LIST) {
-                                gdbmi_list_ptr list_ptr =
-                                        result_ptr->value->option.list;
-                                if (list_ptr
-                                        && list_ptr->list_choice ==
-                                        GDBMI_RESULT) {
-                                    gdbmi_result_ptr result_ptr =
-                                            list_ptr->option.result;
-                                    while (result_ptr) {
-                                        if (strcmp(result_ptr->variable,
-                                                        "bkpt") == 0) {
-                                            gdbmi_oc_breakpoint_ptr ptr =
-                                                    create_gdbmi_breakpoint();
-
-                                            gdbmi_value_ptr value_ptr =
-                                                    result_ptr->value;
-                                            if (value_ptr->value_choice ==
-                                                    GDBMI_TUPLE) {
-                                                gdbmi_result_ptr result_ptr =
-                                                        value_ptr->option.
-                                                        tuple->result;
-                                                while (result_ptr) {
-                                                    if (strcmp(result_ptr->
-                                                                    variable,
-                                                                    "number") ==
-                                                            0) {
-                                                        if (result_ptr->value->
-                                                                value_choice ==
-                                                                GDBMI_CSTRING) {
-                                                            char *nstr;
-
-                                                            if (convert_cstring
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            &nstr)
-                                                                    == -1) {
-                                                                fprintf(stderr,
-                                                                        "%s:%d\n",
-                                                                        __FILE__,
-                                                                        __LINE__);
-                                                                return -1;
-                                                            }
-
-                                                            ptr->number =
-                                                                    atoi(nstr);
-                                                            free(nstr);
-                                                            nstr = NULL;
-                                                        }
-                                                    } else if (strcmp
-                                                            (result_ptr->
-                                                                    variable,
-                                                                    "type") ==
-                                                            0) {
-                                                        if (result_ptr->value->
-                                                                value_choice ==
-                                                                GDBMI_CSTRING) {
-                                                            if (strcmp
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            "\"breakpoint\"")
-                                                                    == 0)
-                                                                ptr->type =
-                                                                        GDBMI_BREAKPOINT;
-                                                            else if (strcmp
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            "\"watchpoint\"")
-                                                                    == 0)
-                                                                ptr->type =
-                                                                        GDBMI_WATCHPOINT;
-                                                        }
-                                                    } else if (strcmp
-                                                            (result_ptr->
-                                                                    variable,
-                                                                    "disp") ==
-                                                            0) {
-                                                        if (result_ptr->value->
-                                                                value_choice ==
-                                                                GDBMI_CSTRING) {
-                                                            if (strcmp
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            "\"keep\"")
-                                                                    == 0)
-                                                                ptr->disposition
-                                                                        =
-                                                                        GDBMI_KEEP;
-                                                            else if (strcmp
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            "\"nokeep\"")
-                                                                    == 0)
-                                                                ptr->disposition
-                                                                        =
-                                                                        GDBMI_NOKEEP;
-                                                        }
-                                                    } else if (strcmp
-                                                            (result_ptr->
-                                                                    variable,
-                                                                    "enabled")
-                                                            == 0) {
-                                                        if (result_ptr->value->
-                                                                value_choice ==
-                                                                GDBMI_CSTRING) {
-                                                            if (strcmp
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            "\"y\"")
-                                                                    == 0)
-                                                                ptr->enabled =
-                                                                        1;
-                                                            else
-                                                                ptr->enabled =
-                                                                        0;
-                                                        }
-                                                    } else if (strcmp
-                                                            (result_ptr->
-                                                                    variable,
-                                                                    "addr") ==
-                                                            0) {
-                                                        if (result_ptr->value->
-                                                                value_choice ==
-                                                                GDBMI_CSTRING) {
-                                                            if (convert_cstring
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            &ptr->
-                                                                            address)
-                                                                    == -1) {
-                                                                fprintf(stderr,
-                                                                        "%s:%d\n",
-                                                                        __FILE__,
-                                                                        __LINE__);
-                                                                return -1;
-                                                            }
-                                                        }
-                                                    } else if (strcmp
-                                                            (result_ptr->
-                                                                    variable,
-                                                                    "func") ==
-                                                            0) {
-                                                        if (result_ptr->value->
-                                                                value_choice ==
-                                                                GDBMI_CSTRING) {
-                                                            if (convert_cstring
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            &ptr->
-                                                                            func)
-                                                                    == -1) {
-                                                                fprintf(stderr,
-                                                                        "%s:%d\n",
-                                                                        __FILE__,
-                                                                        __LINE__);
-                                                                return -1;
-                                                            }
-                                                        }
-                                                    } else if (strcmp
-                                                            (result_ptr->
-                                                                    variable,
-                                                                    "file") ==
-                                                            0) {
-                                                        if (result_ptr->value->
-                                                                value_choice ==
-                                                                GDBMI_CSTRING) {
-                                                            if (convert_cstring
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            &ptr->
-                                                                            file)
-                                                                    == -1) {
-                                                                fprintf(stderr,
-                                                                        "%s:%d\n",
-                                                                        __FILE__,
-                                                                        __LINE__);
-                                                                return -1;
-                                                            }
-                                                        }
-                                                    } else if (strcmp
-                                                            (result_ptr->
-                                                                    variable,
-                                                                    "fullname")
-                                                            == 0) {
-                                                        if (result_ptr->value->
-                                                                value_choice ==
-                                                                GDBMI_CSTRING) {
-                                                            if (convert_cstring
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            &ptr->
-                                                                            fullname)
-                                                                    == -1) {
-                                                                fprintf(stderr,
-                                                                        "%s:%d\n",
-                                                                        __FILE__,
-                                                                        __LINE__);
-                                                                return -1;
-                                                            }
-                                                        }
-                                                    } else if (strcmp
-                                                            (result_ptr->
-                                                                    variable,
-                                                                    "line") ==
-                                                            0) {
-                                                        if (result_ptr->value->
-                                                                value_choice ==
-                                                                GDBMI_CSTRING) {
-                                                            char *nstr;
-
-                                                            if (convert_cstring
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            &nstr)
-                                                                    == -1) {
-                                                                fprintf(stderr,
-                                                                        "%s:%d\n",
-                                                                        __FILE__,
-                                                                        __LINE__);
-                                                                return -1;
-                                                            }
-
-                                                            ptr->line =
-                                                                    atoi(nstr);
-                                                            free(nstr);
-                                                            nstr = NULL;
-                                                        }
-                                                    } else if (strcmp
-                                                            (result_ptr->
-                                                                    variable,
-                                                                    "times") ==
-                                                            0) {
-                                                        if (result_ptr->value->
-                                                                value_choice ==
-                                                                GDBMI_CSTRING) {
-                                                            char *nstr;
-
-                                                            if (convert_cstring
-                                                                    (result_ptr->
-                                                                            value->
-                                                                            option.
-                                                                            cstring,
-                                                                            &nstr)
-                                                                    == -1) {
-                                                                fprintf(stderr,
-                                                                        "%s:%d\n",
-                                                                        __FILE__,
-                                                                        __LINE__);
-                                                                return -1;
-                                                            }
-
-                                                            ptr->times =
-                                                                    atoi(nstr);
-                                                            free(nstr);
-                                                            nstr = NULL;
-                                                        }
-                                                    }
-
-                                                    result_ptr =
-                                                            result_ptr->next;
-                                                }
-                                            }
-
-                                            oc_ptr->input_commands.break_list.
-                                                    breakpoint_ptr =
-                                                    append_gdbmi_breakpoint
-                                                    (oc_ptr->input_commands.
-                                                    break_list.breakpoint_ptr,
-                                                    ptr);
-                                        }
-                                        result_ptr = result_ptr->next;
-                                    }
-                                }
-                            }
-                        }
-                        result_ptr = result_ptr->next;
-                    }
-                }
-            }
-        }
-            break;
+            return handle_break_list(output_ptr, oc_ptr);
         case GDBMI_LAST:
             fprintf(stderr, "%s:%d\n", __FILE__, __LINE__);
             return -1;
