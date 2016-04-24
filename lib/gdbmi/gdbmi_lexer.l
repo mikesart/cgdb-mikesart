@@ -49,8 +49,11 @@ IDENTIFIER {L}+{T}*
 int 
 gdbmi_wrap (void)
 {
-  if (0)
-    yyunput(0, "");
+    if (0)
+    {
+        char buf[] = "";
+        yyunput(0, buf);
+    }
 
-  return 1;
+    return 1;
 }

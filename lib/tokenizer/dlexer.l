@@ -255,7 +255,8 @@ int d_wrap ( void ) {
         {
                 /* Silly impossible function call to stop warning of unused functions */
                 if ( 0 ) {
-                        yyunput(0, "");
+                    char buf[] = "";
+                    yyunput(0, buf);
                 }
         }
 

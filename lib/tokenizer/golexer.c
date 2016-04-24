@@ -27,8 +27,8 @@
 
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
-#define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 35
+#define YY_FLEX_MINOR_VERSION 6
+#define YY_FLEX_SUBMINOR_VERSION 0
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -181,7 +181,12 @@ typedef unsigned int flex_uint32_t;
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 #endif
 
-extern int go_leng;
+#ifndef YY_TYPEDEF_YY_SIZE_T
+#define YY_TYPEDEF_YY_SIZE_T
+typedef size_t yy_size_t;
+#endif
+
+extern yy_size_t go_leng;
 
 extern FILE *go_in, *go_out;
 
@@ -190,6 +195,7 @@ extern FILE *go_in, *go_out;
 #define EOB_ACT_LAST_MATCH 2
 
     #define YY_LESS_LINENO(n)
+    #define YY_LINENO_REWIND_TO(ptr)
     
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -206,11 +212,6 @@ extern FILE *go_in, *go_out;
 	while ( 0 )
 
 #define unput(c) yyunput( c, (yytext_ptr)  )
-
-#ifndef YY_TYPEDEF_YY_SIZE_T
-#define YY_TYPEDEF_YY_SIZE_T
-typedef size_t yy_size_t;
-#endif
 
 #ifndef YY_STRUCT_YY_BUFFER_STATE
 #define YY_STRUCT_YY_BUFFER_STATE
@@ -300,7 +301,7 @@ static YY_BUFFER_STATE * yy_buffer_stack = 0; /**< Stack as an array. */
 /* yy_hold_char holds the character lost when go_text is formed. */
 static char yy_hold_char;
 static int yy_n_chars;		/* number of characters read into yy_ch_buf */
-int go_leng;
+yy_size_t go_leng;
 
 /* Points to current character in buffer. */
 static char *yy_c_buf_p = (char *) 0;
@@ -328,7 +329,7 @@ static void go__init_buffer (YY_BUFFER_STATE b,FILE *file  );
 
 YY_BUFFER_STATE go__scan_buffer (char *base,yy_size_t size  );
 YY_BUFFER_STATE go__scan_string (yyconst char *yy_str  );
-YY_BUFFER_STATE go__scan_bytes (yyconst char *bytes,int len  );
+YY_BUFFER_STATE go__scan_bytes (yyconst char *bytes,yy_size_t len  );
 
 void *go_alloc (yy_size_t  );
 void *go_realloc (void *,yy_size_t  );
@@ -371,11 +372,17 @@ extern int go_lineno;
 int go_lineno = 1;
 
 extern char *go_text;
+#ifdef yytext_ptr
+#undef yytext_ptr
+#endif
 #define yytext_ptr go_text
 
 static yy_state_type yy_get_previous_state (void );
 static yy_state_type yy_try_NUL_trans (yy_state_type current_state  );
 static int yy_get_next_buffer (void );
+#if defined(__GNUC__) && __GNUC__ >= 3
+__attribute__((__noreturn__))
+#endif
 static void yy_fatal_error (yyconst char msg[]  );
 
 /* Done after the current pattern has been matched and before the
@@ -430,7 +437,7 @@ static yyconst flex_int16_t yy_accept[262] =
         0
     } ;
 
-static yyconst flex_int32_t yy_ec[256] =
+static yyconst YY_CHAR yy_ec[256] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    2,    3,
         2,    2,    4,    1,    1,    1,    1,    1,    1,    1,
@@ -462,7 +469,7 @@ static yyconst flex_int32_t yy_ec[256] =
         1,    1,    1,    1,    1
     } ;
 
-static yyconst flex_int32_t yy_meta[48] =
+static yyconst YY_CHAR yy_meta[48] =
     {   0,
         1,    1,    2,    3,    4,    5,    6,    7,    1,    1,
         8,    8,    8,    8,    8,    8,    8,    8,    9,   10,
@@ -471,7 +478,7 @@ static yyconst flex_int32_t yy_meta[48] =
        11,   11,   11,   11,   11,   11,   11
     } ;
 
-static yyconst flex_int16_t yy_base[285] =
+static yyconst flex_uint16_t yy_base[285] =
     {   0,
         0,    0,   45,   47,   52,   55,   58,   60,   62,   66,
       421, 1031, 1031, 1031,  410, 1031,  388,   47,   64,   81,
@@ -541,7 +548,7 @@ static yyconst flex_int16_t yy_def[285] =
       261,  261,  261,  261
     } ;
 
-static yyconst flex_int16_t yy_nxt[1079] =
+static yyconst flex_uint16_t yy_nxt[1079] =
     {   0,
        12,   13,   14,   15,   16,   17,   12,   12,   18,   19,
        20,   21,   21,   21,   21,   21,   21,   21,   22,   23,
@@ -808,7 +815,7 @@ char *go_text;
 
 
 
-#line 812 "golexer.c"
+#line 819 "golexer.c"
 
 #define INITIAL 0
 #define comment 1
@@ -845,19 +852,19 @@ void go_set_extra (YY_EXTRA_TYPE user_defined  );
 
 FILE *go_get_in (void );
 
-void go_set_in  (FILE * in_str  );
+void go_set_in  (FILE * _in_str  );
 
 FILE *go_get_out (void );
 
-void go_set_out  (FILE * out_str  );
+void go_set_out  (FILE * _out_str  );
 
-int go_get_leng (void );
+yy_size_t go_get_leng (void );
 
 char *go_get_text (void );
 
 int go_get_lineno (void );
 
-void go_set_lineno (int line_number  );
+void go_set_lineno (int _line_number  );
 
 /* Macros after this point can all be overridden by user definitions in
  * section 1.
@@ -871,8 +878,12 @@ extern int go_wrap (void );
 #endif
 #endif
 
+#ifndef YY_NO_UNPUT
+    
     static void yyunput (int c,char *buf_ptr  );
     
+#endif
+
 #ifndef yytext_ptr
 static void yy_flex_strncpy (char *,yyconst char *,int );
 #endif
@@ -985,7 +996,7 @@ extern int go_lex (void);
 
 /* Code executed at the end of each rule. */
 #ifndef YY_BREAK
-#define YY_BREAK break;
+#define YY_BREAK /*LINTED*/break;
 #endif
 
 #define YY_RULE_SETUP \
@@ -995,14 +1006,10 @@ extern int go_lex (void);
  */
 YY_DECL
 {
-	register yy_state_type yy_current_state;
-	register char *yy_cp, *yy_bp;
-	register int yy_act;
+	yy_state_type yy_current_state;
+	char *yy_cp, *yy_bp;
+	int yy_act;
     
-#line 30 "golexer.l"
-
-#line 1005 "golexer.c"
-
 	if ( !(yy_init) )
 		{
 		(yy_init) = 1;
@@ -1029,7 +1036,12 @@ YY_DECL
 		go__load_buffer_state( );
 		}
 
-	while ( 1 )		/* loops until end-of-file is reached */
+	{
+#line 30 "golexer.l"
+
+#line 1043 "golexer.c"
+
+	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
 		yy_cp = (yy_c_buf_p);
 
@@ -1045,7 +1057,7 @@ YY_DECL
 yy_match:
 		do
 			{
-			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)];
+			YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)] ;
 			if ( yy_accept[yy_current_state] )
 				{
 				(yy_last_accepting_state) = yy_current_state;
@@ -1532,7 +1544,7 @@ YY_RULE_SETUP
 #line 136 "golexer.l"
 ECHO;
 	YY_BREAK
-#line 1536 "golexer.c"
+#line 1548 "golexer.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(comment):
 case YY_STATE_EOF(string_literal):
@@ -1667,6 +1679,7 @@ case YY_STATE_EOF(unicode_literal):
 			"fatal flex scanner internal error--no action found" );
 	} /* end of action switch */
 		} /* end of scanning one token */
+	} /* end of user's declarations */
 } /* end of go_lex */
 
 /* yy_get_next_buffer - try to read in a new buffer
@@ -1678,9 +1691,9 @@ case YY_STATE_EOF(unicode_literal):
  */
 static int yy_get_next_buffer (void)
 {
-    	register char *dest = YY_CURRENT_BUFFER_LVALUE->yy_ch_buf;
-	register char *source = (yytext_ptr);
-	register int number_to_move, i;
+    	char *dest = YY_CURRENT_BUFFER_LVALUE->yy_ch_buf;
+	char *source = (yytext_ptr);
+	yy_size_t number_to_move, i;
 	int ret_val;
 
 	if ( (yy_c_buf_p) > &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[(yy_n_chars) + 1] )
@@ -1709,7 +1722,7 @@ static int yy_get_next_buffer (void)
 	/* Try to read more data. */
 
 	/* First move last chars to start of buffer. */
-	number_to_move = (int) ((yy_c_buf_p) - (yytext_ptr)) - 1;
+	number_to_move = (yy_size_t) ((yy_c_buf_p) - (yytext_ptr)) - 1;
 
 	for ( i = 0; i < number_to_move; ++i )
 		*(dest++) = *(source++);
@@ -1722,21 +1735,21 @@ static int yy_get_next_buffer (void)
 
 	else
 		{
-			int num_to_read =
+			yy_size_t num_to_read =
 			YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 		while ( num_to_read <= 0 )
 			{ /* Not enough room in the buffer - grow it. */
 
 			/* just a shorter name for the current buffer */
-			YY_BUFFER_STATE b = YY_CURRENT_BUFFER;
+			YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
 
 			int yy_c_buf_p_offset =
 				(int) ((yy_c_buf_p) - b->yy_ch_buf);
 
 			if ( b->yy_is_our_buffer )
 				{
-				int new_size = b->yy_buf_size * 2;
+				yy_size_t new_size = b->yy_buf_size * 2;
 
 				if ( new_size <= 0 )
 					b->yy_buf_size += b->yy_buf_size / 8;
@@ -1767,7 +1780,7 @@ static int yy_get_next_buffer (void)
 
 		/* Read in more data. */
 		YY_INPUT( (&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]),
-			(yy_n_chars), (size_t) num_to_read );
+			(yy_n_chars), num_to_read );
 
 		YY_CURRENT_BUFFER_LVALUE->yy_n_chars = (yy_n_chars);
 		}
@@ -1791,9 +1804,9 @@ static int yy_get_next_buffer (void)
 	else
 		ret_val = EOB_ACT_CONTINUE_SCAN;
 
-	if ((yy_size_t) ((yy_n_chars) + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
+	if ((int) ((yy_n_chars) + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
 		/* Extend the array by 50%, plus the number we really need. */
-		yy_size_t new_size = (yy_n_chars) + number_to_move + ((yy_n_chars) >> 1);
+		int new_size = (yy_n_chars) + number_to_move + ((yy_n_chars) >> 1);
 		YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *) go_realloc((void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf,new_size  );
 		if ( ! YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
 			YY_FATAL_ERROR( "out of dynamic memory in yy_get_next_buffer()" );
@@ -1812,14 +1825,14 @@ static int yy_get_next_buffer (void)
 
     static yy_state_type yy_get_previous_state (void)
 {
-	register yy_state_type yy_current_state;
-	register char *yy_cp;
+	yy_state_type yy_current_state;
+	char *yy_cp;
     
 	yy_current_state = (yy_start);
 
 	for ( yy_cp = (yytext_ptr) + YY_MORE_ADJ; yy_cp < (yy_c_buf_p); ++yy_cp )
 		{
-		register YY_CHAR yy_c = (*yy_cp ? yy_ec[YY_SC_TO_UI(*yy_cp)] : 1);
+		YY_CHAR yy_c = (*yy_cp ? yy_ec[YY_SC_TO_UI(*yy_cp)] : 1);
 		if ( yy_accept[yy_current_state] )
 			{
 			(yy_last_accepting_state) = yy_current_state;
@@ -1844,10 +1857,10 @@ static int yy_get_next_buffer (void)
  */
     static yy_state_type yy_try_NUL_trans  (yy_state_type yy_current_state )
 {
-	register int yy_is_jam;
-    	register char *yy_cp = (yy_c_buf_p);
+	int yy_is_jam;
+    	char *yy_cp = (yy_c_buf_p);
 
-	register YY_CHAR yy_c = 1;
+	YY_CHAR yy_c = 1;
 	if ( yy_accept[yy_current_state] )
 		{
 		(yy_last_accepting_state) = yy_current_state;
@@ -1862,12 +1875,14 @@ static int yy_get_next_buffer (void)
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
 	yy_is_jam = (yy_current_state == 261);
 
-	return yy_is_jam ? 0 : yy_current_state;
+		return yy_is_jam ? 0 : yy_current_state;
 }
 
-    static void yyunput (int c, register char * yy_bp )
+#ifndef YY_NO_UNPUT
+
+    static void yyunput (int c, char * yy_bp )
 {
-	register char *yy_cp;
+	char *yy_cp;
     
     yy_cp = (yy_c_buf_p);
 
@@ -1877,10 +1892,10 @@ static int yy_get_next_buffer (void)
 	if ( yy_cp < YY_CURRENT_BUFFER_LVALUE->yy_ch_buf + 2 )
 		{ /* need to shift things up to make room */
 		/* +2 for EOB chars. */
-		register int number_to_move = (yy_n_chars) + 2;
-		register char *dest = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[
+		yy_size_t number_to_move = (yy_n_chars) + 2;
+		char *dest = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[
 					YY_CURRENT_BUFFER_LVALUE->yy_buf_size + 2];
-		register char *source =
+		char *source =
 				&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move];
 
 		while ( source > YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
@@ -1901,6 +1916,8 @@ static int yy_get_next_buffer (void)
 	(yy_hold_char) = *yy_cp;
 	(yy_c_buf_p) = yy_cp;
 }
+
+#endif
 
 #ifndef YY_NO_INPUT
 #ifdef __cplusplus
@@ -1926,7 +1943,7 @@ static int yy_get_next_buffer (void)
 
 		else
 			{ /* need more input */
-			int offset = (yy_c_buf_p) - (yytext_ptr);
+			yy_size_t offset = (yy_c_buf_p) - (yytext_ptr);
 			++(yy_c_buf_p);
 
 			switch ( yy_get_next_buffer(  ) )
@@ -2051,7 +2068,7 @@ static void go__load_buffer_state  (void)
 	if ( ! b )
 		YY_FATAL_ERROR( "out of dynamic memory in go__create_buffer()" );
 
-	b->yy_buf_size = size;
+	b->yy_buf_size = (yy_size_t)size;
 
 	/* yy_ch_buf has to be 2 characters longer than the size given because
 	 * we need to put in 2 end-of-buffer characters.
@@ -2086,10 +2103,6 @@ static void go__load_buffer_state  (void)
 	go_free((void *) b  );
 }
 
-#ifndef __cplusplus
-extern int isatty (int );
-#endif /* __cplusplus */
-    
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
  * such as during a go_restart() or at EOF.
@@ -2202,7 +2215,7 @@ void go_pop_buffer_state (void)
  */
 static void go_ensure_buffer_stack (void)
 {
-	int num_to_alloc;
+	yy_size_t num_to_alloc;
     
 	if (!(yy_buffer_stack)) {
 
@@ -2210,7 +2223,7 @@ static void go_ensure_buffer_stack (void)
 		 * scanner will even need a stack. We use 2 instead of 1 to avoid an
 		 * immediate realloc on the next call.
          */
-		num_to_alloc = 1;
+		num_to_alloc = 1; /* After all that talk, this was set to 1 anyways... */
 		(yy_buffer_stack) = (struct yy_buffer_state**)go_alloc
 								(num_to_alloc * sizeof(struct yy_buffer_state*)
 								);
@@ -2227,7 +2240,7 @@ static void go_ensure_buffer_stack (void)
 	if ((yy_buffer_stack_top) >= ((yy_buffer_stack_max)) - 1){
 
 		/* Increase the buffer to prepare for a possible push. */
-		int grow_size = 8 /* arbitrary grow size */;
+		yy_size_t grow_size = 8 /* arbitrary grow size */;
 
 		num_to_alloc = (yy_buffer_stack_max) + grow_size;
 		(yy_buffer_stack) = (struct yy_buffer_state**)go_realloc
@@ -2299,12 +2312,12 @@ YY_BUFFER_STATE go__scan_string (yyconst char * yystr )
  * 
  * @return the newly allocated buffer state object.
  */
-YY_BUFFER_STATE go__scan_bytes  (yyconst char * yybytes, int  _yybytes_len )
+YY_BUFFER_STATE go__scan_bytes  (yyconst char * yybytes, yy_size_t  _yybytes_len )
 {
 	YY_BUFFER_STATE b;
 	char *buf;
 	yy_size_t n;
-	int i;
+	yy_size_t i;
     
 	/* Get memory for full buffer, including space for trailing EOB's. */
 	n = _yybytes_len + 2;
@@ -2335,7 +2348,7 @@ YY_BUFFER_STATE go__scan_bytes  (yyconst char * yybytes, int  _yybytes_len )
 
 static void yy_fatal_error (yyconst char* msg )
 {
-    	(void) fprintf( stderr, "%s\n", msg );
+			(void) fprintf( stderr, "%s\n", msg );
 	exit( YY_EXIT_FAILURE );
 }
 
@@ -2386,7 +2399,7 @@ FILE *go_get_out  (void)
 /** Get the length of the current token.
  * 
  */
-int go_get_leng  (void)
+yy_size_t go_get_leng  (void)
 {
         return go_leng;
 }
@@ -2401,29 +2414,29 @@ char *go_get_text  (void)
 }
 
 /** Set the current line number.
- * @param line_number
+ * @param _line_number line number
  * 
  */
-void go_set_lineno (int  line_number )
+void go_set_lineno (int  _line_number )
 {
     
-    go_lineno = line_number;
+    go_lineno = _line_number;
 }
 
 /** Set the input stream. This does not discard the current
  * input buffer.
- * @param in_str A readable stream.
+ * @param _in_str A readable stream.
  * 
  * @see go__switch_to_buffer
  */
-void go_set_in (FILE *  in_str )
+void go_set_in (FILE *  _in_str )
 {
-        go_in = in_str ;
+        go_in = _in_str ;
 }
 
-void go_set_out (FILE *  out_str )
+void go_set_out (FILE *  _out_str )
 {
-        go_out = out_str ;
+        go_out = _out_str ;
 }
 
 int go_get_debug  (void)
@@ -2431,9 +2444,9 @@ int go_get_debug  (void)
         return go__flex_debug;
 }
 
-void go_set_debug (int  bdebug )
+void go_set_debug (int  _bdebug )
 {
-        go__flex_debug = bdebug ;
+        go__flex_debug = _bdebug ;
 }
 
 static int yy_init_globals (void)
@@ -2493,7 +2506,8 @@ int go_lex_destroy  (void)
 #ifndef yytext_ptr
 static void yy_flex_strncpy (char* s1, yyconst char * s2, int n )
 {
-	register int i;
+		
+	int i;
 	for ( i = 0; i < n; ++i )
 		s1[i] = s2[i];
 }
@@ -2502,7 +2516,7 @@ static void yy_flex_strncpy (char* s1, yyconst char * s2, int n )
 #ifdef YY_NEED_STRLEN
 static int yy_flex_strlen (yyconst char * s )
 {
-	register int n;
+	int n;
 	for ( n = 0; s[n]; ++n )
 		;
 
@@ -2512,11 +2526,12 @@ static int yy_flex_strlen (yyconst char * s )
 
 void *go_alloc (yy_size_t  size )
 {
-	return (void *) malloc( size );
+			return (void *) malloc( size );
 }
 
 void *go_realloc  (void * ptr, yy_size_t  size )
 {
+		
 	/* The cast to (char *) in the following accommodates both
 	 * implementations that use char* generic pointers, and those
 	 * that use void* generic pointers.  It works with the latter
@@ -2529,7 +2544,7 @@ void *go_realloc  (void * ptr, yy_size_t  size )
 
 void go_free (void * ptr )
 {
-	free( (char *) ptr );	/* see go_realloc() for (char *) cast */
+			free( (char *) ptr );	/* see go_realloc() for (char *) cast */
 }
 
 #define YYTABLES_NAME "yytables"
@@ -2542,7 +2557,8 @@ int go_wrap ( void ) {
 	{
 		/* Silly impossible function call to stop warning of unused functions */
 		if ( 0 ) {
-			yyunput(0, "");
+            char buf[] = "";
+            yyunput(0, buf);
 		}
 	}
     return 1;

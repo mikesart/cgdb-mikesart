@@ -91,7 +91,7 @@ int tokenizer_get_token(struct tokenizer *t)
     if (t == NULL || t->tokenizer_lex == NULL)
         return 0;
 
-    t->tpacket = (t->tokenizer_lex) ();
+    t->tpacket = (enum tokenizer_type)(t->tokenizer_lex) ();
     ibuf_clear(t->i);
     ibuf_add(t->i, (const char *) *(t->tokenizer_text));
 
