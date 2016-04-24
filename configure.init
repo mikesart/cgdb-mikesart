@@ -116,6 +116,7 @@ AC_ARG_WITH(curses, AC_HELP_STRING([--with-curses=PREFIX], [Use system installed
 # If set to "yes", it is on the compilers include path.
 if test "$opt_with_gdbwire_prefix" != "yes"; then
   LDFLAGS="-L$opt_with_gdbwire_prefix/lib $LDFLAGS" CFLAGS="-I$opt_with_gdbwire_prefix/include -I$opt_with_gdbwire_prefix/include/gdbwire $CFLAGS" CPPFLAGS="-I$opt_with_gdbwire_prefix/include -I$opt_with_gdbwire_prefix/include/gdbwire $CPPFLAGS"
+  GDBWIRE_LIB=$opt_with_gdbwire_prefix/lib/libgdbwire.a
 fi
 
 if test "$opt_with_readline_prefix" != "no"; then
@@ -244,7 +245,7 @@ dnl This will DEFINE the readline headers.
 RL_LIB_READLINE_INCLUDES
 
 dnl Made it this far, add the gdbwire, readline and termcap LIBS
-LIBS="-lgdbwire -lreadline $TERMCAP_LIB $LIBS"
+LIBS="$GDBWIRE_LIB -lreadline $TERMCAP_LIB $LIBS"
 dnl Add the ncurses/curses lib, if it's not the same as the termcap lib
 if test "$TERMCAP_LIB" != "-l$curses_lib_name"; then
   LIBS="-l$curses_lib_name $LIBS"
