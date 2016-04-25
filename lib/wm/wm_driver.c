@@ -48,6 +48,8 @@ static int test_redraw(wm_window *window)
     }
     wattroff(window->cwindow, COLOR_PAIR(widget->color));
     wrefresh(window->cwindow);
+
+    return 0;
 }
 
 static int test_layout(wm_window *window)
@@ -119,9 +121,8 @@ static test_cli *test_cli_create()
 int main(int argc, char *argv[])
 {
     WINDOW *mainwin = NULL;
-    test_widget *widget1, *widget2, *widget3;
     window_manager *wm = NULL;
-    wm_position pos = { 0 };
+    wm_position pos = { 0, 0 };
     int i;
 
     if ((mainwin = initscr()) == NULL ) {

@@ -65,6 +65,8 @@ wm_window_set_context(wm_window *window, window_manager *wm,
     }
     assert(cwindow != NULL);
     window->cwindow = cwindow;
+
+    return 0;
 }
 
 int
@@ -134,19 +136,18 @@ wm_window_dump(wm_window *window, FILE *out, int indent)
             fprintf(out, " ");
         }
         fprintf(out, "+ Split: %s ", splitter->orientation ==
-                WM_HORIZONTAL ? "Horizontal" : "Vertical", splitter);
+                WM_HORIZONTAL ? "Horizontal" : "Vertical");
     } else {
         for (i = 0; i < indent; ++i) {
             fprintf(out, " ");
         }
-        fprintf(out, "- Window ", window);
+        fprintf(out, "- Window ");
     }
     fprintf(out, "(us: +%d+%d %dx%d, curses: +%d+%d %dx%d)\n",
             window->top, window->left, window->real_height, window->real_width,
             ctop, cleft, cheight, cwidth);
     if (window->is_splitter) {
         wm_splitter *splitter = (wm_splitter *) window;
-        int i;
         for (i = 0; i < splitter->num_children; ++i) {
             wm_window_dump(splitter->children[i], out, indent + 2);
         }

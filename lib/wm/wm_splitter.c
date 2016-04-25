@@ -46,7 +46,7 @@ wm_splitter_create(wm_orientation orientation)
 
     /* Splitter data */
     splitter->orientation = orientation;
-    splitter->children = malloc(sizeof(wm_window *) * DEFAULT_ARRAY_LENGTH);
+    splitter->children = (wm_window **)malloc(sizeof(wm_window *) * DEFAULT_ARRAY_LENGTH);
     splitter->num_children = 0;
     splitter->array_length = DEFAULT_ARRAY_LENGTH;
 
@@ -262,7 +262,7 @@ wm_splitter_split(wm_splitter *splitter, wm_window *window,
 
     if (splitter->num_children == splitter->array_length) {
         splitter->array_length *= 2;
-        splitter->children = realloc(splitter->children,
+        splitter->children = (wm_window **)realloc(splitter->children,
             sizeof(wm_window *) * splitter->array_length);
     }
     for (i = pos; i < splitter->num_children; ++i) {
@@ -285,10 +285,10 @@ wm_window *wm_splitter_get_neighbor(wm_splitter *splitter, wm_window *window,
         assert(splitter->window.parent->is_splitter);
         parent = (wm_splitter *) splitter->window.parent;
     }
-    if (splitter->orientation == WM_HORIZONTAL &&
-            (dir == WM_LEFT || dir == WM_RIGHT) ||
-        splitter->orientation == WM_VERTICAL &&
-            (dir == WM_UP || dir == WM_DOWN))
+    if ((splitter->orientation == WM_HORIZONTAL &&
+            (dir == WM_LEFT || dir == WM_RIGHT)) ||
+        (splitter->orientation == WM_VERTICAL &&
+            (dir == WM_UP || dir == WM_DOWN)))
     {
         if (parent == NULL) {
             return NULL;
@@ -349,9 +349,9 @@ wm_splitter_layout(wm_window *window)
     wm_splitter *splitter = (wm_splitter *) window;
     int sum = 0, remainder = 0;
     int position;
-    float *proportions = malloc(sizeof(float) * splitter->num_children);
+    float *proportions = (float *)malloc(sizeof(float) * splitter->num_children);
     int prev_dimension = 0;
-    int *new_sizes = malloc(sizeof(int) * splitter->num_children);
+    int *new_sizes = (int *)malloc(sizeof(int) * splitter->num_children);
     int redistribute = 0; /* Set true as fallback if things look bad */
     int i;
     int real_width = window->real_width - (splitter->num_children - 1);
@@ -566,6 +566,7 @@ wm_splitter_place_window(wm_window *window, int top, int left,
     mvwin(window->cwindow, top, left);
 
     wm_window_layout_event(window);
+    return 0;
 }
 
 static wm_window *
@@ -586,9 +587,9 @@ wm_splitter_find_window_at(wm_splitter *splitter, wm_position cursor_pos)
             lower_bound = child->left;
             upper_bound = child->left + child->real_width;
         }
-        if (value >= lower_bound && value < upper_bound ||
-            i == 0 && value < lower_bound ||
-            i == splitter->num_children - 1 && value >= upper_bound)
+        if ((value >= lower_bound && value < upper_bound) ||
+            (i == 0 && value < lower_bound) ||
+            (i == splitter->num_children - 1 && value >= upper_bound))
         {
             result = child;
             break;

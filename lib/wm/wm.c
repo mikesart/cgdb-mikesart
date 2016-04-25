@@ -167,6 +167,8 @@ int wm_new_main(window_manager *wm, wm_window *window)
     wm_focus(wm, window);
     wm_window_layout_event(window);
     wm_redraw(wm);
+
+    return 0;
 }
 
 void wm_cli_mode(window_manager *wm, int value)
