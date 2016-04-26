@@ -19,4 +19,9 @@ void *cgdb_realloc(void *ptr, size_t size);
 char *cgdb_strdup(const char *s);
 int cgdb_close(int fd);
 
+/* Check if debugger is attached to cgdb.
+ * Return 0 for no, 1 for yes, -1 for error.
+ */
+int cgdb_is_debugger_attached();
+
 #endif
