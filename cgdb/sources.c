@@ -234,7 +234,6 @@ static int load_file(struct list_node *node)
     /* Stat the file to get the timestamp */
     if (get_timestamp(node->path, &(node->last_modification)) == -1)
         return 2;
-
     if (!(file = fopen(node->path, "r")))
         return 1;
 
@@ -473,7 +472,6 @@ int source_del(struct sviewer *sview, const char *path)
 {
     struct list_node *cur;
     struct list_node *prev = NULL;
-    int i;
 
     /* Find the target node */
     for (cur = sview->list_head; cur != NULL; cur = cur->next) {
@@ -485,25 +483,9 @@ int source_del(struct sviewer *sview, const char *path)
     if (cur == NULL)
         return 1;               /* Node not found */
 
-    /* Release file buffer, if one is in memory */
-    if (cur->buf.tlines) {
-        for (i = 0; i < cur->buf.length; i++) {
-            free(cur->buf.tlines[i]);
-            if (cur->buf.cur_line) {
-                free(cur->buf.cur_line);
-                cur->buf.cur_line = NULL;
-            }
-            free(cur->orig_buf.tlines[i]);
-        }
-    }
-    free(cur->buf.tlines);
-    free(cur->orig_buf.tlines);
-
-    /* Release the breakpoints */
-    if (cur->buf.breakpts) {
-        free(cur->buf.breakpts);
-        cur->buf.breakpts = NULL;
-    }
+    /* Release file buffers */
+    release_file_buffer(&cur->buf);
+    release_file_buffer(&cur->orig_buf);
 
     /* Release file name */
     free(cur->path);
@@ -615,7 +597,8 @@ int source_display(struct sviewer *sview, int focus)
                     waddch(sview->win, ' ');
 
                 /* Mark the current line with an arrow or the selected line if in focus and arrowalllines is on */
-            } else if ( line == sview->cur->exe_line || (focus && cgdbrc_get(CGDBRC_ARROWSELECTEDLINE)->variant.int_val && sview->cur->sel_line == line) ) {
+            } else if ( line == sview->cur->exe_line ||
+                        (focus && cgdbrc_get(CGDBRC_ARROWSELECTEDLINE)->variant.int_val && sview->cur->sel_line == line) ) {
                 switch (sview->cur->buf.breakpts[line]) {
                     case 0:
                         {
