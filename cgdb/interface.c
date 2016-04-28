@@ -545,10 +545,11 @@ static void validate_window_sizes(void)
     int odd_size = (h_or_w + 1) % 2;
     int max_window_size_shift = (h_or_w / 2) - tty_window_offset - odd_size;
     int min_window_size_shift = -(h_or_w / 2);
+    int mwh = MAX(interface_winminheight, 4);
 
     /* update max and min based off of users winminheight request */
-    min_window_size_shift += interface_winminheight;
-    max_window_size_shift -= interface_winminheight;
+    min_window_size_shift += mwh;
+    max_window_size_shift -= mwh;
 
     /* Make sure that the windows offset is within its bounds: 
      * This checks the window offset.
