@@ -44,6 +44,10 @@
 #include <termios.h>
 #endif /* HAVE_TERMIOS_H */
 
+#if HAVE_LIMITS_H
+#include <limits.h> /* INT_MAX */
+#endif
+
 #if HAVE_CTYPE_H
 #include <ctype.h>
 #endif
@@ -63,6 +67,9 @@
 #include "highlight.h"
 #include "highlight_groups.h"
 #include "fs_util.h"
+
+#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
+#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
 /* ----------- */
 /* Prototypes  */
@@ -128,6 +135,8 @@ static int regex_direction_last;
 static int orig_line_regex;
 
 static char last_key_pressed = 0;   /* Last key user entered in cgdb mode */
+
+static int G_line_number = -1;      /* Line number user wants to 'G' to */
 
 /* The cgdb status bar command */
 static struct ibuf *cur_sbc = NULL;
@@ -358,8 +367,12 @@ static void update_status_win(void)
     /* Default: Current Filename */
     else {
         /* Print filename */
-        if (src_win != NULL && source_current_file(src_win, filename) != NULL)
-            if_display_message("", WIDTH - 1, "%s", filename);
+        if (src_win != NULL && source_current_file(src_win, filename) != NULL) {
+            if (G_line_number >= 0)
+                if_display_message("", WIDTH - 1, "%s %d", filename, G_line_number);
+            else
+                if_display_message("", WIDTH - 1, "%s", filename);
+        }
     }
 
     wrefresh(status_win);
@@ -1018,7 +1031,7 @@ toggle_breakpoint(struct sviewer *sview, enum tgdb_breakpoint_action t)
 
     return 0;
 }
-char line_num_buff[8] = {0};
+
 /* source_input: Handles user input to the source window.
  * -------------
  *
@@ -1063,12 +1076,7 @@ static void source_input(struct sviewer *sview, int key)
                 source_set_sel_line(sview, 1);
             break;
         case 'G':              /* end of file, or a line number*/
-	    if(strlen(line_num_buff)){
-		    long line = strtol(line_num_buff, NULL, 10);
-		    source_set_sel_line(sview, line);
-	    } else {
-		    source_set_sel_line(sview, 10000000);
-	    }
+            source_set_sel_line(sview, G_line_number >= 0 ? G_line_number : INT_MAX);
             break;
         case '=':
             /* inc window by 1 */
@@ -1112,41 +1120,15 @@ static void source_input(struct sviewer *sview, int key)
             toggle_breakpoint(sview, t);
         }
             break;
-	case '0':
-	case '1':
-	case '2':
-	case '3':
-	case '4':
-	case '5':
-	case '6':
-	case '7':
-	case '8':
-	case '9':
-	    {
-		    /*
-		     * We are storing digits typed into a buffer as long 
-		     * as 10000000. This is because the 'G' command above
-		     * only handles this length anyway, behavior is already
-		     * undefined!
-		     *
-		     * This check prevents overflowing the buffer, which allows 
-		     * for the unchecked versions of the strlen function
-		     */
-		    if(strlen(line_num_buff) < sizeof(line_num_buff) - 1){
-			    line_num_buff[strlen(line_num_buff)] = (char)key;
-		    }
-		    return;
-		    
-	    }
-	    break;
         default:
             break;
     }
-    /*
-     * If we did not read a digit, we need to clear the buffer we use
-     * to store the typed digits
-     */
-    memset(line_num_buff, '\0', sizeof(line_num_buff));
+
+    /* Store digits into G_line_number for 'G' command. */
+    if (sview->cur && (key >= '0' && key <= '9') && (G_line_number < INT_MAX / 10 - 9))
+        G_line_number = MAX(0, G_line_number) * 10 + key - '0';
+    else
+        G_line_number = -1;
 
     /* Some extended features that are set by :set sc */
     if_draw();
