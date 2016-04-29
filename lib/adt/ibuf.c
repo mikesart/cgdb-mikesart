@@ -57,11 +57,11 @@ void ibuf_addchar(struct ibuf *s, char c)
     /* the '+1' is for the null-terminated char */
     if (s->cur_buf_pos + 1 == ((s->cur_block_size) * s->BLOCK_SIZE)) {
         /* NOTE: s->cur_block_size *= 2 would double the buffer size 
-         *  however, I didn't think it was necessary since it should rarly go
+         *  however, I didn't think it was necessary since it should rarely go
          *  above 1 block.
          */
         s->cur_block_size += 1;
-        s->buf = (char *) realloc(s->buf, s->cur_block_size * s->BLOCK_SIZE);
+        s->buf = (char *) cgdb_realloc(s->buf, s->cur_block_size * s->BLOCK_SIZE);
     }
 
     /* Add the new char and null terminate */
@@ -72,6 +72,8 @@ void ibuf_addchar(struct ibuf *s, char c)
 void ibuf_add(struct ibuf *s, const char *d)
 {
     int length = strlen(d), i;
+
+    //$ TODO: NO!
 
     for (i = 0; i < length; i++)
         ibuf_addchar(s, d[i]);

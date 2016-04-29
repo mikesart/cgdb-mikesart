@@ -38,15 +38,33 @@
 
 /* Max length of a line */
 #define MAX_LINE        4096
-#define MAX_TITLE       40
-#define SRC_WINDOW_NAME "Source"
-#define QUEUE_SIZE      10
 
 #if HAVE_ATTRIBUTE_PRINTF
 #define ATTRIBUTE_PRINTF( _x, _y ) __attribute__( ( __format__( __printf__, _x, _y ) ) )
 #else
 #define ATTRIBUTE_PRINTF( _x, _y )
 #endif
+
+// ---- stretchy buffers (From Sean's stb.h)
+// https://github.com/nothings/stb/blob/master/stretchy_buffer.h
+
+#define sbfree( a ) ( ( a ) ? free( stb__sbraw( a ) ), NULL : NULL )
+#define sbpush( a, v ) ( stb__sbmaybegrow( a, 1 ), ( a )[ stb__sbn( a )++ ] = ( v ) )
+#define sbpop( a ) ( ( a )[ --stb__sbn( a ) ] )
+#define sbcount( a ) ( ( a ) ? stb__sbn( a ) : 0 )
+#define sbadd( a, n ) ( stb__sbmaybegrow( a, n ), stb__sbn( a ) += ( n ), &( a )[ stb__sbn( a ) - ( n ) ] )
+#define sblast( a ) ( ( a )[ stb__sbn( a ) - 1 ] )
+#define sbforeach( v, arr ) for ( ( v ) = ( arr ); ( v ) < ( arr ) + sbcount( arr ); ++( v ) )
+#define sbsetcount( a, n ) ( stb__sbgrow( a, n ), stb__sbn( a ) = n )
+
+#define stb__sbraw( a ) ( ( int * )( a )-2 )
+#define stb__sbm( a ) stb__sbraw( a )[ 0 ]
+#define stb__sbn( a ) stb__sbraw( a )[ 1 ]
+
+int stb__sbgrowf( void **arr, int increment, int itemsize );
+#define stb__sbneedgrow( a, n ) ( ( a ) == 0 || stb__sbn( a ) + n >= stb__sbm( a ) )
+#define stb__sbmaybegrow( a, n ) ( stb__sbneedgrow( a, ( n ) ) ? stb__sbgrow( a, n ) : 0 )
+#define stb__sbgrow( a, n ) stb__sbgrowf( ( void ** )&( a ), ( n ), sizeof( *( a ) ) )
 
 /* --------------- */
 /* Data Structures */
@@ -60,19 +78,21 @@ struct sviewer {
 };
 
 struct buffer {
-    int length;                 /* Number of lines in buffer */
-    char **tlines;              /* Array containing file ( lines of text ) */
+    char **tlines;              /* Stretchy buffer array containing lines of file */
     char *cur_line;             /* cur line may have unique color */
-    char *breakpts;             /* Breakpoints */
     int max_width;              /* Width of longest line in file */
+    char *file_data;            /* Entire file pointer if read in that way */
+    enum tokenizer_language_support language;   /* The language type of this file */
 };
 
 struct list_node;
 struct list_node {
     char *path;                 /* Full path to source file */
     char *lpath;                /* Relative path to source file */
-    struct buffer buf;          /* File buffer */
+    struct buffer *buf;         /* Current buffer - points to color_buf or orig_buf */
+    struct buffer color_buf;    /* Color file buffer */
     struct buffer orig_buf;     /* Original File buffer ( no color ) */
+    char *breakpts;             /* Breakpoints */
     int sel_line;               /* Current line selected in viewer */
     int sel_col;                /* Current column selected in viewer */
     int exe_line;               /* Current line executing */
@@ -114,6 +134,8 @@ struct sviewer *source_new(int pos_r, int pos_c, int height, int width);
  * Return Value:  Zero on success, non-zero on error.
  */
 int source_add(struct sviewer *sview, const char *path);
+
+int source_highlight(struct list_node *node);
 
 /* source_set_relative_path: Sets the path that gdb uses for breakpoints
  * -------------------------
