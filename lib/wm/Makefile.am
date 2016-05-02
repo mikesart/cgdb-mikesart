@@ -1,13 +1,13 @@
-AM_CFLAGS = -I$(top_srcdir)/lib/adt
+AM_CXXFLAGS = -I$(top_srcdir)/lib/adt
 
 # create the input library
 noinst_LIBRARIES = libwm.a
 libwm_a_SOURCES = \
-    wm.c \
+    wm.cpp \
     wm.h \
-    wm_splitter.c \
+    wm_splitter.cpp \
     wm_splitter.h \
-    wm_window.c \
+    wm_window.cpp \
     wm_window.h \
     types.h
 
@@ -17,5 +17,5 @@ noinst_PROGRAMS = wm_driver
 # This is the wm driver
 wm_driver_LDFLAGS =
 wm_driver_LDADD = libwm.a
-wm_driver_SOURCES = wm_driver.c
-wm_driver_CFLAGS = $(AM_CFLAGS)
+wm_driver_SOURCES = wm_driver.cpp
+wm_driver_CXXFLAGS = $(AM_CXXFLAGS)
