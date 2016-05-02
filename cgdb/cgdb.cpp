@@ -702,7 +702,7 @@ static char *version_info(void)
 {
     static char buf[MAXLINE];
 
-    sprintf(buf, "%s %s\r\n%s", "CGDB", VERSION,
+    snprintf(buf, sizeof(buf), "%s %s\r\n%s", "CGDB", VERSION,
             "Copyright 2002-2010 Bob Rossi and Mike Mueller.\n"
             "CGDB is free software, covered by the GNU General Public License, and you are\n"
             "welcome to change it and/or distribute copies of it under certain conditions.\n"
@@ -1139,17 +1139,15 @@ does_request_require_console_update(struct tgdb_request *request, int *update)
  */
 static int gdb_input()
 {
-    char *buf = (char *)malloc(GDB_MAXBUF + 1);
     int size;
     int is_finished;
+    char buf[GDB_MAXBUF + 1];
 
     /* Read from GDB */
     size = tgdb_process(tgdb, buf, GDB_MAXBUF, &is_finished);
     if (size == -1) {
         logger_write_pos(logger, __FILE__, __LINE__,
                 "tgdb_recv_debugger_data error");
-        free(buf);
-        buf = NULL;
         return -1;
     }
 
@@ -1164,9 +1162,6 @@ static int gdb_input()
      */
     if (strlen(buf) > 0)
         if_print(buf);
-
-    free(buf);
-    buf = NULL;
 
     /* Check to see if GDB is ready to receive another command. If it is, then
      * readline should redisplay what it currently contains. There are 2 special
@@ -1232,8 +1227,7 @@ static int gdb_input()
 
 static int readline_input()
 {
-    const int MAX = 1024;
-    char *buf = (char *)malloc(MAX + 1);
+    char buf[GDB_MAXBUF + 1];
     int size;
 
     int masterfd = pty_pair_get_masterfd(pty_pair);
@@ -1244,11 +1238,9 @@ static int readline_input()
         return -1;
     }
 
-    size = read(masterfd, buf, MAX);
+    size = read(masterfd, buf, GDB_MAXBUF);
     if (size == -1) {
         logger_write_pos(logger, __FILE__, __LINE__, "read error");
-        free(buf);
-        buf = NULL;
         return -1;
     }
 
@@ -1262,8 +1254,6 @@ static int readline_input()
     if (size > 0)
         if_print(buf);
 
-    free(buf);
-    buf = NULL;
     return 0;
 }
 
@@ -1273,7 +1263,7 @@ static int readline_input()
  */
 static ssize_t child_input()
 {
-    char *buf = (char *)malloc(GDB_MAXBUF + 1);
+    char buf[GDB_MAXBUF + 1];
     ssize_t size;
 
     /* Read from GDB */
@@ -1281,16 +1271,12 @@ static ssize_t child_input()
     if (size == -1) {
         logger_write_pos(logger, __FILE__, __LINE__,
                 "tgdb_recv_inferior_data error ");
-        free(buf);
-        buf = NULL;
         return -1;
     }
     buf[size] = 0;
 
     /* Display CHILD output */
     if_tty_print(buf);
-    free(buf);
-    buf = NULL;
     return size;
 }
 
@@ -1606,7 +1592,7 @@ int init_readline(void)
     /* The 16 is because I don't know how many char's the directory separator 
      * is going to be, I expect it to be 1, but who knows. */
     length = strlen(cgdb_home_dir) + strlen(readline_history_filename) + 16;
-    readline_history_path = (char *) malloc(sizeof (char) * length);
+    readline_history_path = (char *) cgdb_malloc(sizeof (char) * length);
     fs_util_get_path(cgdb_home_dir, readline_history_filename,
             readline_history_path);
     rline = rline_initialize(slavefd, rlctx_send_user_command, tab_completion,
