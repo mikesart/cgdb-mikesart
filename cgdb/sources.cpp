@@ -713,6 +713,7 @@ int source_display(struct sviewer *sview, int focus)
                 case 0:
                     {
                         enum hl_group_kind arr_attr;
+
                         if (line == sview->cur->sel_line && line != sview->cur->exe_line)
                             arr_attr = HLG_ARROW_SEL;
                         else

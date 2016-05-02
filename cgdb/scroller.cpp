@@ -317,8 +317,7 @@ void scr_refresh(struct scroller *scr, int focus)
     int highlight_attr;
 
     /* Steal line highlight attribute for our scroll mode status */
-    if (hl_groups_get_attr(hl_groups_instance, HLG_LINE_HIGHLIGHT, &highlight_attr) == -1)
-        highlight_attr = A_BOLD;
+    hl_groups_get_attr(hl_groups_instance, HLG_LINE_HIGHLIGHT, &highlight_attr);
 
     /* Sanity check */
     getmaxyx(scr->win, height, width);

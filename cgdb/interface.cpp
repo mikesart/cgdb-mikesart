@@ -380,8 +380,7 @@ static void update_status_win(void)
     char filename[FSUTIL_PATH_MAX];
     int attr;
 
-    if (hl_groups_get_attr(hl_groups_instance, HLG_STATUS_BAR, &attr) == -1)
-        return;
+    hl_groups_get_attr(hl_groups_instance, HLG_STATUS_BAR, &attr);
 
     /* Update the tty status bar */
     if (tty_win_on) {
