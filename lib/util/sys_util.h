@@ -24,4 +24,8 @@ int cgdb_close(int fd);
  */
 int cgdb_is_debugger_attached();
 
+/* Unsigned integer version of log10
+*/
+int log10_uint(unsigned int val);
+
 #endif
