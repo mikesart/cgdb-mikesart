@@ -69,9 +69,6 @@
 #include "fs_util.h"
 #include "sys_util.h"
 
-#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
-#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
-
 /* ----------- */
 /* Prototypes  */
 /* ----------- */
@@ -925,7 +922,7 @@ static int gdb_input(int key)
                 buf[i] = '\n';
             }
             buf[i] = '\0';
-            if_print(buf);
+            if_print(buf, GDB);
             free(buf);
 
             /* Sneaky return 1 here. Basically, this allows tricks readline to think
@@ -1517,10 +1514,10 @@ void if_tty_print(const char *buf)
 {
     /* If the tty I/O window is not open send output to gdb window */
     if (!tty_win_on)
-        if_print(buf);
+        if_print(buf, TTY);
 
     /* Print it to the scroller */
-    scr_add(tty_win, buf);
+    scr_add(tty_win, buf, 1);
 
     /* Only need to redraw if tty_win is being displayed */
     if (tty_win_on && get_gdb_height() > 0) {
@@ -1532,10 +1529,10 @@ void if_tty_print(const char *buf)
     }
 }
 
-void if_print(const char *buf)
+void if_print(const char *buf, int source )
 {
     /* Print it to the scroller */
-    scr_add(gdb_win, buf);
+    scr_add(gdb_win, buf, source == TTY);
 
     if (get_gdb_height() > 0) {
         scr_refresh(gdb_win, focus == GDB);
@@ -1560,7 +1557,7 @@ void if_print_message(const char *fmt, ...)
 #endif
     va_end(ap);
 
-    if_print(va_buf);
+    if_print(va_buf, GDB);
 }
 
 void if_show_file(char *path, int line)
@@ -1731,7 +1728,7 @@ int if_clear_line()
     line[i] = '\r';
     line[i + 1] = '\0';
 
-    if_print(line);
+    if_print(line, GDB);
 
     return 0;
 }

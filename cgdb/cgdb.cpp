@@ -89,6 +89,8 @@
 /* Constants */
 /* --------- */
 
+#define GDB_MAXBUF 4096         /* GDB input buffer size */
+
 const char *readline_history_filename = "readline_history.txt";
 
 /* --------------- */
@@ -615,7 +617,7 @@ static int handle_tab_completion_request(tab_completion_ptr comptr, int key)
     gdb_window_size = get_gdb_height();
 
     if (comptr->state == TAB_COMPLETION_START) {
-        if_print("\n");
+        if_print("\n", GDB);
 
         if (query_items > 0 && comptr->num_matches >= query_items) {
             if_print_message("Display all %d possibilities? (y or n)\n",
@@ -655,13 +657,13 @@ static int handle_tab_completion_request(tab_completion_ptr comptr, int key)
 
     if (comptr->state == TAB_COMPLETION_COMPLETION_DISPLAY) {
         for (; comptr->total <= comptr->num_matches; comptr->total++) {
-            if_print(comptr->matches[comptr->total]);
-            if_print("\n");
+            if_print(comptr->matches[comptr->total], GDB);
+            if_print("\n", GDB);
 
             comptr->lines++;
             if (comptr->lines >= (gdb_window_size - 1) &&
                     comptr->total < comptr->num_matches) {
-                if_print("--More--");
+                if_print("--More--", GDB);
                 comptr->state = TAB_COMPLETION_QUERY_PAGER;
                 comptr->total++;
                 return 0;
@@ -1192,7 +1194,7 @@ static int gdb_input()
      * gdb window gets displayed when the filedlg is up
      */
     if (strlen(buf) > 0)
-        if_print(buf);
+        if_print(buf, GDB);
 
     /* Check to see if GDB is ready to receive another command. If it is, then
      * readline should redisplay what it currently contains. There are 2 special
@@ -1220,11 +1222,11 @@ static int gdb_input()
             char *prompt;
 
             rline_get_prompt(rline, &prompt);
-            if_print(prompt);
+            if_print(prompt, GDB);
 
             if (request->header == TGDB_REQUEST_CONSOLE_COMMAND) {
-                if_print(request->choice.console_command.command);
-                if_print("\n");
+                if_print(request->choice.console_command.command, GDB);
+                if_print("\n", GDB);
             }
 
             tgdb_request_destroy(last_request);
@@ -1283,7 +1285,7 @@ static int readline_input()
      * gdb window gets displayed when the filedlg is up
      */
     if (size > 0)
-        if_print(buf);
+        if_print(buf, GDB);
 
     return 0;
 }
@@ -1294,8 +1296,8 @@ static int readline_input()
  */
 static ssize_t child_input()
 {
-    char buf[GDB_MAXBUF + 1];
     ssize_t size;
+    char buf[GDB_MAXBUF + 1];
 
     /* Read from GDB */
     size = tgdb_recv_inferior_data(tgdb, buf, GDB_MAXBUF);
