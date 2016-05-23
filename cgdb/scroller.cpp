@@ -205,6 +205,7 @@ struct scroller *scr_new(int pos_r, int pos_c, int height, int width)
     rv->current.c = 0;
     rv->current.pos = 0;
     rv->in_scroll_mode = 0;
+    rv->clear_row = -1;
     rv->last_tty_line = NULL;
     rv->last_tty_attr = -1;
     rv->win = newwin(height, width, pos_r, pos_c);
@@ -510,6 +511,10 @@ void scr_refresh(struct scroller *scr, int focus)
 
     /* Start drawing at the bottom of the viewable space, and work our way up */
     for (nlines = 1; nlines <= height; nlines++) {
+
+        if ((r <= scr->clear_row) && !scr->in_scroll_mode)
+            r = -1;
+
         /* Print the current line [segment] */
         if (r >= 0) {
             struct scroller_line *sline = &scr->lines[r];

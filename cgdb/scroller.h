@@ -39,10 +39,10 @@ struct scroller_line {
 struct scroller {
     struct scroller_line *lines;
 
-    char *last_tty_line;
-    int last_tty_attr;
-
+    char *last_tty_line;        /* Partial tty line - without \n */
+    int last_tty_attr;          /* ansi attribute we got for last tty line */
     int in_scroll_mode;         /* Currently in scroll mode? */
+    int clear_row;              /* Row where clear (ctrl+L) was hit */
     struct {
         int r;                  /* Current line (row) number */
         int c;                  /* Current column number */
