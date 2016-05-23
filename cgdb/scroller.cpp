@@ -277,7 +277,9 @@ void scr_down(struct scroller *scr, int nlines)
     int length;
     int i;
 
-    int at_bottom = 0;
+    int at_bottom = (scr->current.r == (sbcount(scr->lines) - 1));
+    if (at_bottom)
+        scr->in_scroll_mode = 0;
 
     /* Sanity check */
     getmaxyx(scr->win, height, width);
@@ -304,9 +306,6 @@ void scr_down(struct scroller *scr, int nlines)
             }
         }
     }
-
-    if ( at_bottom )
-        scr->in_scroll_mode = 0;
 }
 
 void scr_home(struct scroller *scr)

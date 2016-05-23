@@ -845,12 +845,34 @@ static int tty_input(int key)
         case CGDB_KEY_NPAGE:
             scr_down(tty_win, get_tty_height() - 1);
             break;
+
+        case CGDB_KEY_HOME:
+            if(!tty_win->in_scroll_mode)
+                return 1;
         case CGDB_KEY_F11:
             scr_home(tty_win);
             break;
+
+        case CGDB_KEY_END:
+            if(!tty_win->in_scroll_mode)
+                return 1;
         case CGDB_KEY_F12:
             scr_end(tty_win);
             break;
+
+        case CGDB_KEY_UP:
+        case CGDB_KEY_CTRL_P:
+            if(!tty_win->in_scroll_mode)
+                return 1;
+            scr_up(tty_win, 1);
+            break;
+        case CGDB_KEY_DOWN:
+        case CGDB_KEY_CTRL_N:
+            if(!tty_win->in_scroll_mode)
+                return 1;
+            scr_down(tty_win, 1);
+            break;
+
         default:
             return 2;
     }
@@ -879,9 +901,17 @@ static int gdb_input(int key)
         case CGDB_KEY_NPAGE:
             scr_down(gdb_win, get_gdb_height() - 1);
             break;
+
+        case CGDB_KEY_HOME:
+            if(!gdb_win->in_scroll_mode)
+                return 1;
         case CGDB_KEY_F11:
             scr_home(gdb_win);
             break;
+
+        case CGDB_KEY_END:
+            if(!gdb_win->in_scroll_mode)
+                return 1;
         case CGDB_KEY_F12:
             scr_end(gdb_win);
             break;
