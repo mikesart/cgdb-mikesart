@@ -227,39 +227,41 @@ struct color_info {
     int nr8Color;
     /* If the terminal has 8 colors, they could be bold. */
     int nr8ForegroundBold;
+    /* HLG group id for this color */
+    enum hl_group_kind hlg_type;
 };
 
 /** A list of all the default colors and their values */
 static const struct color_info hl_color_names[] = {
-    {"Black", COLOR_BLACK, 0},
-    {"DarkBlue", COLOR_BLUE, 0},
-    {"DarkGreen", COLOR_GREEN, 0},
-    {"DarkCyan", COLOR_CYAN, 0},
-    {"DarkRed", COLOR_RED, 0},
-    {"DarkMagenta", COLOR_MAGENTA, 0},
-    {"Brown", COLOR_YELLOW, 0},
-    {"DarkYellow", COLOR_YELLOW, 0},
-    {"LightGray", COLOR_WHITE, 0},
-    {"LightGrey", COLOR_WHITE, 0},
-    {"Gray", COLOR_WHITE, 0},
-    {"Grey", COLOR_WHITE, 0},
+    {"Black", COLOR_BLACK, 0, HLG_BLACK},
+    {"DarkBlue", COLOR_BLUE, 0, HLG_BLUE},
+    {"DarkGreen", COLOR_GREEN, 0, HLG_GREEN},
+    {"DarkCyan", COLOR_CYAN, 0, HLG_CYAN},
+    {"DarkRed", COLOR_RED, 0, HLG_RED},
+    {"DarkMagenta", COLOR_MAGENTA, 0, HLG_MAGENTA},
+    {"Brown", COLOR_YELLOW, 0, HLG_YELLOW},
+    {"DarkYellow", COLOR_YELLOW, 0, HLG_YELLOW},
+    {"LightGray", COLOR_WHITE, 0, HLG_WHITE},
+    {"LightGrey", COLOR_WHITE, 0, HLG_WHITE},
+    {"Gray", COLOR_WHITE, 0, HLG_WHITE},
+    {"Grey", COLOR_WHITE, 0, HLG_WHITE},
     // Bold/high-intensity colors
-    {"DarkGray", COLOR_BLACK, 1},
-    {"DarkGrey", COLOR_BLACK, 1},
-    {"Blue", COLOR_BLUE, 1},
-    {"LightBlue", COLOR_BLUE, 1},
-    {"Green", COLOR_GREEN, 1},
-    {"LightGreen", COLOR_GREEN, 1},
-    {"Cyan", COLOR_CYAN, 1},
-    {"LightCyan", COLOR_CYAN, 1},
-    {"Red", COLOR_RED, 1},
-    {"LightRed", COLOR_RED, 1},
-    {"Magenta", COLOR_MAGENTA, 1},
-    {"LightMagenta", COLOR_MAGENTA, 1},
-    {"Yellow", COLOR_YELLOW, 1},
-    {"LightYellow", COLOR_YELLOW, 1},
-    {"White", COLOR_WHITE, 1},
-    {NULL, 0, 0}
+    {"DarkGray", COLOR_BLACK, 1, HLG_BOLD_BLACK},
+    {"DarkGrey", COLOR_BLACK, 1, HLG_BOLD_BLACK},
+    {"Blue", COLOR_BLUE, 1, HLG_BOLD_BLUE},
+    {"LightBlue", COLOR_BLUE, 1, HLG_BOLD_BLUE},
+    {"Green", COLOR_GREEN, 1, HLG_BOLD_GREEN},
+    {"LightGreen", COLOR_GREEN, 1, HLG_BOLD_GREEN},
+    {"Cyan", COLOR_CYAN, 1, HLG_BOLD_CYAN},
+    {"LightCyan", COLOR_CYAN, 1, HLG_BOLD_CYAN},
+    {"Red", COLOR_RED, 1, HLG_BOLD_RED},
+    {"LightRed", COLOR_RED, 1, HLG_BOLD_RED},
+    {"Magenta", COLOR_MAGENTA, 1, HLG_BOLD_MAGENTA},
+    {"LightMagenta", COLOR_MAGENTA, 1, HLG_BOLD_MAGENTA},
+    {"Yellow", COLOR_YELLOW, 1, HLG_BOLD_YELLOW},
+    {"LightYellow", COLOR_YELLOW, 1, HLG_BOLD_YELLOW},
+    {"White", COLOR_WHITE, 1, HLG_BOLD_WHITE},
+    {NULL, 0, 0, HLG_LAST}
 };
 
 static const struct color_info *color_spec_for_name(const char *name)
@@ -272,6 +274,13 @@ static const struct color_info *color_spec_for_name(const char *name)
     }
 
     return NULL;
+}
+
+enum hl_group_kind hl_get_color_group(const char *color)
+{
+    const struct color_info *color_info = color_spec_for_name(color);
+
+    return color_info ? color_info->hlg_type : HLG_LAST;
 }
 
 int hl_get_color_pair(int bgcolor, int fgcolor)
@@ -492,6 +501,32 @@ int hl_groups_setup(hl_groups_ptr hl_groups)
 int
 hl_groups_get_attr(hl_groups_ptr hl_groups, enum hl_group_kind kind, int *attr)
 {
+    switch(kind)
+    {
+    case HLG_BLACK:
+    case HLG_RED:
+    case HLG_GREEN:
+    case HLG_YELLOW:
+    case HLG_BLUE:
+    case HLG_MAGENTA:
+    case HLG_CYAN:
+    case HLG_WHITE:
+        *attr = COLOR_PAIR(hl_get_color_pair(-1, kind - HLG_BLACK));
+        return 0;
+    case HLG_BOLD_BLACK:
+    case HLG_BOLD_RED:
+    case HLG_BOLD_GREEN:
+    case HLG_BOLD_YELLOW:
+    case HLG_BOLD_BLUE:
+    case HLG_BOLD_MAGENTA:
+    case HLG_BOLD_CYAN:
+    case HLG_BOLD_WHITE:
+        *attr = A_BOLD | COLOR_PAIR(hl_get_color_pair(-1, kind - HLG_BOLD_BLACK));
+        return 0;
+    default:
+        break;
+    }
+
     struct hl_group_info *info = lookup_group_info_by_key(hl_groups, kind);
 
     /* Default to normal */

@@ -27,6 +27,7 @@ enum tokenizer_type {
     TOKENIZER_SELECTED_LINE_NUMBER,
     TOKENIZER_ARROW_SEL,
     TOKENIZER_LOGO,
+    TOKENIZER_COLOR,
 };
 
 enum tokenizer_language_support {

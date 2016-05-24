@@ -42,8 +42,25 @@ enum hl_group_kind {
     HLG_SELECTED_LINE_NUMBER,
     HLG_ARROW_SEL,
     HLG_LOGO,
+    HLG_LAST,
 
-    HLG_LAST
+    /* Straight colors - not configurable */
+    HLG_BLACK,
+    HLG_RED,
+    HLG_GREEN,
+    HLG_YELLOW,
+    HLG_BLUE,
+    HLG_MAGENTA,
+    HLG_CYAN,
+    HLG_WHITE,
+    HLG_BOLD_BLACK,
+    HLG_BOLD_RED,
+    HLG_BOLD_GREEN,
+    HLG_BOLD_YELLOW,
+    HLG_BOLD_BLUE,
+    HLG_BOLD_MAGENTA,
+    HLG_BOLD_CYAN,
+    HLG_BOLD_WHITE,
 };
 
 /* }}}*/
@@ -152,6 +169,8 @@ int hl_groups_parse_config(hl_groups_ptr hl_groups);
 int hl_get_color_pair(int bgcolor, int fgcolor);
 
 int hl_ansi_get_color_attrs(const char *buf, int *attr);
+
+enum hl_group_kind hl_get_color_group(const char *color);
 
 /*@}*/
 /* }}}*/
