@@ -347,9 +347,8 @@ static void draw_current_line(struct sviewer *sview, int line, int lwidth, int a
     unsigned int length = 0;    /* Length of the line */
     int column_offset = 0;      /* Text to skip due to arrow */
     int highlight_attr;
-    enum ArrowStyle config_arrowstyle =
-            cgdbrc_get(CGDBRC_ARROWSTYLE)->variant.arrow_style;
-    int highlight_tabstop = cgdbrc_get(CGDBRC_TABSTOP)->variant.int_val;
+    enum ArrowStyle config_arrowstyle = cgdbrc_get_arrowstyle(CGDBRC_ARROWSTYLE);
+    int highlight_tabstop = cgdbrc_get_int(CGDBRC_TABSTOP);
 
     hl_groups_get_attr(hl_groups_instance, HLG_LINE_HIGHLIGHT, &highlight_attr);
 
@@ -676,7 +675,7 @@ int source_display(struct sviewer *sview, int focus)
     lwidth = log10_uint(count) + 1;
     sprintf(fmt, "%%%dd", lwidth);
 
-    arrow_selected_line = focus && cgdbrc_get(CGDBRC_ARROWSELECTEDLINE)->variant.int_val;
+    arrow_selected_line = focus && cgdbrc_get_int(CGDBRC_ARROWSELECTEDLINE);
 
     for (i = 0; i < height; i++, line++) {
         wmove(sview->win, i, 0);
@@ -968,8 +967,7 @@ int source_reload(struct sviewer *sview, const char *path, int force)
     time_t timestamp;
     struct list_node *cur;
     struct list_node *prev = NULL;
-    int auto_source_reload =
-            cgdbrc_get(CGDBRC_AUTOSOURCERELOAD)->variant.int_val;
+    int auto_source_reload = cgdbrc_get_int(CGDBRC_AUTOSOURCERELOAD);
 
     if (!path)
         return -1;
