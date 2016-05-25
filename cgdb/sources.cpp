@@ -327,6 +327,35 @@ static int load_file(struct list_node *node)
     return source_highlight(node);
 }
 
+static int get_line_leading_ws_count(const char *otext, int length, int tabstop)
+{
+    int i = 0;
+    int column_offset = 0;      /* Text to skip due to arrow */
+
+    if (isspace(otext[0]) || (otext[i] == CHAR_MAX)) {
+        for (i = 0; i < length - 1; i++) {
+            /* Skip highlight chars (HL_CHAR / CHAR_MAX) */
+            if (otext[i] == CHAR_MAX) {
+                i++;
+                continue;
+            }
+
+            /* Add one for space or number of spaces to next tabstop */
+            int offset = otext[i] != '\t' ? 1 :
+                tabstop - (column_offset % tabstop);
+
+            column_offset += offset;
+
+            if (!isspace(otext[i + 1])) {
+                column_offset--;
+                break;
+            }
+        }
+    }
+
+    return column_offset;
+}
+
 /* draw_current_line:  Draws the currently executing source line on the screen
  * ------------------  including the user-selected marker (arrow, highlight,
  *                     etc) indicating this is the executing line.
@@ -336,41 +365,28 @@ static int load_file(struct list_node *node)
  *   lwidth: The width of the line number, used to limit printing to the width
  *           of the screen.  Kinda ugly.
  */
-static void draw_current_line(struct sviewer *sview, int line, int lwidth, int arrow_attr)
+static void draw_current_line(struct sviewer *sview, const char *cur_line,
+                              int line, int lwidth, int arrow_attr)
 {
     int height = 0;             /* Height of curses window */
     int width = 0;              /* Width of curses window */
-    int i = 0, j = 0;           /* Iterators */
-    struct buffer *buf = NULL;  /* Pointer to the source buffer */
-    char *text = NULL;          /* The current line (highlighted) */
+    int i = 0;                  /* Iterators */
     const char *otext = NULL;   /* The current line (unhighlighted) */
     unsigned int length = 0;    /* Length of the line */
     int column_offset = 0;      /* Text to skip due to arrow */
-    int highlight_attr;
+    int line_highlight_attr = 0;
     enum ArrowStyle config_arrowstyle = cgdbrc_get_arrowstyle(CGDBRC_ARROWSTYLE);
     int highlight_tabstop = cgdbrc_get_int(CGDBRC_TABSTOP);
-
-    hl_groups_get_attr(hl_groups_instance, HLG_LINE_HIGHLIGHT, &highlight_attr);
 
     /* Initialize height and width */
     getmaxyx(sview->win, height, width);
 
-    buf = sview->cur->buf;
-
-    /* If the current selected line is the line executing, use cur_line */
-    if (line == sview->cur->sel_line && buf->cur_line != NULL) {
-        text = buf->cur_line;
-    } else {
-        text = buf->tlines[line];
-    }
     otext = sview->cur->buf->tlines[line];
     length = strlen(otext);
 
     /* Draw the appropriate arrow, if applicable */
     switch (config_arrowstyle) {
-
         case ARROWSTYLE_SHORT:
-
             wattron(sview->win, arrow_attr);
             waddch(sview->win, ACS_LTEE);
             waddch(sview->win, '>');
@@ -378,38 +394,17 @@ static void draw_current_line(struct sviewer *sview, int line, int lwidth, int a
             break;
 
         case ARROWSTYLE_LONG:
-
             wattron(sview->win, arrow_attr);
             waddch(sview->win, ACS_LTEE);
 
-            /* Compute the length of the arrow, respecting tab stops, etc. */
-            if (isspace(otext[0]) || (otext[i] == CHAR_MAX)) {
-                for (i = 0; i < length - 1; i++) {
-                    /* Skip highlight chars (HL_CHAR / CHAR_MAX) */
-                    if ((otext[i] == CHAR_MAX) && otext[i]) {
-                        i++;
-                        continue;
-                    }
-
-                    /* Add one for space or number of spaces to next tabstop */
-                    int offset = otext[i] != '\t' ? 1 :
-                            highlight_tabstop - (column_offset % highlight_tabstop);
-
-                    column_offset += offset;
-
-                    if (!isspace(otext[i + 1])) {
-                        column_offset--;
-                        break;
-                    }
-                }
-            }
+            column_offset = get_line_leading_ws_count(otext, length, highlight_tabstop);
 
             column_offset -= sview->cur->sel_col;
             if (column_offset < 0)
                 column_offset = 0;
             else {
                 /* Now actually draw the arrow */
-                for (j = 0; j < column_offset; j++)
+                for (i = 0; i < column_offset; i++)
                     waddch(sview->win, ACS_HLINE);
             }
 
@@ -418,29 +413,17 @@ static void draw_current_line(struct sviewer *sview, int line, int lwidth, int a
             break;
 
         case ARROWSTYLE_HIGHLIGHT:
+            /* Draw the entire line with the LINE_HIGHLIGHT background attribute */
             waddch(sview->win, VERT_LINE);
             waddch(sview->win, ' ');
 
-            wattron(sview->win, highlight_attr);
-            for (i = 0; i < width - lwidth - 2; i++) {
-                if (i < length) {
-                    /* Skip highlight chars (HL_CHAR / CHAR_MAX) */
-                    if ( otext[i] == CHAR_MAX )
-                        i++;
-                    else
-                        waddch(sview->win, otext[i]);
-                } else {
-                    waddch(sview->win, ' ');
-                }
-            }
-            wattroff(sview->win, highlight_attr);
-
-            return;
+            /* Set line_highlight_attr which we'll pass to hl_wprintw */
+            hl_groups_get_attr(hl_groups_instance, HLG_LINE_HIGHLIGHT, &line_highlight_attr);
     }
 
     /* Finally, print the source line */
-    hl_wprintw(sview->win, text, width - lwidth - 2,
-            sview->cur->sel_col + column_offset);
+    hl_wprintw(sview->win, cur_line, width - lwidth - 2,
+            sview->cur->sel_col + column_offset, line_highlight_attr);
 }
 
 /* --------- */
@@ -638,13 +621,17 @@ int source_display(struct sviewer *sview, int focus)
     int line;
     int i;
     int count;
-    int attr = 0, sellineno;
+    int focus_attr = focus ? A_BOLD : 0;
     int arrow_selected_line;
-    int enabled_bp, disabled_bp;
+    int sellineno_attr;
+    int enabled_bp_attr, disabled_bp_attr;
+    int arrow_sel_attr, arrow_attr;
 
-    hl_groups_get_attr(hl_groups_instance, HLG_SELECTED_LINE_NUMBER, &sellineno);
-    hl_groups_get_attr(hl_groups_instance, HLG_ENABLED_BREAKPOINT, &enabled_bp);
-    hl_groups_get_attr(hl_groups_instance, HLG_DISABLED_BREAKPOINT, &disabled_bp);
+    hl_groups_get_attr(hl_groups_instance, HLG_SELECTED_LINE_NUMBER, &sellineno_attr);
+    hl_groups_get_attr(hl_groups_instance, HLG_ENABLED_BREAKPOINT, &enabled_bp_attr);
+    hl_groups_get_attr(hl_groups_instance, HLG_DISABLED_BREAKPOINT, &disabled_bp_attr);
+    hl_groups_get_attr(hl_groups_instance, HLG_ARROW, &arrow_attr);
+    hl_groups_get_attr(hl_groups_instance, HLG_ARROW_SEL, &arrow_sel_attr);
 
     /* Check that a file is loaded */
     if (sview->cur == NULL || sview->cur->buf->tlines == NULL) {
@@ -678,6 +665,10 @@ int source_display(struct sviewer *sview, int focus)
     arrow_selected_line = focus && cgdbrc_get_int(CGDBRC_ARROWSELECTEDLINE);
 
     for (i = 0; i < height; i++, line++) {
+        int is_sel_line;
+        int is_exe_line;
+        const char *cur_line;
+
         wmove(sview->win, i, 0);
 
         if (!has_colors()) {
@@ -685,7 +676,7 @@ int source_display(struct sviewer *sview, int focus)
             continue;
         }
 
-        /* Outside of file, just finish drawing the vertical line */
+        /* Outside of file, just draw the vertical line */
         if (line < 0 || line >= count) {
             int j;
 
@@ -693,96 +684,72 @@ int source_display(struct sviewer *sview, int focus)
                 waddch(sview->win, ' ');
             waddch(sview->win, '~');
 
-            if (focus)
-                wattron(sview->win, A_BOLD);
+            wattron(sview->win, focus_attr);
             waddch(sview->win, VERT_LINE);
-            if (focus)
-                wattroff(sview->win, A_BOLD);
+            wattroff(sview->win, focus_attr);
 
-            for (j = 2 + lwidth; j < width; j++)
-                waddch(sview->win, ' ');
+            wclrtoeol(sview->win);
+            continue;
+        }
 
-            /* Mark the current line with an arrow or the selected line if in focus and arrowalllines is on */
-        } else if ( line == sview->cur->exe_line || (arrow_selected_line && sview->cur->sel_line == line) ) {
-            switch (sview->cur->breakpts[line]) {
-                case 0:
-                    {
-                        enum hl_group_kind arr_attr;
+        /* Is this the current selected line? */
+        is_sel_line = (sview->cur->sel_line == line);
+        /* Is this the current executing line */
+        is_exe_line = (sview->cur->exe_line == line);
+        /* Get line we should print */
+        cur_line = (is_sel_line && sview->cur->buf->cur_line) ?
+                       sview->cur->buf->cur_line : sview->cur->buf->tlines[line];
 
-                        if (line == sview->cur->sel_line && line != sview->cur->exe_line)
-                            arr_attr = HLG_ARROW_SEL;
-                        else
-                            arr_attr = HLG_ARROW;
+        /* Mark the current line with an arrow or the selected line if in focus and arrowalllines is on */
+        if ( is_exe_line || (arrow_selected_line && is_sel_line) ) {
+            int attr;
 
-                        hl_groups_get_attr(hl_groups_instance, arr_attr, &attr);
-                    }
-                    break;
-                case 1:
-                    attr = enabled_bp;
-                    break;
-                case 2:
-                    attr = disabled_bp;
-                    break;
-            }
+            if (sview->cur->breakpts[line] == 0)
+                attr = (is_sel_line && !is_exe_line) ? arrow_sel_attr : arrow_attr;
+            else
+                attr = (sview->cur->breakpts[line] == 1) ? enabled_bp_attr : disabled_bp_attr;
+
+            /* Print line number */
             wattron(sview->win, attr);
             wprintw(sview->win, fmt, line + 1);
             wattroff(sview->win, attr);
 
-            draw_current_line(sview, line, lwidth, attr);
+            draw_current_line(sview, cur_line, line, lwidth, attr);
 
             /* Look for breakpoints */
         } else if (sview->cur->breakpts[line]) {
-            if (sview->cur->breakpts[line] == 1)
-                attr = enabled_bp;
-            else
-                attr = disabled_bp;
+            int attr = (sview->cur->breakpts[line] == 1) ? enabled_bp_attr : disabled_bp_attr;
 
+            /* Print line number */
             wattron(sview->win, attr);
             wprintw(sview->win, fmt, line + 1);
             wattroff(sview->win, attr);
 
-            if (focus)
-                wattron(sview->win, A_BOLD);
+            /* Vertical bar */
+            wattron(sview->win, focus_attr);
             waddch(sview->win, VERT_LINE);
-            if (focus)
-                wattroff(sview->win, A_BOLD);
+            wattroff(sview->win, focus_attr);
             waddch(sview->win, ' ');
 
-            if (line == sview->cur->sel_line && sview->cur->buf->cur_line != NULL) {
-                hl_wprintw(sview->win, sview->cur->buf->cur_line,
-                        width - lwidth - 2, sview->cur->sel_col);
-
-            } else {
-                hl_wprintw(sview->win, sview->cur->buf->tlines[line],
-                        width - lwidth - 2, sview->cur->sel_col);
-            }
+            hl_wprintw(sview->win, cur_line, width - lwidth - 2, sview->cur->sel_col, 0);
         }
         /* Ordinary lines */
         else {
-            if (focus && sview->cur->sel_line == line)
-                wattron(sview->win, sellineno);
+            int lineno_attr = (focus && is_sel_line) ? sellineno_attr : 0;
 
+            /* Print line number */
+            wattron(sview->win, lineno_attr);
             wprintw(sview->win, fmt, line + 1);
+            wattroff(sview->win, lineno_attr);
 
-            if (focus && sview->cur->sel_line == line)
-                wattroff(sview->win, sellineno);
-
-            if (focus)
-                wattron(sview->win, A_BOLD);
+            /* Vertical bar */
+            wattron(sview->win, focus_attr);
             waddch(sview->win, VERT_LINE);
-            if (focus)
-                wattroff(sview->win, A_BOLD);
+            wattroff(sview->win, focus_attr);
             waddch(sview->win, ' ');
 
             /* No special line information */
-            if (line == sview->cur->sel_line && sview->cur->buf->cur_line != NULL) {
-                hl_wprintw(sview->win, sview->cur->buf->cur_line,
-                        width - lwidth - 2, sview->cur->sel_col);
-
-            } else {
-                hl_wprintw(sview->win, sview->cur->buf->tlines[line],
-                        width - lwidth - 2, sview->cur->sel_col);
-            }
+            hl_wprintw(sview->win, cur_line, width - lwidth - 2, sview->cur->sel_col, 0);
         }
     }
 
