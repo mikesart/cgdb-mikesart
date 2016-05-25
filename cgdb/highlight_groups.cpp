@@ -50,13 +50,13 @@ struct hl_groups {
 static struct hl_group_info *lookup_group_info_by_key(struct hl_groups *groups,
         enum hl_group_kind kind)
 {
-    struct hl_group_info *lgroups;
-    int i;
-
-    for (i = 0; i < HLG_LAST; ++i) {
-        lgroups = &groups->groups[i];
-        if (kind == lgroups->kind)
-            return lgroups;
+    if (groups) {
+        int i;
+        for (i = 0; i < HLG_LAST; ++i) {
+            struct hl_group_info *lgroups = &groups->groups[i];
+            if (kind == lgroups->kind)
+                return lgroups;
+        }
     }
 
     return NULL;
@@ -276,23 +276,30 @@ static const struct color_info *color_spec_for_name(const char *name)
     return NULL;
 }
 
-enum hl_group_kind hl_get_color_group(const char *color)
+enum hl_group_kind hl_get_color_group(hl_groups_ptr hl_group, const char *color)
 {
     const struct color_info *color_info = color_spec_for_name(color);
 
     return color_info ? color_info->hlg_type : HLG_LAST;
 }
 
-int hl_get_color_pair(int bgcolor, int fgcolor)
+/* Given an ncurses COLOR_XX background and foreground color, return an ncurses
+ *  color pair index for that color.
+ */
+static int hl_get_color_pair(hl_groups_ptr hl_groups, int bgcolor, int fgcolor)
 {
     static int color_pairs_inited = 0;
     static int color_pair_table[9][9];
+
+    /* If ansi colors aren't enabled, return default color pair 0 */
+    if (!hl_groups->ansi_color)
+        return 0;
 
     if (!color_pairs_inited) {
         int fg, bg;
         int color_pair = 1;
 
-        /* Initialize [1..8][1..8] */
+        /* Initialize 64 [1..8][1..8] color entries */
         for (fg = COLOR_BLACK; fg <= COLOR_WHITE; fg++) {
             for (bg = COLOR_BLACK; bg <= COLOR_WHITE; bg++) {
                 init_pair(color_pair, fg, bg);
@@ -300,12 +307,19 @@ int hl_get_color_pair(int bgcolor, int fgcolor)
             }
         }
 
-        /* Initialize colors w/ default bg: [0][1..8] */
+        /* init_pair:
+         *  The value of the first argument must be between 1 and COLOR_PAIRS-1,
+         * except that if default colors are used (see use_default_colors) the
+         * upper limit is adjusted to allow for extra pairs which use a default
+         * color in foreground and/or background.
+         */
+
+        /* Initialize colors with default bg: [0][1..8] */
         for (fg = COLOR_BLACK; fg <= COLOR_WHITE; fg++) {
             init_pair(color_pair, fg, -1);
             color_pair_table[0][fg + 1] = color_pair++;
         }
-        /* Initialize colors w/ default fg: [1..8][0] */
+        /* Initialize colors with default fg: [1..8][0] */
         for (bg = COLOR_BLACK; bg <= COLOR_WHITE; bg++) {
             init_pair(color_pair, -1, bg);
             color_pair_table[bg + 1][0] = color_pair++;
@@ -348,11 +362,7 @@ setup_group(hl_groups_ptr hl_groups, enum hl_group_kind group,
     static int next_color_pair = 1;
     struct hl_group_info *info;
 
-    if (!hl_groups)
-        return -1;
-
     info = lookup_group_info_by_key(hl_groups, group);
-
     if (!info)
         return -1;
 
@@ -372,7 +382,9 @@ setup_group(hl_groups_ptr hl_groups, enum hl_group_kind group,
 
 #ifdef NCURSES_VERSION
     if (hl_groups->ansi_color) {
-        info->color_pair = hl_get_color_pair(back_color, fore_color);
+        /* Ansi mode is enabled so we've got 16 colors and 64 color pairs.
+           Set the color_pair index for this bg / fg color combination. */
+        info->color_pair = hl_get_color_pair(hl_groups, back_color, fore_color);
         return 0;
     }
 #endif
@@ -426,11 +438,7 @@ setup_group(hl_groups_ptr hl_groups, enum hl_group_kind group,
 hl_groups_ptr hl_groups_initialize(void)
 {
     int i;
-
-    hl_groups_ptr hl_groups = (hl_groups_ptr) malloc(sizeof (struct hl_groups));
-
-    if (!hl_groups)
-        return NULL;
+    hl_groups_ptr hl_groups = (hl_groups_ptr) cgdb_malloc(sizeof (struct hl_groups));
 
     hl_groups->in_color = 0;
     hl_groups->ansi_color = 0;
@@ -480,6 +488,8 @@ int hl_groups_setup(hl_groups_ptr hl_groups)
 #endif
 
     hl_groups->in_color = has_colors();
+
+    //$ TODO: Add ability to disable ansi_color mode in cgdbrc file
     hl_groups->ansi_color = has_colors() && (COLORS >= 8) && (COLOR_PAIRS >= 64);
 
     /* Set up the default groups. */
@@ -511,7 +521,8 @@ hl_groups_get_attr(hl_groups_ptr hl_groups, enum hl_group_kind kind, int *attr)
     case HLG_MAGENTA:
     case HLG_CYAN:
     case HLG_WHITE:
-        *attr = COLOR_PAIR(hl_get_color_pair(-1, kind - HLG_BLACK));
+        /* Return ncurses color pair attribute for color */
+        *attr = COLOR_PAIR(hl_get_color_pair(hl_groups, -1, kind - HLG_BLACK));
         return 0;
     case HLG_BOLD_BLACK:
     case HLG_BOLD_RED:
@@ -521,7 +532,8 @@ hl_groups_get_attr(hl_groups_ptr hl_groups, enum hl_group_kind kind, int *attr)
     case HLG_BOLD_MAGENTA:
     case HLG_BOLD_CYAN:
     case HLG_BOLD_WHITE:
-        *attr = A_BOLD | COLOR_PAIR(hl_get_color_pair(-1, kind - HLG_BOLD_BLACK));
+        /* Return ncurses color pair and BOLD attribute for color */
+        *attr = A_BOLD | COLOR_PAIR(hl_get_color_pair(hl_groups, -1, kind - HLG_BOLD_BLACK));
         return 0;
     default:
         break;
@@ -529,15 +541,15 @@ hl_groups_get_attr(hl_groups_ptr hl_groups, enum hl_group_kind kind, int *attr)
 
     struct hl_group_info *info = lookup_group_info_by_key(hl_groups, kind);
 
-    /* Default to normal */
-    *attr = (kind == HLG_LINE_HIGHLIGHT) ? A_BOLD : A_NORMAL;
-
-    if (!hl_groups || !info || !attr)
+    if (!info) {
+        /* Default to normal, or bold if this was a highlight */
+        *attr = (kind == HLG_LINE_HIGHLIGHT) ? A_BOLD : A_NORMAL;
         return -1;
+    }
 
-    if (!hl_groups->in_color)
+    if (!hl_groups->in_color) {
         *attr = info->mono_attrs;
-    else {
+    } else {
         *attr = info->color_attrs;
         if (info->color_pair)
             *attr |= COLOR_PAIR(info->color_pair);
@@ -748,7 +760,102 @@ int hl_groups_parse_config(hl_groups_ptr hl_groups)
     return 0;
 }
 
-int hl_ansi_get_color_attrs(const char *buf, int *attr)
+/* Given 24-bit rgb value, calculate closest color in our 16 entry color table */
+static int ansi_get_closest_color_value(int r, int g, int b)
+{
+    static const struct
+    {
+        int r, g, b;
+    } standard_ansi_colors[] = {
+      // standard colors
+      {   0,   0,   0 }, // COLOR_BLACK
+      { 224,   0,   0 }, // COLOR_RED
+      {   0, 224,   0 }, // COLOR_GREEN
+      { 224, 224,   0 }, // COLOR_YELLOW
+      {   0,   0, 224 }, // COLOR_BLUE
+      { 224,   0, 224 }, // COLOR_MAGENTA
+      {   0, 224, 224 }, // COLOR_CYAN
+      { 224, 224, 224 }, // COLOR_WHITE
+      // High intensity colors
+      { 128, 128, 128 }, // COLOR_BLACK
+      { 255,  64,  64 }, // COLOR_RED
+      {  64, 255,  64 }, // COLOR_GREEN
+      { 255, 255,  64 }, // COLOR_YELLOW
+      {  64,  64, 255 }, // COLOR_BLUE
+      { 255,  64, 255 }, // COLOR_MAGENTA
+      {  64, 255, 255 }, // COLOR_CYAN
+      { 255, 255, 255 }, // COLOR_WHITE
+    };
+    int i;
+    int index = 0;
+    int distance = -1;
+
+    for (i = 0; i < sizeof(standard_ansi_colors) / sizeof(standard_ansi_colors[0]); i++)
+    {
+        int r2 = standard_ansi_colors[i].r;
+        int g2 = standard_ansi_colors[i].g;
+        int b2 = standard_ansi_colors[i].b;
+        /* Distance in rgb space. Not all that accurate, but should work for this. */
+        int d = (r2-r)*(r2-r) + (g2-g)*(g2-g) + (b2-b)*(b2-b);
+
+        if ((distance == -1) || (d < distance))
+        {
+            distance = d;
+            index = i;
+        }
+    }
+
+    return index;
+}
+
+/*
+   In 256-color mode, the color-codes are the following:
+
+   0x00-0x07: standard colors (as in ESC [ 30–37 m)
+   0x08-0x0F: high intensity colors (as in ESC [ 90–97 m)
+   0x10-0xE7: 6 × 6 × 6 = 216 colors: 16 + 36 × r + 6 × g + b (0 ? r, g, b ? 5)
+   0xE8-0xFF: grayscale from black to white in 24 steps
+
+   Set the foreground color to index N: \033[38;5;${N}m
+   Set the background color to index M: \033[48;5;${M}m
+*/
+static int ansi_get_color_code_index(const char *buf, int *index)
+{
+    int i = 0;
+
+    if (buf[i] == ';' && buf[i+1] == '5' && buf[i+2] == ';')
+    {
+        int num = 0;
+
+        i += 3;
+        while (isdigit(buf[i]))
+        {
+            num = num * 10 + buf[i] - '0';
+            i++;
+        }
+
+        if (num >= 232) {
+            /* Convert grayscale 232 - 255 value to 0 - 255 rgb value */
+            int gray = 255 * (MIN(num, 255) - 232) / (255 - 232);
+            num = ansi_get_closest_color_value( gray, gray, gray );
+        } else if (num >= 16) {
+            /* Convert 0-6 component values to 0 - 255 rgb values */
+            int red = ((num - 16) / 36);
+            int green = (((num - 16) - red * 36) / 6);
+            int blue = ((num - 16) % 6);
+            num = ansi_get_closest_color_value( red * 255 / 6, green * 255 / 6, blue * 255 / 6 );
+        }
+
+        *index = num;
+        return i;
+    }
+
+    *index = -1;
+    return 0;
+}
+
+/* Parse ansi color escape sequence in buf, return ncurses attribute and esc length */
+int hl_ansi_get_color_attrs(hl_groups_ptr hl_groups, const char *buf, int *attr)
 {
     int i = 0;
     int fg = -1;
@@ -757,14 +864,20 @@ int hl_ansi_get_color_attrs(const char *buf, int *attr)
 
     *attr = 0;
 
+    /* If we're not in ansi mode, just return default color pair 0 and don't parse
+       the string. */
+    if (!hl_groups->ansi_color)
+        return 0;
+
     if ((buf[i++] == '\033') && (buf[i++] == '[')) {
 
-        /* Check for reset attributes */
+        /* Check for reset attributes. Ie: \033[m or \033[0m */
         if (buf[i] == 'm')
             return 3;
         else if (buf[i] == '0' && buf[i+1] == 'm')
             return 4;
 
+        /* Parse number;number;number;m sequences */
         for (;;)
         {
             int num = 0;
@@ -809,12 +922,33 @@ int hl_ansi_get_color_attrs(const char *buf, int *attr)
                 a &= ~A_UNDERLINE;
                 break;
             case 27: /* Use normal colors */
-            case 39: /* Rest text color to defaults */
+            case 39: /* Reset text color to defaults */
                 fg = -1;
                 bg = -1;
                 break;
             case 49: /* Reset background color to defaults */
                 bg = -1;
+                break;
+            case 38:
+                /* Foreground xterm color code index */
+                i += ansi_get_color_code_index(buf + i, &num);
+                if (num >= 0 && num < 16) {
+                    fg = num & 7;
+                    a |= ((num & 0x8) ? A_BOLD : 0);
+                } else {
+                    a |= A_REVERSE | A_BOLD;
+                }
+                break;
+            case 48:
+                /* Background xterm color code index */
+                i += ansi_get_color_code_index(buf + i, &num);
+                if (num >= 0 && num < 16) {
+                    bg = num & 7;
+                    a |= ((num & 0x8) ? A_BOLD : 0);
+                }
+                else {
+                    a |= A_REVERSE | A_BOLD;
+                }
                 break;
                 /* Set ANSI text color */
             case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37:
@@ -827,18 +961,18 @@ int hl_ansi_get_color_attrs(const char *buf, int *attr)
                 /* Set bright ANSI text color */
             case 90: case 91: case 92: case 93: case 94: case 95: case 96: case 97:
                 fg = num - 90;
-                a |= A_STANDOUT;
+                a |= A_BOLD;
                 break;
                 /* Set bright ANSI background color */
             case 100: case 101: case 102: case 103: case 104: case 105: case 106: case 107:
                 bg = num - 100;
-                a |= A_STANDOUT;
+                a |= A_BOLD;
                 break;
             }
 
             if (buf[i] == 'm')
             {
-                int color_pair = hl_get_color_pair(bg, fg);
+                int color_pair = hl_get_color_pair(hl_groups, bg, fg);
 
                 *attr = a | COLOR_PAIR(color_pair);
                 return i + 1;

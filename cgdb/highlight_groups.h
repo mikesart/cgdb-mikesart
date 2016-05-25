@@ -166,11 +166,37 @@ int hl_groups_get_attr(hl_groups_ptr hl_groups, enum hl_group_kind kind,
  */
 int hl_groups_parse_config(hl_groups_ptr hl_groups);
 
-int hl_get_color_pair(int bgcolor, int fgcolor);
+/**
+ * Parse an ansi SGR (Select Graphic Rendition) escape sequence and return the
+ * attributes you can use with ncurses.
+ *
+ * \param hl_groups
+ * An instance of hl_groups to operate on.
+ *
+ * \param buf
+ * String with escape sequence to parse
+ *
+ * \param attr
+ * Ncurses attribute calculated from escape sequence
+ *
+ * \return
+ * Number of characters in escape sequence
+ */
+int hl_ansi_get_color_attrs(hl_groups_ptr hl_groups, const char *buf, int *attr);
 
-int hl_ansi_get_color_attrs(const char *buf, int *attr);
-
-enum hl_group_kind hl_get_color_group(const char *color);
+/**
+ * Calculate hl_group_kind from color name
+ *
+ * \param hl_groups
+ * An instance of hl_groups to operate on
+ *
+ * \param color
+ * Color name. Ie: Blue, DarkBlue, LightBlue, etc.
+ *
+ * \return
+ * hl_group_kind color enum, or HLG_LAST if not found
+ */
+enum hl_group_kind hl_get_color_group(hl_groups_ptr hl_groups, const char *color);
 
 /*@}*/
 /* }}}*/

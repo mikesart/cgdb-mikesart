@@ -68,7 +68,7 @@ static void add_type(struct ibuf *ibuf, int *lasttype, int newtype)
 static enum hl_group_kind hlg_from_tokenizer_type(enum tokenizer_type type, const char *tok_data)
 {
     switch(type) {
-        case TOKENIZER_COLOR: return hl_get_color_group(tok_data);
+        case TOKENIZER_COLOR: return hl_get_color_group(hl_groups_instance, tok_data);
         case TOKENIZER_KEYWORD: return HLG_KEYWORD;
         case TOKENIZER_TYPE: return HLG_TYPE;
         case TOKENIZER_LITERAL: return HLG_LITERAL;
