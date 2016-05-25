@@ -49,9 +49,9 @@
 #endif /* HAVE_LIMITS_H */
 
 /* Local Includes */
+#include "cgdb.h"
 #include "highlight.h"
 #include "sources.h"
-#include "cgdb.h"
 #include "logo.h"
 #include "sys_util.h"
 #include "fs_util.h"
@@ -613,7 +613,7 @@ char *source_current_file(struct sviewer *sview, char *path)
     return path;
 }
 
-int source_display(struct sviewer *sview, int focus)
+int source_display(struct sviewer *sview, int focus, enum win_refresh dorefresh)
 {
     char fmt[5];
     int width, height;
@@ -754,8 +754,11 @@ int source_display(struct sviewer *sview, int focus)
     }
 
     wmove(sview->win, height - (line - sview->cur->sel_line), lwidth + 2);
-    wrefresh(sview->win);
 
+    if (dorefresh == WIN_REFRESH)
+        wrefresh(sview->win);
+    else
+        wnoutrefresh(sview->win);
     return 0;
 }
 
