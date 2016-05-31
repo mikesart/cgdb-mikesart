@@ -329,28 +329,25 @@ static int load_file(struct list_node *node)
 
 static int get_line_leading_ws_count(const char *otext, int length, int tabstop)
 {
-    int i = 0;
+    int i;
     int column_offset = 0;      /* Text to skip due to arrow */
 
-    if (isspace(otext[0]) || (otext[i] == CHAR_MAX)) {
-        for (i = 0; i < length - 1; i++) {
-            /* Skip highlight chars (HL_CHAR / CHAR_MAX) */
-            if (otext[i] == CHAR_MAX) {
-                i++;
-                continue;
-            }
+    for (i = 0; i < length - 1; i++) {
+        int offset;
 
-            /* Add one for space or number of spaces to next tabstop */
-            int offset = otext[i] != '\t' ? 1 :
-                tabstop - (column_offset % tabstop);
-
-            column_offset += offset;
-
-            if (!isspace(otext[i + 1])) {
-                column_offset--;
-                break;
-            }
+        /* Skip highlight chars (HL_CHAR / CHAR_MAX) */
+        if (otext[i] == CHAR_MAX) {
+            i++;
+            continue;
         }
+
+        /* Bail if we hit a non whitespace character */
+        if (!isspace(otext[i]))
+            break;
+
+        /* Add one for space or number of spaces to next tabstop */
+        offset = (otext[i] == '\t') ? (tabstop - (column_offset % tabstop)) : 1;
+        column_offset += offset;
     }
 
     return column_offset;
@@ -370,7 +367,7 @@ static void draw_current_line(struct sviewer *sview, const char *cur_line,
 {
     int height = 0;             /* Height of curses window */
     int width = 0;              /* Width of curses window */
-    int i = 0;                  /* Iterators */
+    int i;                      /* Iterators */
     const char *otext = NULL;   /* The current line (unhighlighted) */
     unsigned int length = 0;    /* Length of the line */
     int column_offset = 0;      /* Text to skip due to arrow */
@@ -398,15 +395,13 @@ static void draw_current_line(struct sviewer *sview, const char *cur_line,
             waddch(sview->win, ACS_LTEE);
 
             column_offset = get_line_leading_ws_count(otext, length, highlight_tabstop);
-
-            column_offset -= sview->cur->sel_col;
+            column_offset -= (sview->cur->sel_col + 1);
             if (column_offset < 0)
                 column_offset = 0;
-            else {
-                /* Now actually draw the arrow */
-                for (i = 0; i < column_offset; i++)
-                    waddch(sview->win, ACS_HLINE);
-            }
+
+            /* Now actually draw the arrow */
+            for (i = 0; i < column_offset; i++)
+                waddch(sview->win, ACS_HLINE);
 
             waddch(sview->win, '>');
             wattroff(sview->win, arrow_attr);
