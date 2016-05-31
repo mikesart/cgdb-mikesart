@@ -17,6 +17,8 @@ Please let us know if you try any of the below and run into any issues or have a
 - implement ^L for clearing gdb window
 - use wnoutrefresh/doupdate instead of wrefresh when drawing ncurses windows. Eliminates a lot of flashing.
 - use strcasecmp for default file type (fixes fltk .H parsing)
+- add support for local and global marks (including '., '')
+- add C-U, C-D, g, gg, G support to filedlg
 
 ### Minor tweaks / bug fixes
 - update configure version number
