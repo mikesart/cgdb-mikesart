@@ -65,8 +65,8 @@ static int cgdbrc_set_val(struct cgdbrc_config_option config_option);
  */
 static struct cgdbrc_config_option cgdbrc_config_options[CGDBRC_WRAPSCAN + 1] = {
     {CGDBRC_ANSIESCAPEPARSING, {1}},
-    {CGDBRC_ARROWSELECTEDLINE, {0}},
-    {CGDBRC_ARROWSTYLE, {ARROWSTYLE_SHORT}},
+    {CGDBRC_ARROWSELECTEDLINE, {1}},
+    {CGDBRC_ARROWSTYLE, {ARROWSTYLE_LONG}},
     {CGDBRC_AUTOSOURCERELOAD, {1}},
     {CGDBRC_CGDB_MODE_KEY, {CGDB_KEY_ESC}},
     {CGDBRC_COLOR, {1}},
