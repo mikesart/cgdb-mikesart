@@ -1142,11 +1142,11 @@ static void source_input(struct sviewer *sview, int key)
     switch (key) {
         case CGDB_KEY_UP:
         case 'k':              /* VI-style up-arrow */
-            source_vscroll(sview, -1);
+            source_vscroll(sview, G_line_number >= 0 ? -G_line_number : -1);
             break;
         case CGDB_KEY_DOWN:
         case 'j':              /* VI-style down-arrow */
-            source_vscroll(sview, 1);
+            source_vscroll(sview, G_line_number >= 0 ? G_line_number : 1);
             break;
         case CGDB_KEY_LEFT:
         case 'h':
