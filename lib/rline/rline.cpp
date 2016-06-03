@@ -407,7 +407,8 @@ int rline_resize_terminal_and_redisplay(struct rline *rline, int rows, int cols)
     size.ws_ypixel = 0;
     ioctl(fileno(rline->input), TIOCSWINSZ, &size);
 
-    rl_resize_terminal();
+    /* Set Readline's idea of the terminal size to rows rows and cols columns. */
+    rl_set_screen_size(rows, cols);
     return 0;
 }
 
