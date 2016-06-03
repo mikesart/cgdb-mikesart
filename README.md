@@ -19,6 +19,9 @@ Please let us know if you try any of the below and run into any issues or have a
 - use strcasecmp for default file type (fixes fltk .H parsing)
 - add support for local and global marks (including '., '')
 - add C-U, C-D, g, gg, G support to filedlg
+- Add support for <digits>j, <digits>k source movement
+- Color logos. Woot! :)
+- Pull Armin Widegreen's rust syntax highlighting patch
 
 ### Minor tweaks / bug fixes
 - update configure version number
@@ -41,6 +44,7 @@ Please let us know if you try any of the below and run into any issues or have a
 - fix incorrect printf format specifiers
 - fix several spelling, grammar mistakes
 - switch several malloc calls to cgdb_malloc
+- check file existence before adding to file dialog
 
 CGDB
 ====
