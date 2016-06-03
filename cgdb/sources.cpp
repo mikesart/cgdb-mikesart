@@ -725,18 +725,22 @@ int source_display(struct sviewer *sview, int focus, enum win_refresh dorefresh)
     int enabled_bp_attr, disabled_bp_attr;
     int arrow_sel_attr, arrow_attr;
 
+    /* Check that a file is loaded */
+    if (sview->cur == NULL || sview->cur->buf->tlines == NULL) {
+        logo_display(sview->win);
+
+        if (dorefresh == WIN_REFRESH)
+            wrefresh(sview->win);
+        else
+            wnoutrefresh(sview->win);
+        return 0;
+    }
+
     hl_groups_get_attr(hl_groups_instance, HLG_SELECTED_LINE_NUMBER, &sellineno_attr);
     hl_groups_get_attr(hl_groups_instance, HLG_ENABLED_BREAKPOINT, &enabled_bp_attr);
     hl_groups_get_attr(hl_groups_instance, HLG_DISABLED_BREAKPOINT, &disabled_bp_attr);
     hl_groups_get_attr(hl_groups_instance, HLG_ARROW, &arrow_attr);
     hl_groups_get_attr(hl_groups_instance, HLG_ARROW_SEL, &arrow_sel_attr);
-
-    /* Check that a file is loaded */
-    if (sview->cur == NULL || sview->cur->buf->tlines == NULL) {
-        logo_display(sview->win);
-        wrefresh(sview->win);
-        return 0;
-    }
 
     /* Make sure cursor is visible */
     curs_set( !!focus );

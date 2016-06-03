@@ -182,7 +182,7 @@ int hl_groups_parse_config(hl_groups_ptr hl_groups);
  * \return
  * Number of characters in escape sequence
  */
-int hl_ansi_get_color_attrs(hl_groups_ptr hl_groups, const char *buf, int *attr);
+int hl_ansi_get_color_attrs(hl_groups_ptr hl_groups, const char *buf, int *attr, int force_esc_parsing);
 
 /**
  * Calculate hl_group_kind from color name
