@@ -116,6 +116,7 @@ static int tty_win_on = 0;      /* Flag: tty window being shown */
 static struct sviewer *src_win = NULL;  /* The source viewer window */
 static WINDOW *status_win = NULL;   /* The status line */
 static WINDOW *tty_status_win = NULL;   /* The tty status line */
+static WINDOW *vseparator_win = NULL;
 static enum Focus focus = GDB;  /* Which pane is currently focused */
 static struct winsize screen_size;  /* Screen size */
 
@@ -224,7 +225,7 @@ static int get_src_status_row(void)
 
 static int get_src_status_col(void)
 {
-    return get_src_col();;
+    return get_src_col();
 }
 
 static int get_src_status_height(void)
@@ -354,16 +355,28 @@ static int get_gdb_width(void)
     return (screen_size.ws_col);
 }
 
-static void separator_display()
+static void separator_display(int draw)
 {
-    int col = get_sep_col();
-    int row = get_sep_row();
-    int last_row = row + get_sep_height();
+    int x = get_sep_col();
+    int y = get_sep_row();
+    int h = y + get_sep_height();
 
-    for (; row < last_row; ++row) {
-        wmove(stdscr, row, col);
-        waddch(stdscr, VERT_LINE);
-        wnoutrefresh(stdscr);
+    if (draw && !vseparator_win) {
+        vseparator_win = newwin(h, 1, y, x);
+    } else if (!draw && vseparator_win) {
+        delwin(vseparator_win);
+        vseparator_win = NULL;
+    }
+
+    if (vseparator_win) {
+        /* Move window to correct spot */
+        mvwin(vseparator_win, y, x);
+
+        /* Draw vertical line in window */
+        wmove(vseparator_win, 0, 0);
+        wvline(vseparator_win, VERT_LINE, h);
+
+        wnoutrefresh(vseparator_win);
     }
 }
 
@@ -518,8 +531,7 @@ void if_draw(void)
     if (get_src_height() > 0)
         source_display(src_win, focus == CGDB, WIN_NO_REFRESH);
 
-    if (cur_split_orientation == SPLIT_VERTICAL)
-        separator_display();
+    separator_display(cur_split_orientation == SPLIT_VERTICAL);
 
     if (tty_win_on && get_tty_height() > 0)
         scr_refresh(tty_win, focus == TTY, WIN_NO_REFRESH);
@@ -1671,20 +1683,35 @@ void if_shutdown(void)
     if (curses_initialized)
         endwin();
 
-    if (status_win != NULL)
+    if (status_win) {
         delwin(status_win);
+        status_win = NULL;
+    }
 
-    if (tty_status_win != NULL)
+    if (tty_status_win) {
         delwin(tty_status_win);
+        tty_status_win = NULL;
+    }
 
-    if (gdb_win != NULL)
+    if (gdb_win) {
         scr_free(gdb_win);
+        gdb_win = NULL;
+    }
 
-    if (tty_win != NULL)
+    if (tty_win) {
         scr_free(tty_win);
+        tty_win = NULL;
+    }
 
-    if (src_win != NULL)
+    if (src_win) {
         source_free(src_win);
+        src_win = NULL;
+    }
+
+    if (vseparator_win) {
+        delwin(vseparator_win);
+        vseparator_win = NULL;
+    }
 }
 
 void if_set_focus(Focus f)
