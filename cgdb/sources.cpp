@@ -106,22 +106,6 @@ static struct list_node *get_node(struct sviewer *sview, const char *path)
     return NULL;
 }
 
-/* stb__sbgrowf: internal stretchy buffer grow function.
- */
-int stb__sbgrowf( void **arr, int increment, int itemsize )
-{
-    int m = *arr ? 2 * stb__sbm( *arr ) + increment : increment + 1; 
-    void *p = cgdb_realloc( *arr ? stb__sbraw( *arr ) : 0,
-                            itemsize * m + sizeof( int ) * 2 );
-
-    if ( !*arr )
-        ( ( int * )p )[ 1 ] = 0; 
-    *arr = ( void * )( ( int * )p + 2 ); 
-    stb__sbm( *arr ) = m; 
-
-    return 0;
-}
-
 /**
  * Get's the timestamp of a particular file.
  *
@@ -372,8 +356,8 @@ static void draw_current_line(struct sviewer *sview, const char *cur_line,
     unsigned int length = 0;    /* Length of the line */
     int column_offset = 0;      /* Text to skip due to arrow */
     int line_highlight_attr = 0;
-    enum ArrowStyle config_arrowstyle = cgdbrc_get_arrowstyle(CGDBRC_ARROWSTYLE);
     int highlight_tabstop = cgdbrc_get_int(CGDBRC_TABSTOP);
+    enum ArrowStyle config_arrowstyle = cgdbrc_get_arrowstyle(CGDBRC_ARROWSTYLE);
 
     /* Initialize height and width */
     getmaxyx(sview->win, height, width);
@@ -703,8 +687,8 @@ int source_goto_mark(struct sviewer *sview, int key)
         sview->jump_back_mark.line = sview->cur->sel_line;
         sview->jump_back_mark.node = sview->cur;
 
-	sview->cur = node;
-	source_set_sel_line(sview, line + 1);
+        sview->cur = node;
+        source_set_sel_line(sview, line + 1);
         return 1;
     }
 
@@ -743,7 +727,7 @@ int source_display(struct sviewer *sview, int focus, enum win_refresh dorefresh)
     hl_groups_get_attr(hl_groups_instance, HLG_ARROW_SEL, &arrow_sel_attr);
 
     /* Make sure cursor is visible */
-    curs_set( !!focus );
+    curs_set(!!focus);
 
     /* Initialize variables */
     getmaxyx(sview->win, height, width);
@@ -970,6 +954,7 @@ void source_free(struct sviewer *sview)
         source_del(sview, sview->list_head->path);
 
     delwin(sview->win);
+    sview->win = NULL;
 }
 
 void source_search_regex_init(struct sviewer *sview)
@@ -994,13 +979,13 @@ int source_search_regex(struct sviewer *sview,
         regex == NULL || strlen(regex) == 0) {
 
         if (sview && sview->cur) {
-            free( sview->cur->buf->cur_line );
+            free(sview->cur->buf->cur_line);
             sview->cur->buf->cur_line = NULL;
         }
         return -1;
     }
 
-    if ( !sbcount(sview->cur->orig_buf.tlines ) )
+    if (!sbcount(sview->cur->orig_buf.tlines))
         load_file_buf(&sview->cur->orig_buf, sview->cur->path);
 
     return hl_regex(regex,
@@ -1022,7 +1007,7 @@ void source_disable_break(struct sviewer *sview, const char *path, int line)
     if (!node->buf && load_file(node))
         return;
 
-    if (line > 0 && line <= sbcount(node->buf->tlines))
+    if (line > 0 && line <= sbcount(node->lflags))
         node->lflags[line - 1].breakpt = 2;
 }
 
@@ -1036,7 +1021,7 @@ void source_enable_break(struct sviewer *sview, const char *path, int line)
     if (!node->buf && load_file(node))
         return;
 
-    if (line > 0 && line <= sbcount(node->buf->tlines)) {
+    if (line > 0 && line < sbcount(node->lflags)) {
         node->lflags[line - 1].breakpt = 1;
     }
 }
