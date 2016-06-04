@@ -180,6 +180,7 @@ static int command_focus_tty(int param);
 static int command_do_bang(int param);
 static int command_do_focus(int param);
 static int command_do_help(int param);
+static int command_do_logo(int param);
 static int command_do_quit(int param);
 static int command_do_shell(int param);
 static int command_source_reload(int param);
@@ -204,6 +205,7 @@ COMMANDS commands[] = {
     /* edit         */ {"e", (action_t)command_source_reload, 0},
     /* focus        */ {"focus", (action_t)command_do_focus, 0},
     /* help         */ {"help", (action_t)command_do_help, 0},
+    /* logo         */ {"logo", (action_t)command_do_logo, 0},
     /* highlight    */ {"highlight", (action_t)command_parse_highlight, 0},
     /* highlight    */ {"hi", (action_t)command_parse_highlight, 0},
     /* imap         */ {"imap", (action_t)command_parse_map, 0},
@@ -547,6 +549,12 @@ int command_do_focus(int param)
 int command_do_help(int param)
 {
     if_display_help();
+    return 0;
+}
+
+int command_do_logo(int param)
+{
+    if_display_logo();
     return 0;
 }
 
