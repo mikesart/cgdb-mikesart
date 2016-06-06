@@ -865,7 +865,7 @@ void source_move(struct sviewer *sview,
 {
     delwin(sview->win);
     sview->win = newwin(height, width, pos_r, pos_c);
-    wclear(sview->win);
+    werase(sview->win);
 }
 
 static int clamp_line(struct sviewer *sview, int line)

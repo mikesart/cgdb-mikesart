@@ -438,7 +438,7 @@ void scr_move(struct scroller *scr, int pos_r, int pos_c, int height, int width)
 {
     delwin(scr->win);
     scr->win = newwin(height, width, pos_r, pos_c);
-    wclear(scr->win);
+    werase(scr->win);
 }
 
 void scr_refresh(struct scroller *scr, int focus, enum win_refresh dorefresh)
