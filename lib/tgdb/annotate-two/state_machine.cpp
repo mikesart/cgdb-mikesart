@@ -181,9 +181,18 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
                         data_process(a2, data[i], gui_data, &counter,
                                 command_list);
                         break;
-                    case ANNOTATION:
-                        ibuf_addchar(sm->tgdb_buffer, data[i]);
+                    case ANNOTATION: {
+                        int end;
+                        for (end = i + 1; end < size; end++) {
+                            if ((data[end] == '\r') || (data[end] == '\n') || (data[end] == '\032')) {
+                                break;
+                            }
+                        }
+
+                        ibuf_adddata(sm->tgdb_buffer, data + i, end - i);
+                        i = end - 1;
                         break;
+                    }
                     default:
                         logger_write_pos(logger, __FILE__, __LINE__,
                                 "Bad state transition");

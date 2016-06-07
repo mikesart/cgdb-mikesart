@@ -33,6 +33,13 @@ void ibuf_addchar(struct ibuf *s, char c);
  */
 int ibuf_add(struct ibuf *s, const char *d);
 
+/* ibuf_adddata: Adds len chars to infinite buffer
+ *  s - the infinite string to modify
+ *  d - the string to add
+ *  len - count of chars to add
+ */
+int ibuf_adddata(struct ibuf *s, const char *d, int len);
+
 /* ibuf_delchar: Delete the last char put in */
 void ibuf_delchar(struct ibuf *s);
 

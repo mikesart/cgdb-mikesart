@@ -59,6 +59,17 @@ void ibuf_addchar(struct ibuf *s, char c)
     }
 }
 
+int ibuf_adddata(struct ibuf *s, const char *d, int len)
+{
+    ibuf_ensuresize(s, s->pos + len + 2);
+
+    memcpy(s->buf + s->pos, d, len);
+
+    s->buf[len] = 0;
+    s->pos += len;
+    return len;
+}
+
 int ibuf_add(struct ibuf *s, const char *d)
 {
     int length = strlen(d);
