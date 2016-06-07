@@ -873,6 +873,10 @@ static int start_gdb(int argc, char *argv[])
     if (tgdb == NULL)
         return -1;
 
+#if 0
+    tgdb_set_verbose_error_handling(tgdb, 0, if_print_message);
+#endif
+
     return 0;
 }
 

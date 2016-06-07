@@ -1,7 +1,8 @@
 libtgdb_a2_a_CXXFLAGS = \
     -I$(top_srcdir)/lib/adt \
     -I$(top_srcdir)/lib/util \
-    -I$(top_srcdir)/lib/tgdb/tgdb-base
+    -I$(top_srcdir)/lib/tgdb/tgdb-base \
+    -I$(top_srcdir)/lib/libmigdb/src
 
 # create the input library
 # This depends on input

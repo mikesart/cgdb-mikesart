@@ -134,7 +134,7 @@ int MIDebugger::SelectTargetTTY(const char *exec, const char *args,
 
  targetEndian=enUnknown;
  targetArch=arUnknown;
- mode=m;
+ dmode=m;
  if (!gmi_set_exec(h,exec,args))
     return 0;
 
@@ -233,7 +233,7 @@ int MIDebugger::SelectTargetRemote(const char *exec, const char *rparams,
  if (state!=connected)
     return 0;
 
- mode=dmRemote;
+ dmode=dmRemote;
  preRun=true;
  targetEndian=enUnknown;
  targetArch=arUnknown;
@@ -272,7 +272,7 @@ mi_frames *MIDebugger::SelectTargetPID(const char *exec, int pid)
  if (state!=connected)
     return NULL;
 
- mode=dmPID;
+ dmode=dmPID;
  preRun=false;
  targetEndian=enUnknown;
  targetArch=arUnknown;
@@ -306,7 +306,7 @@ terminal. For remote debugging it uses "detach". Can be called when in
 
 int MIDebugger::TargetUnselect()
 {
- switch (mode)
+ switch (dmode)
    {
     case dmX11:
     case dmLinux:
@@ -408,7 +408,7 @@ int MIDebugger::Poll(mi_stop *&rs)
         res->reason==sr_exited_normally)
        // When we use a PID the exit makes it invalid, so we don't have a
        // valid target to re-run.
-       state=mode==dmPID ? connected : target_specified;
+       state=dmode==dmPID ? connected : target_specified;
     else
        state=stopped;
     if (res->reason==sr_unknown && waitingTempBkpt)

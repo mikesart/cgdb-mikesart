@@ -3,8 +3,8 @@ AM_CXXFLAGS = \
     -I$(top_srcdir)/lib/rline \
     -I$(top_srcdir)/lib/util \
     -I$(top_srcdir)/lib/tgdb/annotate-two \
-    -I$(top_srcdir)/lib/tgdb/gdbmi \
-    -I$(top_srcdir)/lib/tgdb/tgdb-base
+    -I$(top_srcdir)/lib/tgdb/tgdb-base \
+    -I$(top_srcdir)/lib/libmigdb/src
 
 noinst_LIBRARIES = libtgdb.a
 
@@ -25,13 +25,13 @@ tgdb_driver_LDFLAGS = \
     -L$(top_builddir)/lib/rline \
     -L$(top_builddir)/lib/util \
     -L$(top_builddir)/lib/tgdb/annotate-two \
-    -L$(top_builddir)/lib/tgdb/gdbmi \
-    -L$(top_builddir)/lib/tgdb/tgdb-base
+    -L$(top_builddir)/lib/tgdb/tgdb-base \
+    -L$(top_builddir)/lib/libmigdb/src
 
 tgdb_driver_LDADD = \
     libtgdb.a \
     $(top_builddir)/lib/tgdb/annotate-two/libtgdb_a2.a \
-    $(top_builddir)/lib/tgdb/gdbmi/libtgdb_mi.a \
+    $(top_builddir)/lib/libmigdb/src/libmigdb.a \
     $(top_builddir)/lib/rline/librline.a \
     $(top_builddir)/lib/adt/libadt.a \
     $(top_builddir)/lib/util/libcgdbutil.a

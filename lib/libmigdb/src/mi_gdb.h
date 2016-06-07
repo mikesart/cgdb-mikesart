@@ -956,7 +956,7 @@ public:
 
 protected:
  eState state;
- dMode mode;
+ dMode dmode;
  endianType targetEndian;
  archType targetArch;
  bool  preRun;  // Remote targets starts running but outside main.

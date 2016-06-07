@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #endif /* HAVE_STDLIB_H */
 
-#include "gdbmi_tgdb.h"
 #include "a2-tgdb.h"
 #include "sys_util.h"
 

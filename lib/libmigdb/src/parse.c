@@ -95,7 +95,6 @@ int mi_get_cstring_r(mi_results *r, const char *str, const char **end)
 
 /* TODO: What's a valid variable name?
    I'll assume a-zA-Z0-9_- */
-inline
 int mi_is_var_name_char(char c)
 {
  return isalnum(c) || c=='-' || c=='_';

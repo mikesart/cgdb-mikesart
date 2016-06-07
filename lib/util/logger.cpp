@@ -171,7 +171,6 @@ int logger_set_fd(struct logger *log, FILE * fd)
 
 int logger_get_file(struct logger *log, char **file)
 {
-
     if (!file)
         return -1;
 

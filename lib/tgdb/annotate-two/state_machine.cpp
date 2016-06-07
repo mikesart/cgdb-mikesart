@@ -22,6 +22,7 @@
 #include "annotate_two.h"
 #include "sys_util.h"
 #include "ibuf.h"
+#include "mi_gdb.h"
 
 /* This package looks for annotations coming from gdb's output.
  * The program that is being debugged does not have its output pass
@@ -85,6 +86,10 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
         char *gui_data, size_t * gui_size, struct tgdb_list *command_list)
 {
     int i, counter = 0;
+
+#if 0
+    mi_output *miout = mi_parse_gdb_output(data);
+#endif
 
     /* track state to find next file and line number */
     for (i = 0; i < size; ++i) {
