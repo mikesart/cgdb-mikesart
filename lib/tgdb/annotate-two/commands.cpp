@@ -40,12 +40,6 @@
  */
 struct commands {
 
-  /** The current absolute path the debugger is at in the inferior.  */
-    struct ibuf *absolute_path;
-
-  /** The current line number the debugger is at in the inferior.  */
-    struct ibuf *line_number;
-
   /** The state of the command context.  */
     enum COMMAND_STATE cur_command_state;
 
@@ -64,18 +58,6 @@ struct commands {
   /** The current breakpoint being parsed.  */
     struct ibuf *breakpoint_string;
 
-  /** ???  */
-    int breakpoint_table;
-
-  /** If the current breakpoint is enabled */
-    int breakpoint_enabled;
-
-  /** ???  */
-    int breakpoint_started;
-
-    /* The regular expression matching the breakpoint GDB output */
-    regex_t regex_bp;
-
     /*@} */
 
   /** 'info source' information */
@@ -84,6 +66,9 @@ struct commands {
 
   /** The current info source line being parsed */
     struct ibuf *info_source_string;
+
+  /** The current line number the debugger is at in the inferior.  */
+    struct ibuf *line_number;
 
   /** The discovered relative path, found from the info source output.  */
     struct ibuf *info_source_relative_path;
@@ -144,25 +129,16 @@ struct commands {
 
 struct commands *commands_initialize(void)
 {
-    struct commands *c =
-            (struct commands *) cgdb_malloc(sizeof (struct commands));
-    const char *regex = "[io]n (.*) at (.*):([0-9]+)";
-
-    c->absolute_path = ibuf_init();
-    c->line_number = ibuf_init();
+    struct commands *c = (struct commands *) cgdb_malloc(sizeof (struct commands));
 
     c->cur_command_state = VOID_COMMAND;
     c->cur_field_num = 0;
 
     c->breakpoint_list = tgdb_list_init();
     c->breakpoint_string = ibuf_init();
-    c->breakpoint_table = 0;
-    c->breakpoint_enabled = 0;
-    c->breakpoint_started = 0;
-    if (regcomp(&c->regex_bp, regex, REG_EXTENDED) != 0)
-        return NULL;
 
     c->info_source_string = ibuf_init();
+    c->line_number = ibuf_init();
     c->info_source_relative_path = ibuf_init();
     c->info_source_absolute_path = ibuf_init();
     c->info_source_ready = 0;
@@ -220,21 +196,17 @@ void commands_shutdown(struct commands *c)
     if (c == NULL)
         return;
 
-    ibuf_free(c->absolute_path);
-    c->absolute_path = NULL;
-
-    ibuf_free(c->line_number);
-    c->line_number = NULL;
-
     tgdb_list_free(c->breakpoint_list, free_breakpoint);
     tgdb_list_destroy(c->breakpoint_list);
 
     ibuf_free(c->breakpoint_string);
     c->breakpoint_string = NULL;
-    regfree(&c->regex_bp);
 
     ibuf_free(c->info_source_string);
     c->info_source_string = NULL;
+
+    ibuf_free(c->line_number);
+    c->line_number = NULL;
 
     ibuf_free(c->info_source_relative_path);
     c->info_source_relative_path = NULL;
@@ -278,66 +250,7 @@ commands_parse_source(struct commands *c,
         struct tgdb_list *client_command_list,
         const char *buf, size_t n, struct tgdb_list *list)
 {
-    //$ TODO: Why do we parse all this source stuff if we
-    // run a info source command right afterwards and get
-    // all the same info?
-#if 0
-    int i = 0;
-    char copy[n + 1];
-    char *cur = copy + n;
-    struct ibuf *file = ibuf_init(), *line = ibuf_init();
-
-    strncpy(copy, buf, n + 1);  /* modify local copy */
-
-    while (cur != copy && i <= 3) {
-        if (*cur == ':') {
-            if (i == 3) {
-                int length = strlen(cur + 1);
-                char *temp = (char *)cgdb_malloc(sizeof (char) * (length + 1));
-
-                if (sscanf(cur + 1, "%s", temp) != 1)
-                    logger_write_pos(logger, __FILE__, __LINE__,
-                            "Could not get line number");
-
-                ibuf_add(line, temp);
-                free(temp);
-                temp = NULL;
-            }
-
-            *cur = '\0';
-            ++i;
-        }
-        --cur;
-    }                           /* end while */
-
-    {
-        int length = strlen(copy);
-        char *temp = (char *)cgdb_malloc(sizeof (char) * (length + 1));
-
-        if (strncmp("source ", copy, 7) == 0 && length > 7) {
-            int j;
-
-            for (j = 7; j < length; j++)
-                ibuf_addchar(file, copy[j]);
-        } else {
-            logger_write_pos(logger, __FILE__, __LINE__,
-                    "Could not get file name out of line (%s)", buf);
-        }
-
-        free(temp);
-        temp = NULL;
-    }
-
-    ibuf_clear(c->absolute_path);
-    ibuf_add(c->absolute_path, ibuf_get(file));
-    ibuf_clear(c->line_number);
-    ibuf_add(c->line_number, ibuf_get(line));
-
-    ibuf_free(file);
-    ibuf_free(line);
-#endif
-
-    /* set up the info_source command to get the relative path */
+    /* set up the info_source command to get info */
     if (commands_issue_command(c,
                     client_command_list,
                     ANNOTATE_INFO_SOURCE_RELATIVE, NULL, 1) == -1) {
@@ -349,145 +262,11 @@ commands_parse_source(struct commands *c,
     return 0;
 }
 
-/** 
- * Parse a breakpoint that GDB passes back when annotate=2 is set.
- * 
- * Unfortunately, the line that this function has to parse is completely 
- * ambiguous. GDB does not output a line that can be read in a 
- * non-ambiguous way. Therefore, TGDB tries its best to read the line 
- * properly. The line is in this format.
- *
- *  '[io]n .* at .*:number'
- *
- * so, TGDB can parser the ':number' part without a problem. However,
- * it may not be able to get function name and filename correctly. If
- * the filename contains ' at ' in it, then TGDB will stop prematurly.
- */
-static int parse_breakpoint(struct commands *c)
-{
-#define BP_REGEX_SIZE (4)
-    char *info_ptr;
-    size_t nmatch = BP_REGEX_SIZE;
-    regmatch_t pmatch[BP_REGEX_SIZE];
-    char *matches[BP_REGEX_SIZE] = { NULL, NULL, NULL, NULL };
-    int cur, val;
-    struct tgdb_breakpoint *tb;
-
-    info_ptr = ibuf_get(c->breakpoint_string);
-    if (!info_ptr)              /* This should never really happen */
-        return -1;
-
-    /* Check to see if this is a watchpoint, if it is,
-     * don't parse for a breakpoint.  */
-    if (strstr(info_ptr, " at ") == NULL)
-        return 0;
-
-    val = regexec(&c->regex_bp, info_ptr, nmatch, pmatch, 0);
-    if (val != 0) {
-        logger_write_pos(logger, __FILE__, __LINE__, "regexec failed");
-        return -1;
-    }
-
-    /* Get the whole match, function, filename and number name */
-    for (cur = 0; cur < BP_REGEX_SIZE; ++cur)
-        if (pmatch[cur].rm_so != -1) {
-            int size = pmatch[cur].rm_eo - pmatch[cur].rm_so;
-
-            matches[cur] = (char *)cgdb_malloc(sizeof (char) * (size) + 1);
-            strncpy(matches[cur], &info_ptr[pmatch[cur].rm_so], size);
-            matches[cur][size] = 0;
-        }
-
-    tb = (struct tgdb_breakpoint *) cgdb_malloc(sizeof (struct
-                    tgdb_breakpoint));
-    tb->funcname = matches[1];
-    tb->file = matches[2];
-    tb->line = atoi(matches[3]);
-
-    if (c->breakpoint_enabled == 1)
-        tb->enabled = 1;
-    else
-        tb->enabled = 0;
-
-    tgdb_list_append(c->breakpoint_list, tb);
-
-    /* Matches 1 && 2 are freed by client. */
-    free(matches[0]);
-    matches[0] = NULL;
-    free(matches[3]);
-    matches[3] = NULL;
-
-    return 0;
-}
-
 void
 commands_set_state(struct commands *c,
         enum COMMAND_STATE state, struct tgdb_list *list)
 {
     c->cur_command_state = state;
-
-    switch (c->cur_command_state) {
-        case RECORD:
-            if (ibuf_length(c->breakpoint_string) > 0) {
-                if (parse_breakpoint(c) == -1)
-                    logger_write_pos(logger, __FILE__, __LINE__,
-                            "parse_breakpoint error");
-
-                ibuf_clear(c->breakpoint_string);
-                c->breakpoint_enabled = 0;
-            }
-            break;
-        case BREAKPOINT_TABLE_END:
-            if (ibuf_length(c->breakpoint_string) > 0)
-                if (parse_breakpoint(c) == -1)
-                    logger_write_pos(logger, __FILE__, __LINE__,
-                            "parse_breakpoint error");
-            {
-                struct tgdb_response *response = (struct tgdb_response *)
-                        cgdb_malloc(sizeof (struct tgdb_response));
-
-                response->header = TGDB_UPDATE_BREAKPOINTS;
-                response->choice.update_breakpoints.breakpoint_list =
-                        c->breakpoint_list;
-
-                /* At this point, annotate needs to send the breakpoints to the gui.
-                 * All of the valid breakpoints are stored in breakpoint_queue. */
-                tgdb_types_append_command(list, response);
-            }
-
-            ibuf_clear(c->breakpoint_string);
-            c->breakpoint_enabled = 0;
-
-            c->breakpoint_started = 0;
-            break;
-        case BREAKPOINT_HEADERS:
-            c->breakpoint_table = 0;
-            break;
-        case BREAKPOINT_TABLE_BEGIN:
-
-            /* The breakpoint queue should be empty at this point */
-            c->breakpoint_table = 1;
-            c->breakpoint_started = 1;
-            break;
-        case INFO_SOURCE_FILENAME_PAIR:
-            break;
-        case INFO_SOURCE_RELATIVE:
-            break;
-        case INFO_SOURCES:
-            break;
-        default:
-            break;
-    }
-}
-
-void commands_set_field_num(struct commands *c, int field_num)
-{
-    c->cur_field_num = field_num;
-
-    /* clear buffer and start over */
-    if (c->breakpoint_table && c->cur_command_state == FIELD
-            && c->cur_field_num == 5)
-        ibuf_clear(c->breakpoint_string);
 }
 
 enum COMMAND_STATE commands_get_state(struct commands *c)
@@ -596,7 +375,7 @@ commands_send_source_relative_source_file(struct commands *c,
     struct tgdb_response *response = (struct tgdb_response *)
             cgdb_malloc(sizeof (struct tgdb_response));
 
-    tfp->absolute_path = strdup(ibuf_get(c->absolute_path));
+    tfp->absolute_path = strdup(ibuf_get(c->info_source_absolute_path));
     tfp->relative_path = strdup(ibuf_get(c->info_source_relative_path));
     tfp->line_number = atoi(ibuf_get(c->line_number));
 
@@ -615,13 +394,12 @@ commands_send_source_relative_source_file(struct commands *c,
 static void
 commands_process_info_source(struct commands *c, char a)
 {
-#if 1
     if (a == '\n') {
         /* parse gdbmi -file-list-exec-source-file output */
         mi_output *miout = mi_parse_gdb_output(ibuf_get(c->info_source_string));
 
-        if (miout && (miout->type == MI_T_RESULT_RECORD)) {
-            mi_results *res = miout->c;
+        if (miout) {
+            mi_results *res = (miout->type == MI_T_RESULT_RECORD) ? miout->c : NULL;
 
             while (res && (res->type == t_const)) {
                 if (!strcmp(res->var, "file")) {
@@ -629,11 +407,8 @@ commands_process_info_source(struct commands *c, char a)
                     ibuf_add(c->info_source_relative_path, res->v.cstr);
                 }
                 else if (!strcmp(res->var, "fullname")) {
-                    //$ TODO: Need both absolute_paths?
                     ibuf_clear(c->info_source_absolute_path);
-                    ibuf_clear(c->absolute_path);
                     ibuf_add(c->info_source_absolute_path, res->v.cstr);
-                    ibuf_add(c->absolute_path, res->v.cstr);
                 }
                 else if (!strcmp(res->var, "line")) {
                     ibuf_clear(c->line_number);
@@ -651,63 +426,22 @@ commands_process_info_source(struct commands *c, char a)
     } else {
         ibuf_addchar(c->info_source_string, a);
     }
-#else
-    unsigned long length;
-    static char *info_ptr;
-
-    if (c->info_source_ready)   /* Already found */
-        return;
-
-    info_ptr = ibuf_get(c->info_source_string);
-    length = ibuf_length(c->info_source_string);
-
-    if (a == '\r')
-        return;
-
-    if (a == '\n') {
-        /* This is the line containing the absolute path to the source file */
-        if (length >= c->source_prefix_length &&
-                strncmp(info_ptr, c->source_prefix,
-                        c->source_prefix_length) == 0) {
-            ibuf_add(c->info_source_absolute_path,
-                    info_ptr + c->source_prefix_length);
-            c->info_source_ready = 1;
-            ibuf_clear(c->info_source_string);
-
-            /* commands_finalize_command will use the populated data */
-
-            /* This is the line contatining the relative path to the source file */
-        } else if (length >= c->source_relative_prefix_length &&
-                strncmp(info_ptr, c->source_relative_prefix,
-                        c->source_relative_prefix_length) == 0) {
-            ibuf_add(c->info_source_relative_path,
-                    info_ptr + c->source_relative_prefix_length);
-            ibuf_clear(c->info_source_string);
-        } else
-            ibuf_clear(c->info_source_string);
-    } else
-        ibuf_addchar(c->info_source_string, a);
-#endif
 }
 
 static void mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
 {
-    if (miout && (miout->type == MI_T_RESULT_RECORD))
+    if (miout)
     {
-        mi_results *c = miout->c;
+        mi_results *res = (miout->type == MI_T_RESULT_RECORD) ? miout->c : NULL;
 
-        if (c && (c->type == t_list) && c->var && !strcmp(c->var, "files"))
-        {
-            c = c->v.rs;
+        if (res && (res->type == t_list) && res->var && !strcmp(res->var, "files")) {
+            res = res->v.rs;
 
-            while (c && (c->type == t_tuple))
-            {
-                mi_results *sub = c->v.rs;
+            while (res && (res->type == t_tuple)) {
+                mi_results *sub = res->v.rs;
 
-                while (sub && sub->var)
-                {
-                    if ((sub->type == t_const) && !strcmp(sub->var, "fullname"))
-                    {
+                while (sub && sub->var) {
+                    if ((sub->type == t_const) && !strcmp(sub->var, "fullname")) {
                         tgdb_list_append(source_files, sub->v.cstr);
                         sub->v.cstr = NULL;
                         break;
@@ -716,7 +450,7 @@ static void mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
                     sub = sub->next;
                 }
 
-                c = c->next;
+                res = res->next;
             }
         }
     }
@@ -738,6 +472,83 @@ static void commands_process_sources(struct commands *c, char a)
         ibuf_clear(c->info_sources_string);
     } else {
         ibuf_addchar(c->info_sources_string, a);
+    }
+}
+
+//$ TODO: Document and put these in mi_gdb.h
+extern "C" mi_bkpt *mi_get_bkpt(mi_results *p);
+
+mi_results *mi_find_var(mi_results *res, const char *var, mi_val_type type)
+{
+    while (res) {
+        if (res->var && (type == res->type) && !strcmp(res->var, var))
+            return res;
+
+        // if (res->type == t_const) res->v.cstr;
+        if ((res->type == t_tuple) || (res->type == t_list)) {
+            mi_results *t = mi_find_var(res->v.rs, var, type);
+            if (t)
+                return t;
+        }
+
+        res = res->next;
+    }
+
+    return NULL;
+}
+
+static void commands_process_breakpoints(struct commands *c, char a, struct tgdb_list *list)
+{
+    if (a == '\n') {
+        /* parse gdbmi -break-info output */
+        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->breakpoint_string));
+        if (miout) {
+            mi_results *res = (miout->type == MI_T_RESULT_RECORD) ? miout->c : NULL;
+            mi_results *bplist = mi_find_var(res, "bkpt", t_tuple);
+
+            while (bplist) {
+                mi_bkpt *bkpt = mi_get_bkpt(bplist->v.rs);
+
+                if (bkpt) {
+                    if (bkpt->fullname) {
+                        struct tgdb_breakpoint *tb = (struct tgdb_breakpoint *) cgdb_malloc(
+                                    sizeof (struct tgdb_breakpoint));
+                        tb->funcname = bkpt->func;
+                        tb->file = bkpt->fullname;
+                        tb->line = bkpt->line;
+                        tb->enabled = bkpt->enabled;
+
+                        tgdb_list_append(c->breakpoint_list, tb);
+                    }
+
+                    bkpt->func = NULL;
+                    bkpt->fullname = NULL;
+                    mi_free_bkpt(bkpt);
+                }
+
+                bplist = bplist->next;
+            }
+
+
+            if (tgdb_list_size(c->breakpoint_list)) {
+                struct tgdb_response *response = (struct tgdb_response *)
+                        cgdb_malloc(sizeof (struct tgdb_response));
+
+                response->header = TGDB_UPDATE_BREAKPOINTS;
+                response->choice.update_breakpoints.breakpoint_list =
+                        c->breakpoint_list;
+
+                /* At this point, annotate needs to send the breakpoints to the gui.
+                 * All of the valid breakpoints are stored in breakpoint_queue. */
+                tgdb_types_append_command(list, response);
+            }
+
+            mi_free_output(miout);
+        }
+
+        ibuf_clear(c->breakpoint_string);
+    } else {
+        ibuf_addchar(c->breakpoint_string, a);
     }
 }
 
@@ -808,6 +619,8 @@ void commands_process(struct commands *c, char a, struct tgdb_list *list)
 {
     if (commands_get_state(c) == INFO_SOURCES) {
         commands_process_sources(c, a);
+    } else if (commands_get_state(c) == INFO_BREAKPOINTS) {
+        commands_process_breakpoints(c, a, list);
     } else if (commands_get_state(c) == COMPLETE) {
         commands_process_complete(c, a);
     } else if (commands_get_state(c) == INFO_LIST) {
@@ -815,12 +628,6 @@ void commands_process(struct commands *c, char a, struct tgdb_list *list)
     } else if (commands_get_state(c) == INFO_SOURCE_FILENAME_PAIR
             || commands_get_state(c) == INFO_SOURCE_RELATIVE) {
         commands_process_info_source(c, a);
-    } else if (c->breakpoint_table && c->cur_command_state == FIELD && c->cur_field_num == 5) { /* the file name and line num */
-        if (a != '\n' && a != '\r')
-            ibuf_addchar(c->breakpoint_string, a);
-    } else if (c->breakpoint_table && c->cur_command_state == FIELD
-            && c->cur_field_num == 3 && a == 'y') {
-        c->breakpoint_enabled = 1;
     }
 }
 
@@ -833,9 +640,11 @@ void commands_process(struct commands *c, char a, struct tgdb_list *list)
  *  
  *  This prepares the command 'info breakpoints' 
  */
-static void commands_prepare_info_breakpoints(struct commands *c)
+static void
+commands_prepare_info_breakpoints(struct commands *c)
 {
     ibuf_clear(c->breakpoint_string);
+    commands_set_state(c, INFO_BREAKPOINTS, NULL);
 }
 
 /* commands_prepare_tab_completion:
@@ -1053,7 +862,8 @@ static char *commands_create_command(struct commands *c,
             ncom = strdup("server interp mi \"-file-list-exec-source-file\"\n");
             break;
         case ANNOTATE_INFO_BREAKPOINTS:
-            ncom = strdup("server info breakpoints\n");
+            /* server info breakpoints */
+            ncom = strdup("server interp mi \"-break-info\"\n");
             break;
         case ANNOTATE_TTY:
         {

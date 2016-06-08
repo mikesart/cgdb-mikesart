@@ -1225,6 +1225,7 @@ mi_bkpt *mi_get_bkpt(mi_results *p)
    {
     if (p->type==t_const && p->var)
       {
+       //$ TODO: thread-groups, original-location
        if (strcmp(p->var,"number")==0)
           res->number=atoi(p->v.cstr);
        else if (strcmp(p->var,"type")==0)
@@ -1255,6 +1256,11 @@ mi_bkpt *mi_get_bkpt(mi_results *p)
        else if (strcmp(p->var,"file")==0)
          {
           res->file=p->v.cstr;
+          p->v.cstr=NULL;
+         }
+       else if (strcmp(p->var,"fullname")==0)
+         {
+          res->fullname=p->v.cstr;
           p->v.cstr=NULL;
          }
        else if (strcmp(p->var,"line")==0)

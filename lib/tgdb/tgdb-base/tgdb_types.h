@@ -149,9 +149,7 @@
     struct tgdb_breakpoint {
 
     /**
-     * This is the file that the breakpoint is set in. This path name can be
-     * relative.
-     */
+     * This is the fullname to the file that the breakpoint is set in. */
         char *file;
 
     /** The name of the function the breakpoint is set at.  */

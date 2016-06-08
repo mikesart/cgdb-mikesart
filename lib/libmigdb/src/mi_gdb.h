@@ -172,6 +172,7 @@ struct mi_bkpt_struct
  void *addr;
  char *func;
  char *file;
+ char *fullname;
  int line;
  int ignore;
  int times;

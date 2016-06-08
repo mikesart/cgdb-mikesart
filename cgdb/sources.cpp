@@ -1002,8 +1002,14 @@ void source_disable_break(struct sviewer *sview, const char *path, int line)
 {
     struct list_node *node;
 
-    if ((node = get_relative_node(sview, path)) == NULL)
-        return;
+    node = get_node(sview, path);
+
+    //$ TODO: Can we get rid of the relative_node stuff entirely?
+    // New breakpoint code returns fullpaths, not relative all the time?
+    if (!node) {
+        if ((node = get_relative_node(sview, path)) == NULL)
+            return;
+    }
 
     if (!node->buf && load_file(node))
         return;
@@ -1016,8 +1022,12 @@ void source_enable_break(struct sviewer *sview, const char *path, int line)
 {
     struct list_node *node;
 
-    if ((node = get_relative_node(sview, path)) == NULL)
-        return;
+    node = get_node(sview, path);
+
+    if (!node) {
+        if ((node = get_relative_node(sview, path)) == NULL)
+            return;
+    }
 
     if (!node->buf && load_file(node))
         return;
