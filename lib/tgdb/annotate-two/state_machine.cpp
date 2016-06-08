@@ -87,10 +87,6 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
 {
     int i, counter = 0;
 
-#if 0
-    mi_output *miout = mi_parse_gdb_output(data);
-#endif
-
     /* track state to find next file and line number */
     for (i = 0; i < size; ++i) {
         switch (data[i]) {

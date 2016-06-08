@@ -32,6 +32,7 @@
 #include "queue.h"
 #include "tgdb_list.h"
 #include "annotate_two.h"
+#include "mi_gdb.h"
 
 /**
  * This structure represents most of the I/O parsing state of the 
@@ -646,24 +647,34 @@ commands_process_info_source(struct commands *c, struct tgdb_list *list, char a)
         ibuf_addchar(c->info_source_string, a);
 }
 
-static void commands_process_source_line(struct commands *c)
+static void mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
 {
-    unsigned long length = ibuf_length(c->info_sources_string), i, start = 0;
-    static char *info_ptr;
-    static char *nfile;
+    if (miout && (miout->type == MI_T_RESULT_RECORD))
+    {
+        mi_results *c = miout->c;
 
-    info_ptr = ibuf_get(c->info_sources_string);
+        if (c && (c->type == t_list) && c->var && !strcmp(c->var, "files"))
+        {
+            c = c->v.rs;
 
-    for (i = 0; i < length; ++i) {
-        if (i > 0 && info_ptr[i - 1] == ',' && info_ptr[i] == ' ') {
-            nfile = (char *)calloc(sizeof (char), i - start);
-            strncpy(nfile, info_ptr + start, i - start - 1);
-            start += ((i + 1) - start);
-            tgdb_list_append(c->inferior_source_files, nfile);
-        } else if (i == length - 1) {
-            nfile = (char *)calloc(sizeof (char), i - start + 2);
-            strncpy(nfile, info_ptr + start, i - start + 1);
-            tgdb_list_append(c->inferior_source_files, nfile);
+            while (c && (c->type == t_tuple))
+            {
+                mi_results *sub = c->v.rs;
+
+                while (sub && sub->var)
+                {
+                    if ((sub->type == t_const) && !strcmp(sub->var, "fullname"))
+                    {
+                        tgdb_list_append(source_files, sub->v.cstr);
+                        sub->v.cstr = NULL;
+                        break;
+                    }
+
+                    sub = sub->next;
+                }
+
+                c = c->next;
+            }
         }
     }
 }
@@ -671,30 +682,23 @@ static void commands_process_source_line(struct commands *c)
 /* process's source files */
 static void commands_process_sources(struct commands *c, char a)
 {
-    static const char *sourcesReadyString = "Source files for which symbols ";
-    static const int sourcesReadyStringLength = 31;
-    static char *info_ptr;
-
     ibuf_addchar(c->info_sources_string, a);
 
     if (a == '\n') {
-        ibuf_delchar(c->info_sources_string);   /* remove '\n' and null terminate */
-        /* valid lines are 
-         * 1. after the first line,
-         * 2. do not end in ':' 
-         * 3. and are not empty 
-         */
-        info_ptr = ibuf_get(c->info_sources_string);
+        mi_output *miout;
 
-        if (strncmp(info_ptr, sourcesReadyString, sourcesReadyStringLength) ==
-                0)
-            c->sources_ready = 1;
+        /* remove '\n' */
+        ibuf_delchar(c->info_sources_string);
 
-        /* is this a valid line */
-        if (ibuf_length(c->info_sources_string) > 0 && c->sources_ready
-                && info_ptr[ibuf_length(c->info_sources_string) - 1] != ':')
-            commands_process_source_line(c);
+        /* parse gdbmi -file-list-exec-source-files output */
+        miout = mi_parse_gdb_output(ibuf_get(c->info_sources_string));
+        if (miout) {
+            /* Add source files to our file list */
+            mi_parse_sources(miout, c->inferior_source_files);
+            mi_free_output(miout);
+        }
 
+        c->sources_ready = 1;
         ibuf_clear(c->info_sources_string);
     }
 }
@@ -956,7 +960,8 @@ static char *commands_create_command(struct commands *c,
 
     switch (com) {
         case ANNOTATE_INFO_SOURCES:
-            ncom = strdup("server info sources\n");
+            // ncom = strdup("server info sources\n");
+            ncom = strdup("server interpreter mi \"-file-list-exec-source-files\"\n");
             break;
         case ANNOTATE_LIST:
         {
