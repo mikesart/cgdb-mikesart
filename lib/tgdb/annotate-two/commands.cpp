@@ -278,6 +278,10 @@ commands_parse_source(struct commands *c,
         struct tgdb_list *client_command_list,
         const char *buf, size_t n, struct tgdb_list *list)
 {
+    //$ TODO: Why do we parse all this source stuff if we
+    // run a info source command right afterwards and get
+    // all the same info?
+#if 0
     int i = 0;
     char copy[n + 1];
     char *cur = copy + n;
@@ -331,6 +335,7 @@ commands_parse_source(struct commands *c,
 
     ibuf_free(file);
     ibuf_free(line);
+#endif
 
     /* set up the info_source command to get the relative path */
     if (commands_issue_command(c,
@@ -608,8 +613,45 @@ commands_send_source_relative_source_file(struct commands *c,
  * It can get both the absolute and relative path to the source file.
  */
 static void
-commands_process_info_source(struct commands *c, struct tgdb_list *list, char a)
+commands_process_info_source(struct commands *c, char a)
 {
+#if 1
+    if (a == '\n') {
+        /* parse gdbmi -file-list-exec-source-file output */
+        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->info_source_string));
+
+        if (miout && (miout->type == MI_T_RESULT_RECORD)) {
+            mi_results *res = miout->c;
+
+            while (res && (res->type == t_const)) {
+                if (!strcmp(res->var, "file")) {
+                    ibuf_clear(c->info_source_relative_path);
+                    ibuf_add(c->info_source_relative_path, res->v.cstr);
+                }
+                else if (!strcmp(res->var, "fullname")) {
+                    //$ TODO: Need both absolute_paths?
+                    ibuf_clear(c->info_source_absolute_path);
+                    ibuf_clear(c->absolute_path);
+                    ibuf_add(c->info_source_absolute_path, res->v.cstr);
+                    ibuf_add(c->absolute_path, res->v.cstr);
+                }
+                else if (!strcmp(res->var, "line")) {
+                    ibuf_clear(c->line_number);
+                    ibuf_add(c->line_number, res->v.cstr);
+                }
+
+                res = res->next;
+            }
+
+            mi_free_output(miout);
+        }
+
+        c->info_source_ready = 1;
+        ibuf_clear(c->info_source_string);
+    } else {
+        ibuf_addchar(c->info_source_string, a);
+    }
+#else
     unsigned long length;
     static char *info_ptr;
 
@@ -645,6 +687,7 @@ commands_process_info_source(struct commands *c, struct tgdb_list *list, char a)
             ibuf_clear(c->info_source_string);
     } else
         ibuf_addchar(c->info_source_string, a);
+#endif
 }
 
 static void mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
@@ -682,16 +725,9 @@ static void mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
 /* process's source files */
 static void commands_process_sources(struct commands *c, char a)
 {
-    ibuf_addchar(c->info_sources_string, a);
-
     if (a == '\n') {
-        mi_output *miout;
-
-        /* remove '\n' */
-        ibuf_delchar(c->info_sources_string);
-
         /* parse gdbmi -file-list-exec-source-files output */
-        miout = mi_parse_gdb_output(ibuf_get(c->info_sources_string));
+        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->info_sources_string));
         if (miout) {
             /* Add source files to our file list */
             mi_parse_sources(miout, c->inferior_source_files);
@@ -700,6 +736,8 @@ static void commands_process_sources(struct commands *c, char a)
 
         c->sources_ready = 1;
         ibuf_clear(c->info_sources_string);
+    } else {
+        ibuf_addchar(c->info_sources_string, a);
     }
 }
 
@@ -776,7 +814,7 @@ void commands_process(struct commands *c, char a, struct tgdb_list *list)
         /* do nothing with data */
     } else if (commands_get_state(c) == INFO_SOURCE_FILENAME_PAIR
             || commands_get_state(c) == INFO_SOURCE_RELATIVE) {
-        commands_process_info_source(c, list, a);
+        commands_process_info_source(c, a);
     } else if (c->breakpoint_table && c->cur_command_state == FIELD && c->cur_field_num == 5) { /* the file name and line num */
         if (a != '\n' && a != '\r')
             ibuf_addchar(c->breakpoint_string, a);
@@ -960,8 +998,8 @@ static char *commands_create_command(struct commands *c,
 
     switch (com) {
         case ANNOTATE_INFO_SOURCES:
-            // ncom = strdup("server info sources\n");
-            ncom = strdup("server interpreter mi \"-file-list-exec-source-files\"\n");
+            /* server info sources */
+            ncom = strdup("server interp mi \"-file-list-exec-source-files\"\n");
             break;
         case ANNOTATE_LIST:
         {
@@ -1006,11 +1044,13 @@ static char *commands_create_command(struct commands *c,
             break;
         }
         case ANNOTATE_INFO_LINE:
+            /* Not implemented? -symbol-info-line */
             ncom = strdup("server info line\n");
             break;
         case ANNOTATE_INFO_SOURCE_RELATIVE:
         case ANNOTATE_INFO_SOURCE_FILENAME_PAIR:
-            ncom = strdup("server info source\n");
+            /* server info source */
+            ncom = strdup("server interp mi \"-file-list-exec-source-file\"\n");
             break;
         case ANNOTATE_INFO_BREAKPOINTS:
             ncom = strdup("server info breakpoints\n");
