@@ -645,6 +645,9 @@ static char *commands_create_command(struct commands *c,
             break;
         }
         case ANNOTATE_COMPLETE:
+            //$ TODO: server interp mi "complete info "
+            //$ TODO: use commands_send_gui_completions
+            //$ TODO: check for ^done to end completions
             ncom = (char *) cgdb_malloc(sizeof (char) * (18 + strlen(data)));
             strcpy(ncom, "server complete ");
             strcat(ncom, data);
