@@ -630,28 +630,14 @@ static char *commands_create_command(struct commands *c,
             ncom = strdup("server interp mi \"-break-info\"\n");
             break;
         case ANNOTATE_TTY:
-        {
-            //$ TODO mikesart: -inferior-tty-set
-            struct ibuf *temp_tty_name = ibuf_init();
-
-            ibuf_add(temp_tty_name, data);
-            ncom = (char *) cgdb_malloc(sizeof (char) * (13 + strlen(data)));
-            strcpy(ncom, "server tty ");
-            strcat(ncom, ibuf_get(temp_tty_name));
-            strcat(ncom, "\n");
-
-            ibuf_free(temp_tty_name);
-            temp_tty_name = NULL;
+            /* server tty %s */
+            ncom = sys_aprintf("server interp mi \"-inferior-tty-set %s\"\n", data);
             break;
-        }
         case ANNOTATE_COMPLETE:
             //$ TODO: server interp mi "complete info "
             //$ TODO: use commands_send_gui_completions
             //$ TODO: check for ^done to end completions
-            ncom = (char *) cgdb_malloc(sizeof (char) * (18 + strlen(data)));
-            strcpy(ncom, "server complete ");
-            strcat(ncom, data);
-            strcat(ncom, "\n");
+            ncom = sys_aprintf("server interp mi \"complete %s\"\n", data);
             break;
         case ANNOTATE_VOID:
         default:
