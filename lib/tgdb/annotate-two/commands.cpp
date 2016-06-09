@@ -67,15 +67,6 @@ struct commands {
   /** The current info source line being parsed */
     struct ibuf *info_source_string;
 
-  /** The current line number the debugger is at in the inferior.  */
-    struct ibuf *line_number;
-
-  /** The discovered relative path, found from the info source output.  */
-    struct ibuf *info_source_relative_path;
-
-  /** The discovered absolute path, found from the info source output.  */
-    struct ibuf *info_source_absolute_path;
-
     /*@} */
 
     /* info sources information {{{ */
@@ -126,10 +117,6 @@ struct commands *commands_initialize(void)
     c->breakpoint_string = ibuf_init();
 
     c->info_source_string = ibuf_init();
-    c->line_number = ibuf_init();
-    c->info_source_relative_path = ibuf_init();
-    c->info_source_absolute_path = ibuf_init();
-
     c->info_sources_string = ibuf_init();
     c->inferior_source_files = tgdb_list_init();
 
@@ -189,15 +176,6 @@ void commands_shutdown(struct commands *c)
     ibuf_free(c->info_source_string);
     c->info_source_string = NULL;
 
-    ibuf_free(c->line_number);
-    c->line_number = NULL;
-
-    ibuf_free(c->info_source_relative_path);
-    c->info_source_relative_path = NULL;
-
-    ibuf_free(c->info_source_absolute_path);
-    c->info_source_absolute_path = NULL;
-
     ibuf_free(c->info_sources_string);
     c->info_sources_string = NULL;
 
@@ -227,42 +205,6 @@ enum COMMAND_STATE commands_get_state(struct commands *c)
     return c->cur_command_state;
 }
 
-static void
-commands_prepare_info_source(struct annotate_two *a2, struct commands *c)
-{
-    data_set_state(a2, INTERNAL_COMMAND);
-    ibuf_clear(c->info_source_string);
-    ibuf_clear(c->info_source_relative_path);
-    ibuf_clear(c->info_source_absolute_path);
-
-    commands_set_state(c, INFO_SOURCE, NULL);
-}
-
-static void
-commands_send_source_file(struct commands *c,
-        struct tgdb_list *list)
-{
-    /* So far, INFO_SOURCE_RELATIVE is only used when a 
-     * TGDB_UPDATE_FILE_POSITION is needed.
-     */
-    /* This section allocates a new structure to add into the queue 
-     * All of its members will need to be freed later.
-     */
-    struct tgdb_file_position *tfp = (struct tgdb_file_position *)
-            cgdb_malloc(sizeof (struct tgdb_file_position));
-    struct tgdb_response *response = (struct tgdb_response *)
-            cgdb_malloc(sizeof (struct tgdb_response));
-
-    tfp->absolute_path = strdup(ibuf_get(c->info_source_absolute_path));
-    tfp->relative_path = strdup(ibuf_get(c->info_source_relative_path));
-    tfp->line_number = atoi(ibuf_get(c->line_number));
-
-    response->header = TGDB_UPDATE_FILE_POSITION;
-    response->choice.update_file_position.file_position = tfp;
-
-    tgdb_types_append_command(list, response);
-}
-
 /* commands_process_info_source:
  * -----------------------------
  *
@@ -278,28 +220,45 @@ commands_process_info_source(struct commands *c, char a, struct tgdb_list *list)
 
         if (miout) {
             mi_results *res = (miout->type == MI_T_RESULT_RECORD) ? miout->c : NULL;
+            int line = 0;
+            char *fullname = NULL;
+            char *file = NULL;
 
             while (res && (res->type == t_const)) {
                 if (!strcmp(res->var, "file")) {
-                    ibuf_clear(c->info_source_relative_path);
-                    ibuf_add(c->info_source_relative_path, res->v.cstr);
+                    file = res->v.cstr;
+                    res->v.cstr = NULL;
                 }
                 else if (!strcmp(res->var, "fullname")) {
-                    ibuf_clear(c->info_source_absolute_path);
-                    ibuf_add(c->info_source_absolute_path, res->v.cstr);
+                    fullname = res->v.cstr;
+                    res->v.cstr = NULL;
                 }
                 else if (!strcmp(res->var, "line")) {
-                    ibuf_clear(c->line_number);
-                    ibuf_add(c->line_number, res->v.cstr);
+                    line = atoi(res->v.cstr);
                 }
 
                 res = res->next;
             }
 
             mi_free_output(miout);
-        }
 
-        commands_send_source_file(c, list);
+            if (fullname) {
+                struct tgdb_file_position *tfp = (struct tgdb_file_position *)
+                        cgdb_malloc(sizeof (struct tgdb_file_position));
+                struct tgdb_response *response = (struct tgdb_response *)
+                        cgdb_malloc(sizeof (struct tgdb_response));
+
+                tfp->absolute_path = fullname;
+                tfp->relative_path = file;
+                tfp->line_number = line;
+
+                response->header = TGDB_UPDATE_FILE_POSITION;
+                response->choice.update_file_position.file_position = tfp;
+
+                tgdb_types_append_command(list, response);
+            }
+
+        }
 
         ibuf_clear(c->info_source_string);
     } else {
@@ -530,7 +489,9 @@ commands_prepare_for_command(struct annotate_two *a2,
             commands_set_state(c, INFO_SOURCES, NULL);
             break;
         case ANNOTATE_INFO_SOURCE:
-            commands_prepare_info_source(a2, c);
+            ibuf_clear(c->info_source_string);
+            data_set_state(a2, INTERNAL_COMMAND);
+            commands_set_state(c, INFO_SOURCE, NULL);
             break;
         case ANNOTATE_INFO_BREAKPOINTS:
             ibuf_clear(c->breakpoint_string);
