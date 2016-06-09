@@ -150,7 +150,7 @@ Focus if_get_focus(void);
  */
 void if_display_help(void);
 
-void if_display_logo(void);
+void if_display_logo(int reset);
 
 /* if_search_next: finds the next match in a given direction.
  * ------------

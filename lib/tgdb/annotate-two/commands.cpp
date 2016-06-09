@@ -67,6 +67,9 @@ struct commands {
   /** The current info source line being parsed */
     struct ibuf *info_source_string;
 
+  /** The current info frame line being parsed */
+    struct ibuf *info_frame_string;
+
     /*@} */
 
     /* info sources information {{{ */
@@ -118,6 +121,7 @@ struct commands *commands_initialize(void)
 
     c->info_source_string = ibuf_init();
     c->info_sources_string = ibuf_init();
+    c->info_frame_string = ibuf_init();
     c->inferior_source_files = tgdb_list_init();
 
     c->tab_completion_string = ibuf_init();
@@ -179,6 +183,9 @@ void commands_shutdown(struct commands *c)
     ibuf_free(c->info_sources_string);
     c->info_sources_string = NULL;
 
+    ibuf_free(c->info_frame_string);
+    c->info_frame_string = NULL;
+
     ibuf_free(c->tab_completion_string);
     c->tab_completion_string = NULL;
 
@@ -205,6 +212,145 @@ enum COMMAND_STATE commands_get_state(struct commands *c)
     return c->cur_command_state;
 }
 
+//$ TODO mikesart: Document and put these in mi_gdb.h
+extern "C" mi_bkpt *mi_get_bkpt(mi_results *p);
+
+mi_results *mi_find_var(mi_results *res, const char *var, mi_val_type type)
+{
+    while (res) {
+        if (res->var && (type == res->type) && !strcmp(res->var, var))
+            return res;
+
+        // if (res->type == t_const) res->v.cstr;
+        if ((res->type == t_tuple) || (res->type == t_list)) {
+            mi_results *t = mi_find_var(res->v.rs, var, type);
+            if (t)
+                return t;
+        }
+
+        res = res->next;
+    }
+
+    return NULL;
+}
+
+static int commands_parse_file_position( mi_results *res,
+        struct tgdb_list *list)
+{
+    struct tgdb_file_position fp;
+
+    memset(&fp, 0, sizeof(fp));
+
+    while (res && (res->type == t_const)) {
+        if (!strcmp(res->var, "fullname")) {
+            fp.absolute_path = res->v.cstr;
+            res->v.cstr = NULL;
+        } else if (!strcmp(res->var, "line")) {
+            fp.line_number = atoi(res->v.cstr);
+        } else if (!strcmp(res->var, "addr")) {
+            fp.addr = res->v.cstr;
+            res->v.cstr = NULL;
+        } else if (!strcmp(res->var, "from")) {
+            fp.from = res->v.cstr;
+            res->v.cstr = NULL;
+        } else if (!strcmp(res->var, "func")) {
+            fp.func = res->v.cstr;
+            res->v.cstr = NULL;
+        }
+
+        res = res->next;
+    }
+
+    if (fp.absolute_path || fp.addr) {
+        struct tgdb_file_position *tfp = (struct tgdb_file_position *)
+                cgdb_malloc(sizeof (struct tgdb_file_position));
+        struct tgdb_response *response = (struct tgdb_response *)
+                cgdb_malloc(sizeof (struct tgdb_response));
+
+        *tfp = fp;
+
+        response->header = TGDB_UPDATE_FILE_POSITION;
+        response->choice.update_file_position.file_position = tfp;
+
+        tgdb_types_append_command(list, response);
+        return 1;
+    } else {
+        free(fp.absolute_path);
+        free(fp.addr);
+        free(fp.from);
+        free(fp.func);
+    }
+
+    return 0;
+}
+
+/* commands_process_info_frame:
+ * -----------------------------
+ *
+ * This function is capable of parsing the output of 'info frame'.
+ */
+static void
+commands_process_info_frame(struct annotate_two *a2, struct commands *c,
+        char a, struct tgdb_list *list)
+{
+    /*
+    ^error,msg="No registers."
+
+    ~"\n\032\032frame-begin 0 0x400908\n"
+    ~"\n\032\032frame-address\n"
+    ~"\n\032\032frame-address-end\n"
+    ~"\n\032\032frame-function-name\n"
+    ~"\n\032\032frame-args\n"
+    ~"\n\032\032frame-source-begin\n"
+    ~"\n\032\032frame-source-file\n"
+    ~"\n\032\032frame-source-file-end\n"
+    ~"\n\032\032frame-source-line\n"
+    ~"\n\032\032frame-source-end\n"
+    ~"\n\032\032frame-end\n"
+    ^done,frame={level="0",addr="0x0000000000400908",func="main",file="driver.cpp",fullname="/home/mikesart/dev/cgdb/cgdb-src/lib/util/driver.cpp",line="57"}
+
+    post-prompt
+    ~"\n\032\032frame-begin 0 0x7ffff6ecd7d0\n"
+    ~"\n\032\032frame-address\n"
+    ~"\n\032\032frame-address-end\n"
+    ~"\n\032\032frame-function-name\n"
+    ~"\n\032\032frame-args\n"
+    ~"\n\032\032frame-where\n"
+    ~"\n\032\032frame-end\n"
+    ^done,frame={level="0",addr="0x00007ffff6ecd7d0",func="printf",from="/usr/lib/x86_64-linux-gnu/libasan.so.2"}
+    */
+
+    if (a == '\n') {
+        char *str = ibuf_get(c->info_frame_string);
+
+        /* Check for result record */
+        if (*str == '^') {
+            int success = 0;
+            mi_output *miout = mi_parse_gdb_output(ibuf_get(c->info_frame_string));
+
+            if (miout && (miout->tclass == MI_CL_DONE)) {
+                mi_results *res = mi_find_var(miout->c, "frame", t_tuple);
+
+                if (res) {
+                    success = commands_parse_file_position(res->v.rs, list);
+                }
+            }
+
+            if (!success) {
+                /* We got nothing - try "info source" command. */
+                commands_issue_command(a2->c, a2->client_command_list,
+                                       ANNOTATE_INFO_SOURCE, NULL, 1);
+            }
+
+            mi_free_output(miout);
+        }
+
+        ibuf_clear(c->info_frame_string);
+    } else {
+        ibuf_addchar(c->info_frame_string, a);
+    }
+}
+
 /* commands_process_info_source:
  * -----------------------------
  *
@@ -220,44 +366,10 @@ commands_process_info_source(struct commands *c, char a, struct tgdb_list *list)
 
         if (miout) {
             mi_results *res = (miout->type == MI_T_RESULT_RECORD) ? miout->c : NULL;
-            int line = 0;
-            char *fullname = NULL;
-            char *file = NULL;
 
-            while (res && (res->type == t_const)) {
-                if (!strcmp(res->var, "file")) {
-                    file = res->v.cstr;
-                    res->v.cstr = NULL;
-                }
-                else if (!strcmp(res->var, "fullname")) {
-                    fullname = res->v.cstr;
-                    res->v.cstr = NULL;
-                }
-                else if (!strcmp(res->var, "line")) {
-                    line = atoi(res->v.cstr);
-                }
-
-                res = res->next;
-            }
+            commands_parse_file_position(res, list);
 
             mi_free_output(miout);
-
-            if (fullname) {
-                struct tgdb_file_position *tfp = (struct tgdb_file_position *)
-                        cgdb_malloc(sizeof (struct tgdb_file_position));
-                struct tgdb_response *response = (struct tgdb_response *)
-                        cgdb_malloc(sizeof (struct tgdb_response));
-
-                tfp->absolute_path = fullname;
-                tfp->relative_path = file;
-                tfp->line_number = line;
-
-                response->header = TGDB_UPDATE_FILE_POSITION;
-                response->choice.update_file_position.file_position = tfp;
-
-                tgdb_types_append_command(list, response);
-            }
-
         }
 
         ibuf_clear(c->info_source_string);
@@ -309,6 +421,7 @@ static void commands_process_sources(struct commands *c, char a, struct tgdb_lis
             response = (struct tgdb_response *) cgdb_malloc(sizeof (struct tgdb_response));
             response->header = TGDB_UPDATE_SOURCE_FILES;
             response->choice.update_source_files.source_files = c->inferior_source_files;
+
             tgdb_types_append_command(list, response);
         }
 
@@ -316,28 +429,6 @@ static void commands_process_sources(struct commands *c, char a, struct tgdb_lis
     } else {
         ibuf_addchar(c->info_sources_string, a);
     }
-}
-
-//$ TODO mikesart: Document and put these in mi_gdb.h
-extern "C" mi_bkpt *mi_get_bkpt(mi_results *p);
-
-mi_results *mi_find_var(mi_results *res, const char *var, mi_val_type type)
-{
-    while (res) {
-        if (res->var && (type == res->type) && !strcmp(res->var, var))
-            return res;
-
-        // if (res->type == t_const) res->v.cstr;
-        if ((res->type == t_tuple) || (res->type == t_list)) {
-            mi_results *t = mi_find_var(res->v.rs, var, type);
-            if (t)
-                return t;
-        }
-
-        res = res->next;
-    }
-
-    return NULL;
 }
 
 static void commands_process_breakpoints(struct commands *c, char a, struct tgdb_list *list)
@@ -446,6 +537,7 @@ static void commands_process_complete(struct commands *c, char a, struct tgdb_li
         response = (struct tgdb_response *)cgdb_malloc(sizeof (struct tgdb_response));
         response->header = TGDB_UPDATE_COMPLETIONS;
         response->choice.update_completions.completion_list = c->tab_completions;
+
         tgdb_types_append_command(list, response);
 
         ibuf_clear(c->tab_completion_string);
@@ -454,7 +546,7 @@ static void commands_process_complete(struct commands *c, char a, struct tgdb_li
     }
 }
 
-void commands_process(struct commands *c, char a, struct tgdb_list *list)
+void commands_process(struct annotate_two *a2, struct commands *c, char a, struct tgdb_list *list)
 {
     if (commands_get_state(c) == INFO_SOURCES) {
         commands_process_sources(c, a, list);
@@ -464,6 +556,8 @@ void commands_process(struct commands *c, char a, struct tgdb_list *list)
         commands_process_complete(c, a, list);
     } else if (commands_get_state(c) == INFO_SOURCE) {
         commands_process_info_source(c, a, list);
+    } else if (commands_get_state(c) == INFO_FRAME) {
+        commands_process_info_frame(a2, c, a, list);
     }
 }
 
@@ -492,6 +586,11 @@ commands_prepare_for_command(struct annotate_two *a2,
             ibuf_clear(c->info_source_string);
             data_set_state(a2, INTERNAL_COMMAND);
             commands_set_state(c, INFO_SOURCE, NULL);
+            break;
+        case ANNOTATE_INFO_FRAME:
+            ibuf_clear(c->info_frame_string);
+            data_set_state(a2, INTERNAL_COMMAND);
+            commands_set_state(c, INFO_FRAME, NULL);
             break;
         case ANNOTATE_INFO_BREAKPOINTS:
             ibuf_clear(c->breakpoint_string);
@@ -544,6 +643,10 @@ static char *commands_create_command(struct commands *c,
         case ANNOTATE_INFO_SOURCE:
             /* server info source */
             ncom = strdup("server interp mi \"-file-list-exec-source-file\"\n");
+            break;
+        case ANNOTATE_INFO_FRAME:
+            /* server info frame */
+            ncom = strdup("server interp mi \"-stack-info-frame\"\n");
             break;
         case ANNOTATE_INFO_BREAKPOINTS:
             /* server info breakpoints */

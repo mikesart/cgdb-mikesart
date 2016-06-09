@@ -15,11 +15,12 @@ enum COMMAND_STATE {
     INFO_BREAKPOINTS,
     /* Related to the 'info sources' command */
     INFO_SOURCES,
-    /* Related to the 'server complete' command for tab completion */
-    COMMAND_COMPLETE,
-
     /* Related to the 'info source' command */
     INFO_SOURCE,
+    /* Related to the 'info frame' command */
+    INFO_FRAME,
+    /* Related to the 'server complete' command for tab completion */
+    COMMAND_COMPLETE,
 };
 
 /* commands_initialize: Initialize the commands unit */
@@ -58,7 +59,8 @@ int commands_issue_command(struct commands *c,
  *    a     -> the character received from gdb.
  *    com   -> commands to give back to gdb.
  */
-void commands_process(struct commands *c, char a, struct tgdb_list *list);
+void commands_process(struct annotate_two *a2, struct commands *c,
+                      char a, struct tgdb_list *list);
 
 /* This gives the gui all of the completions that were just read from gdb 
  * through a 'complete' command.

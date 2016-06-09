@@ -30,34 +30,39 @@ struct annotate_two;
 enum annotate_commands {
 
     /**
-	 * Currently not used.
-	 */
+     * Currently not used.
+     */
     ANNOTATE_VOID = 0,
 
     /**
-	 * Get a list of breakpoints.
-	 */
+     * Get a list of breakpoints.
+     */
     ANNOTATE_INFO_BREAKPOINTS,
 
     /**
      * Tell gdb where to send inferior's output
-	 */
+     */
     ANNOTATE_TTY,
 
     /**
      * Complete the current console line
-	 */
+     */
     ANNOTATE_COMPLETE,
 
     /**
- 	 * Show all the sources inferior is made of
-	 */
+     * Show all the sources inferior is made of
+     */
     ANNOTATE_INFO_SOURCES,
 
     /**
- 	 * Shows information on the current source file
-	 */
+     * Shows information on the current source file
+     */
     ANNOTATE_INFO_SOURCE,
+
+    /**
+     * Shows information on the current frame
+     */
+    ANNOTATE_INFO_FRAME,
 };
 
 /******************************************************************************/

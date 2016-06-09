@@ -19,18 +19,11 @@
 #include "io.h"
 
 static int
-handle_source(struct annotate_two *a2, const char *buf, size_t n,
+handle_frame_end(struct annotate_two *a2, const char *buf, size_t n,
         struct tgdb_list *list)
 {
     /* set up the info_source command to get file info */
-    if (commands_issue_command(a2->c, a2->client_command_list,
-                    ANNOTATE_INFO_SOURCE, NULL, 1) == -1) {
-        logger_write_pos(logger, __FILE__, __LINE__,
-                "commands_issue_command error");
-        return -1;
-    }
-
-    return 0;
+    return a2_get_current_location(a2);
 }
 
 static int handle_misc_pre_prompt(struct annotate_two *a2, const char *buf,
@@ -164,7 +157,7 @@ static struct annotation {
             struct tgdb_list * list);
 } annotations[] = {
     {
-    "source", 6, handle_source}, {
+    "frame-end", 10, handle_frame_end}, {
     "pre-commands", 12, handle_misc_pre_prompt}, {
     "commands", 8, handle_misc_prompt}, {
     "post-commands", 13, handle_misc_post_prompt}, {

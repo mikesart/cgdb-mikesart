@@ -164,17 +164,24 @@
 
  /**
   * This structure currently represents a file position.
+  * Info from gdbmi -stack-info-frame call.
   */
     struct tgdb_file_position {
 
     /** The absolute path to the file.  */
         char *absolute_path;
 
-    /** The relative path to the file.  */
-        char *relative_path;
-
     /** The line number in the file.  */
         int line_number;
+
+    /** Line number corresponding to the $pc.  */
+        char *addr;
+
+    /** Shared library where this function is defined.  */
+        char *from;
+
+    /** Function name.  */
+        char *func;
     };
 
  /**

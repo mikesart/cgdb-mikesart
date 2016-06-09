@@ -314,9 +314,9 @@ int a2_get_current_location(struct annotate_two *a2)
 {
     int ret;
 
-    /* set up the info_source command to get info */
+    /* Try to get frame information */
     ret = commands_issue_command(a2->c, a2->client_command_list,
-                    ANNOTATE_INFO_SOURCE, NULL, 1);
+                           ANNOTATE_INFO_FRAME, NULL, 1);
     if (ret == -1) {
         logger_write_pos(logger, __FILE__, __LINE__,
                 "commands_issue_command error");
