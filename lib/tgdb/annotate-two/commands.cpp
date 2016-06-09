@@ -430,8 +430,7 @@ commands_process_info_source(struct commands *c, char a)
 
 static void mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
 {
-    if (miout)
-    {
+    if (miout) {
         mi_results *res = (miout->type == MI_T_RESULT_RECORD) ? miout->c : NULL;
 
         if (res && (res->type == t_list) && res->var && !strcmp(res->var, "files")) {
@@ -465,6 +464,7 @@ static void commands_process_sources(struct commands *c, char a)
         if (miout) {
             /* Add source files to our file list */
             mi_parse_sources(miout, c->inferior_source_files);
+
             mi_free_output(miout);
         }
 
@@ -502,29 +502,29 @@ static void commands_process_breakpoints(struct commands *c, char a, struct tgdb
     if (a == '\n') {
         /* parse gdbmi -break-info output */
         mi_output *miout = mi_parse_gdb_output(ibuf_get(c->breakpoint_string));
-        if (miout) {
-            mi_results *res = (miout->type == MI_T_RESULT_RECORD) ? miout->c : NULL;
+
+        if (miout && (miout->type == MI_T_RESULT_RECORD)) {
+            mi_results *res = miout->c;
             mi_results *bplist = mi_find_var(res, "bkpt", t_tuple);
 
             while (bplist) {
                 mi_bkpt *bkpt = mi_get_bkpt(bplist->v.rs);
 
-                if (bkpt) {
-                    if (bkpt->fullname) {
-                        struct tgdb_breakpoint *tb = (struct tgdb_breakpoint *) cgdb_malloc(
-                                    sizeof (struct tgdb_breakpoint));
-                        tb->funcname = bkpt->func;
-                        tb->file = bkpt->fullname;
-                        tb->line = bkpt->line;
-                        tb->enabled = bkpt->enabled;
+                if (bkpt && bkpt->fullname) {
+                    struct tgdb_breakpoint *tb = (struct tgdb_breakpoint *) cgdb_malloc(
+                                sizeof (struct tgdb_breakpoint));
+                    tb->funcname = bkpt->func;
+                    tb->file = bkpt->fullname;
+                    tb->line = bkpt->line;
+                    tb->enabled = bkpt->enabled;
 
-                        tgdb_list_append(c->breakpoint_list, tb);
-                    }
+                    tgdb_list_append(c->breakpoint_list, tb);
 
                     bkpt->func = NULL;
                     bkpt->fullname = NULL;
-                    mi_free_bkpt(bkpt);
                 }
+
+                mi_free_bkpt(bkpt);
 
                 bplist = bplist->next;
             }
@@ -542,10 +542,9 @@ static void commands_process_breakpoints(struct commands *c, char a, struct tgdb
                  * All of the valid breakpoints are stored in breakpoint_queue. */
                 tgdb_types_append_command(list, response);
             }
-
-            mi_free_output(miout);
         }
 
+        mi_free_output(miout);
         ibuf_clear(c->breakpoint_string);
     } else {
         ibuf_addchar(c->breakpoint_string, a);

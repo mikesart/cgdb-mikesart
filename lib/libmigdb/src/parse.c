@@ -15,7 +15,7 @@ tree (could be a complex one) that we can easily interpret using C code.
 #include <assert.h>
 #include "mi_gdb.h"
 
-mi_results *mi_get_result(const char *str, const char **end);
+mi_results *mi_get_result(const char *str, const char **end,mi_results *last_r);
 int mi_get_value(mi_results *r, const char *str, const char **end);
 
 
@@ -131,7 +131,7 @@ int mi_get_list_res(mi_results *r, const char *str, const char **end, char close
  last_r=NULL;
  do
    {
-    rs=mi_get_result(str,&str);
+    rs=mi_get_result(str,&str,last_r);
     if (last_r)
        last_r->next=rs;
     else
@@ -282,14 +282,25 @@ int mi_get_value(mi_results *r, const char *str, const char **end)
  return 0;
 }
 
-mi_results *mi_get_result(const char *str, const char **end)
+mi_results *mi_get_result(const char *str, const char **end,mi_results *last_r)
 {
  char *var;
  mi_results *r;
 
- var=mi_get_var_name(str,&str);
- if (!var)
-    return NULL;
+ /* Workaround gdb/mi bug
+    Occasionally get bkpt={foo,blah},{foo1,blah1},{foo2,blah2},bkpt={...}
+    https://sourceware.org/bugzilla/show_bug.cgi?id=9659
+  */
+ if ((*str=='{' || *str=='[') && last_r && last_r->var)
+   {
+     var = strdup(last_r->var);
+   }
+ else
+   {
+     var=mi_get_var_name(str,&str);
+     if (!var)
+        return NULL;
+   }
 
  r=mi_alloc_results();
  if (!r)
@@ -324,7 +335,7 @@ mi_output *mi_get_results_alone(mi_output *r,const char *str)
        break;
       }
     str++;
-    rs=mi_get_result(str,&str);
+    rs=mi_get_result(str,&str,NULL);
     if (!rs)
        break;
     if (!last_r)
