@@ -76,12 +76,6 @@ struct commands {
   /** The discovered absolute path, found from the info source output.  */
     struct ibuf *info_source_absolute_path;
 
-  /** Finished parsing the line being looked for.  */
-    int info_source_ready;
-
-  /** The name of the file requested to have 'info source' run on.  */
-    struct ibuf *last_info_source_requested;
-
     /*@} */
 
     /* info sources information {{{ */
@@ -141,8 +135,6 @@ struct commands *commands_initialize(void)
     c->line_number = ibuf_init();
     c->info_source_relative_path = ibuf_init();
     c->info_source_absolute_path = ibuf_init();
-    c->info_source_ready = 0;
-    c->last_info_source_requested = ibuf_init();
 
     c->sources_ready = 0;
     c->info_sources_string = ibuf_init();
@@ -214,9 +206,6 @@ void commands_shutdown(struct commands *c)
     ibuf_free(c->info_source_absolute_path);
     c->info_source_absolute_path = NULL;
 
-    ibuf_free(c->last_info_source_requested);
-    c->last_info_source_requested = NULL;
-
     ibuf_free(c->info_sources_string);
     c->info_sources_string = NULL;
 
@@ -234,34 +223,6 @@ void commands_shutdown(struct commands *c)
     c = NULL;
 }
 
-int
-commands_parse_field(struct commands *c, const char *buf, size_t n, int *field)
-{
-    if (sscanf(buf, "field %d", field) != 1)
-        logger_write_pos(logger, __FILE__, __LINE__,
-                "parsing field annotation failed (%s)\n", buf);
-
-    return 0;
-}
-
-/* source filename:line:character:middle:addr */
-int
-commands_parse_source(struct commands *c,
-        struct tgdb_list *client_command_list,
-        const char *buf, size_t n, struct tgdb_list *list)
-{
-    /* set up the info_source command to get info */
-    if (commands_issue_command(c,
-                    client_command_list,
-                    ANNOTATE_INFO_SOURCE_RELATIVE, NULL, 1) == -1) {
-        logger_write_pos(logger, __FILE__, __LINE__,
-                "commands_issue_command error");
-        return -1;
-    }
-
-    return 0;
-}
-
 void
 commands_set_state(struct commands *c,
         enum COMMAND_STATE state, struct tgdb_list *list)
@@ -275,93 +236,18 @@ enum COMMAND_STATE commands_get_state(struct commands *c)
 }
 
 static void
-commands_prepare_info_source(struct annotate_two *a2, struct commands *c,
-        enum COMMAND_STATE state)
+commands_prepare_info_source(struct annotate_two *a2, struct commands *c)
 {
     data_set_state(a2, INTERNAL_COMMAND);
     ibuf_clear(c->info_source_string);
     ibuf_clear(c->info_source_relative_path);
     ibuf_clear(c->info_source_absolute_path);
 
-    if (state == INFO_SOURCE_FILENAME_PAIR)
-        commands_set_state(c, INFO_SOURCE_FILENAME_PAIR, NULL);
-    else if (state == INFO_SOURCE_RELATIVE)
-        commands_set_state(c, INFO_SOURCE_RELATIVE, NULL);
-
-    c->info_source_ready = 0;
-}
-
-void
-commands_list_command_finished(struct commands *c,
-        struct tgdb_list *list, int success)
-{
-    /* The file does not exist and it can not be opened.
-     * So we return that information to the gui.  */
-    struct tgdb_source_file *rejected = (struct tgdb_source_file *)
-            cgdb_malloc(sizeof (struct tgdb_source_file));
-    struct tgdb_response *response = (struct tgdb_response *)
-            cgdb_malloc(sizeof (struct tgdb_response));
-
-    if (c->last_info_source_requested == NULL)
-        rejected->absolute_path = NULL;
-    else
-        rejected->absolute_path =
-                strdup(ibuf_get(c->last_info_source_requested));
-
-    response->header = TGDB_ABSOLUTE_SOURCE_DENIED;
-    response->choice.absolute_source_denied.source_file = rejected;
-
-    tgdb_types_append_command(list, response);
-}
-
-/* This will send to the gui the absolute path to the file being requested. 
- * Otherwise the gui will be notified that the file is not valid.
- */
-static void
-commands_send_source_absolute_source_file(struct commands *c,
-        struct tgdb_list *list)
-{
-    /*err_msg("Whats up(%s:%d)\r\n", info_source_buf, info_source_buf_pos); */
-    unsigned long length = ibuf_length(c->info_source_absolute_path);
-
-    /* found */
-    if (length > 0) {
-        char *apath = NULL, *rpath = NULL;
-        struct tgdb_response *response;
-
-        if (length > 0)
-            apath = ibuf_get(c->info_source_absolute_path);
-        if (ibuf_length(c->info_source_relative_path) > 0)
-            rpath = ibuf_get(c->info_source_relative_path);
-
-        response = (struct tgdb_response *)
-                cgdb_malloc(sizeof (struct tgdb_response));
-        response->header = TGDB_FILENAME_PAIR;
-        response->choice.filename_pair.absolute_path = strdup(apath);
-        response->choice.filename_pair.relative_path = strdup(rpath);
-        tgdb_types_append_command(list, response);
-        /* not found */
-    } else {
-        struct tgdb_source_file *rejected = (struct tgdb_source_file *)
-                cgdb_malloc(sizeof (struct tgdb_source_file));
-        struct tgdb_response *response = (struct tgdb_response *)
-                cgdb_malloc(sizeof (struct tgdb_response));
-
-        response->header = TGDB_ABSOLUTE_SOURCE_DENIED;
-
-        if (c->last_info_source_requested == NULL)
-            rejected->absolute_path = NULL;
-        else
-            rejected->absolute_path =
-                    strdup(ibuf_get(c->last_info_source_requested));
-
-        response->choice.absolute_source_denied.source_file = rejected;
-        tgdb_types_append_command(list, response);
-    }
+    commands_set_state(c, INFO_SOURCE, NULL);
 }
 
 static void
-commands_send_source_relative_source_file(struct commands *c,
+commands_send_source_file(struct commands *c,
         struct tgdb_list *list)
 {
     /* So far, INFO_SOURCE_RELATIVE is only used when a 
@@ -392,7 +278,7 @@ commands_send_source_relative_source_file(struct commands *c,
  * It can get both the absolute and relative path to the source file.
  */
 static void
-commands_process_info_source(struct commands *c, char a)
+commands_process_info_source(struct commands *c, char a, struct tgdb_list *list)
 {
     if (a == '\n') {
         /* parse gdbmi -file-list-exec-source-file output */
@@ -421,7 +307,8 @@ commands_process_info_source(struct commands *c, char a)
             mi_free_output(miout);
         }
 
-        c->info_source_ready = 1;
+        commands_send_source_file(c, list);
+
         ibuf_clear(c->info_source_string);
     } else {
         ibuf_addchar(c->info_source_string, a);
@@ -622,11 +509,8 @@ void commands_process(struct commands *c, char a, struct tgdb_list *list)
         commands_process_breakpoints(c, a, list);
     } else if (commands_get_state(c) == COMPLETE) {
         commands_process_complete(c, a);
-    } else if (commands_get_state(c) == INFO_LIST) {
-        /* do nothing with data */
-    } else if (commands_get_state(c) == INFO_SOURCE_FILENAME_PAIR
-            || commands_get_state(c) == INFO_SOURCE_RELATIVE) {
-        commands_process_info_source(c, a);
+    } else if (commands_get_state(c) == INFO_SOURCE) {
+        commands_process_info_source(c, a, list);
     }
 }
 
@@ -674,54 +558,6 @@ commands_prepare_info_sources(struct annotate_two *a2, struct commands *c)
     global_set_start_info_sources(a2->g);
 }
 
-/* commands_prepare_list: 
- * -----------------------------
- *  This runs the command 'list filename:1' and then runs
- *  'info source' to find out what the absolute path to filename is.
- * 
- *    filename -> The name of the file to check the absolute path of.
- */
-static void
-commands_prepare_list(struct annotate_two *a2, struct commands *c,
-        char *filename)
-{
-    commands_set_state(c, INFO_LIST, NULL);
-    global_set_start_list(a2->g);
-    c->info_source_ready = 0;
-}
-
-void commands_finalize_command(struct commands *c, struct tgdb_list *list)
-{
-    switch (commands_get_state(c)) {
-        case INFO_SOURCE_RELATIVE:
-        case INFO_SOURCE_FILENAME_PAIR:
-            if (c->info_source_ready == 0) {
-                struct tgdb_source_file *rejected = (struct tgdb_source_file *)
-                        cgdb_malloc(sizeof (struct tgdb_source_file));
-                struct tgdb_response *response = (struct tgdb_response *)
-                        cgdb_malloc(sizeof (struct tgdb_response));
-
-                if (c->last_info_source_requested == NULL)
-                    rejected->absolute_path = NULL;
-                else
-                    rejected->absolute_path =
-                            strdup(ibuf_get(c->last_info_source_requested));
-
-                response->header = TGDB_ABSOLUTE_SOURCE_DENIED;
-                response->choice.absolute_source_denied.source_file = rejected;
-                tgdb_types_append_command(list, response);
-            } else {
-                if (commands_get_state(c) == INFO_SOURCE_RELATIVE)
-                    commands_send_source_relative_source_file(c, list);
-                else if (commands_get_state(c) == INFO_SOURCE_FILENAME_PAIR)
-                    commands_send_source_absolute_source_file(c, list);
-            }
-            break;
-        default:
-            break;
-    }
-}
-
 int
 commands_prepare_for_command(struct annotate_two *a2,
         struct commands *c, struct tgdb_command *com)
@@ -733,14 +569,6 @@ commands_prepare_for_command(struct annotate_two *a2,
     /* Set the commands state to nothing */
     commands_set_state(c, VOID_COMMAND, NULL);
 
-    /* The list command is no longer running */
-    global_list_finished(a2->g);
-
-    if (global_list_had_error(a2->g) == 1 && commands_get_state(c) == INFO_LIST) {
-        global_set_list_error(a2->g, 0);
-        return -1;
-    }
-
     if (a_com == NULL) {
         data_set_state(a2, USER_COMMAND);
         return 0;
@@ -750,16 +578,8 @@ commands_prepare_for_command(struct annotate_two *a2,
         case ANNOTATE_INFO_SOURCES:
             commands_prepare_info_sources(a2, c);
             break;
-        case ANNOTATE_LIST:
-            commands_prepare_list(a2, c, com->tgdb_command_data);
-            break;
-        case ANNOTATE_INFO_LINE:
-            break;
-        case ANNOTATE_INFO_SOURCE_RELATIVE:
-            commands_prepare_info_source(a2, c, INFO_SOURCE_RELATIVE);
-            break;
-        case ANNOTATE_INFO_SOURCE_FILENAME_PAIR:
-            commands_prepare_info_source(a2, c, INFO_SOURCE_FILENAME_PAIR);
+        case ANNOTATE_INFO_SOURCE:
+            commands_prepare_info_source(a2, c);
             break;
         case ANNOTATE_INFO_BREAKPOINTS:
             commands_prepare_info_breakpoints(c);
@@ -770,7 +590,6 @@ commands_prepare_for_command(struct annotate_two *a2,
             commands_prepare_tab_completion(a2, c);
             io_debug_write_fmt("<%s\n>", com->tgdb_command_data);
             break;              /* Nothing to do */
-        case ANNOTATE_INFO_SOURCE:
         case ANNOTATE_SET_PROMPT:
         case ANNOTATE_VOID:
             break;
@@ -809,54 +628,7 @@ static char *commands_create_command(struct commands *c,
             /* server info sources */
             ncom = strdup("server interp mi \"-file-list-exec-source-files\"\n");
             break;
-        case ANNOTATE_LIST:
-        {
-            struct ibuf *temp_file_name = NULL;
-
-            if (data != NULL) {
-                temp_file_name = ibuf_init();
-                ibuf_add(temp_file_name, data);
-            }
-            if (data == NULL)
-                ncom = (char *) cgdb_malloc(sizeof (char) * (16));
-            else
-                ncom = (char *) cgdb_malloc(sizeof (char) * (18 +
-                                strlen(data)));
-            strcpy(ncom, "server list ");
-
-            if (temp_file_name != NULL) {
-                strcat(ncom, "\"");
-                strcat(ncom, ibuf_get(temp_file_name));
-                strcat(ncom, "\"");
-                strcat(ncom, ":1");
-            }
-
-            /* This happens when the user wants to get the absolute path of 
-             * the current file. They pass in NULL to represent that. */
-            if (temp_file_name == NULL) {
-                ibuf_free(c->last_info_source_requested);
-                c->last_info_source_requested = NULL;
-            } else {
-                if (c->last_info_source_requested == NULL)
-                    c->last_info_source_requested = ibuf_init();
-
-                ibuf_clear(c->last_info_source_requested);
-                ibuf_add(c->last_info_source_requested,
-                        ibuf_get(temp_file_name));
-            }
-
-            strcat(ncom, "\n");
-
-            ibuf_free(temp_file_name);
-            temp_file_name = NULL;
-            break;
-        }
-        case ANNOTATE_INFO_LINE:
-            /* Not implemented? -symbol-info-line */
-            ncom = strdup("server info line\n");
-            break;
-        case ANNOTATE_INFO_SOURCE_RELATIVE:
-        case ANNOTATE_INFO_SOURCE_FILENAME_PAIR:
+        case ANNOTATE_INFO_SOURCE:
             /* server info source */
             ncom = strdup("server interp mi \"-file-list-exec-source-file\"\n");
             break;
@@ -866,6 +638,7 @@ static char *commands_create_command(struct commands *c,
             break;
         case ANNOTATE_TTY:
         {
+            //$ TODO mikesart: -inferior-tty-set
             struct ibuf *temp_tty_name = ibuf_init();
 
             ibuf_add(temp_tty_name, data);

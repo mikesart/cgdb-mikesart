@@ -22,10 +22,16 @@ static int
 handle_source(struct annotate_two *a2, const char *buf, size_t n,
         struct tgdb_list *list)
 {
-    int ret =
-            commands_parse_source(a2->c, a2->client_command_list, buf, n, list);
+    /* set up the info_source command to get info */
+    if (commands_issue_command(a2->c,
+                    a2->client_command_list,
+                    ANNOTATE_INFO_SOURCE, NULL, 1) == -1) {
+        logger_write_pos(logger, __FILE__, __LINE__,
+                "commands_issue_command error");
+        return -1;
+    }
 
-    return ret;
+    return 0;
 }
 
 static int handle_misc_pre_prompt(struct annotate_two *a2, const char *buf,
@@ -72,12 +78,6 @@ static int handle_pre_prompt(struct annotate_two *a2, const char *buf, size_t n,
 static int handle_prompt(struct annotate_two *a2, const char *buf, size_t n,
         struct tgdb_list *list)
 {
-    /* This return TGDB_ABSOLUTE_SOURCE_DENIED if there was no absolute path
-     * given when 'info source' was run.
-     * It tells the gui that the source is not available.
-     */
-    commands_finalize_command(a2->c, list);
-
     /* All done. */
     data_set_state(a2, USER_AT_PROMPT);
 
@@ -130,14 +130,6 @@ static int handle_error_begin(struct annotate_two *a2, const char *buf,
 
         response->header = TGDB_SOURCES_DENIED;
         tgdb_types_append_command(list, response);
-        return 0;
-    }
-
-    /* if the user tried to list a file that does not exist */
-    if (global_has_list_started(a2->g) == 1) {
-        global_list_finished(a2->g);
-        global_set_list_error(a2->g, 1);
-        commands_list_command_finished(a2->c, list, 0);
         return 0;
     }
 
