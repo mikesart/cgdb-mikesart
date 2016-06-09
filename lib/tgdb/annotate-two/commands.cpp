@@ -93,9 +93,6 @@ struct commands {
     /* tab completion information {{{ */
     /*@{ */
 
-  /** ??? Finished parsing the data being looked for.  */
-    int tab_completion_ready;
-
   /** A tab completion item */
     struct ibuf *tab_completion_string;
 
@@ -136,7 +133,6 @@ struct commands *commands_initialize(void)
     c->info_sources_string = ibuf_init();
     c->inferior_source_files = tgdb_list_init();
 
-    c->tab_completion_ready = 0;
     c->tab_completion_string = ibuf_init();
     c->tab_completions = tgdb_list_init();
 
@@ -338,22 +334,6 @@ static void mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
     }
 }
 
-static void commands_send_gui_sources(struct commands *c, struct tgdb_list *list)
-{
-    /* If the inferior program was not compiled with debug, then no sources
-     * will be available. If no sources are available, do not return the
-     * TGDB_UPDATE_SOURCE_FILES command. */
-    if (tgdb_list_size(c->inferior_source_files) > 0) {
-        struct tgdb_response *response = (struct tgdb_response *)
-                cgdb_malloc(sizeof (struct tgdb_response));
-
-        response->header = TGDB_UPDATE_SOURCE_FILES;
-        response->choice.update_source_files.source_files =
-                c->inferior_source_files;
-        tgdb_types_append_command(list, response);
-    }
-}
-
 /* process's source files */
 static void commands_process_sources(struct commands *c, char a, struct tgdb_list *list)
 {
@@ -365,7 +345,15 @@ static void commands_process_sources(struct commands *c, char a, struct tgdb_lis
             mi_parse_sources(miout, c->inferior_source_files);
             mi_free_output(miout);
 
-            commands_send_gui_sources(c, list);
+            if (tgdb_list_size(c->inferior_source_files) > 0) {
+                struct tgdb_response *response = (struct tgdb_response *)
+                        cgdb_malloc(sizeof (struct tgdb_response));
+
+                response->header = TGDB_UPDATE_SOURCE_FILES;
+                response->choice.update_source_files.source_files =
+                        c->inferior_source_files;
+                tgdb_types_append_command(list, response);
+            }
         }
 
         ibuf_clear(c->info_sources_string);
@@ -374,7 +362,7 @@ static void commands_process_sources(struct commands *c, char a, struct tgdb_lis
     }
 }
 
-//$ TODO: Document and put these in mi_gdb.h
+//$ TODO mikesart: Document and put these in mi_gdb.h
 extern "C" mi_bkpt *mi_get_bkpt(mi_results *p);
 
 mi_results *mi_find_var(mi_results *res, const char *var, mi_val_type type)
@@ -450,51 +438,64 @@ static void commands_process_breakpoints(struct commands *c, char a, struct tgdb
     }
 }
 
-static void commands_process_completion(struct commands *c)
+/* process's command completion
+    (gdb) server interp mi "complete com"
+    &"complete com\n"
+    ~"commands\n"
+    ~"compare-sections\n"
+    ~"compile\n"
+    ~"complete\n"
+    ^done
+*/
+static void commands_process_complete(struct commands *c, char a, struct tgdb_list *list)
 {
-    const char *ptr = ibuf_get(c->tab_completion_string);
-    const char *scomplete = "server complete ";
+    int len = ibuf_length(c->tab_completion_string);
+    char *str = ibuf_get(c->tab_completion_string);
 
-    /* Do not add the "server complete " matches, which is returned with 
-     * GNAT 3.15p version of GDB. Most likely this could happen with other 
-     * implementations that are derived from GDB.
-     */
-    if (strncmp(ptr, scomplete, strlen(scomplete)) != 0)
-        tgdb_list_append(c->tab_completions, strdup(ptr));
-}
+    if ((len > 5) && !strcmp(str + len - 5, "^done")) {
+        struct tgdb_response *response;
 
-/* process's source files */
-static void commands_process_complete(struct commands *c, char a)
-{
-    ibuf_addchar(c->tab_completion_string, a);
+        while (str) {
+            char *end;
+            mi_output *miout;
 
-    if (a == '\n') {
-        ibuf_delchar(c->tab_completion_string); /* remove '\n' and null terminate */
+            /* Find end of line */
+            end = strchr(str, '\n');
+            if (!end)
+                break;
 
-        if (ibuf_length(c->tab_completion_string) > 0)
-            commands_process_completion(c);
+            /* Zero terminate line and parse the gdbmi string */
+            *end++ = 0;
+            miout = mi_parse_gdb_output(str);
+
+            /* If this is a console string, add it to our list */
+            if (miout && (miout->sstype == MI_SST_CONSOLE)) {
+                char *cstr = miout->c->v.cstr;
+                size_t length = strlen(cstr);
+
+                if (length > 0) {
+                    /* Trim trailing newline */
+                    if (cstr[length - 1] == '\n')
+                        cstr[--length] = 0;
+
+                    tgdb_list_append(c->tab_completions, miout->c->v.cstr);
+                    miout->c->v.cstr = NULL;
+                }
+            }
+            mi_free_output(miout);
+
+            str = end;
+        }
+
+        response = (struct tgdb_response *)cgdb_malloc(sizeof (struct tgdb_response));
+        response->header = TGDB_UPDATE_COMPLETIONS;
+        response->choice.update_completions.completion_list = c->tab_completions;
+        tgdb_types_append_command(list, response);
 
         ibuf_clear(c->tab_completion_string);
+    } else {
+        ibuf_addchar(c->tab_completion_string, a);
     }
-}
-
-void commands_free(struct commands *c, void *item)
-{
-    free((char *) item);
-}
-
-void commands_send_gui_completions(struct commands *c, struct tgdb_list *list)
-{
-    /* If the inferior program was not compiled with debug, then no sources
-     * will be available. If no sources are available, do not return the
-     * TGDB_UPDATE_SOURCE_FILES command. */
-/*  if (tgdb_list_size ( c->tab_completions ) > 0)*/
-    struct tgdb_response *response = (struct tgdb_response *)
-            cgdb_malloc(sizeof (struct tgdb_response));
-
-    response->header = TGDB_UPDATE_COMPLETIONS;
-    response->choice.update_completions.completion_list = c->tab_completions;
-    tgdb_types_append_command(list, response);
 }
 
 void commands_process(struct commands *c, char a, struct tgdb_list *list)
@@ -503,53 +504,11 @@ void commands_process(struct commands *c, char a, struct tgdb_list *list)
         commands_process_sources(c, a, list);
     } else if (commands_get_state(c) == INFO_BREAKPOINTS) {
         commands_process_breakpoints(c, a, list);
-    } else if (commands_get_state(c) == COMPLETE) {
-        commands_process_complete(c, a);
+    } else if (commands_get_state(c) == COMMAND_COMPLETE) {
+        commands_process_complete(c, a, list);
     } else if (commands_get_state(c) == INFO_SOURCE) {
         commands_process_info_source(c, a, list);
     }
-}
-
-/*******************************************************************************
- * This must be translated to just return the proper command.
- ******************************************************************************/
-
-/* commands_prepare_info_breakpoints: 
- * ----------------------------------
- *  
- *  This prepares the command 'info breakpoints' 
- */
-static void
-commands_prepare_info_breakpoints(struct commands *c)
-{
-    ibuf_clear(c->breakpoint_string);
-    commands_set_state(c, INFO_BREAKPOINTS, NULL);
-}
-
-/* commands_prepare_tab_completion:
- * --------------------------------
- *
- * This prepares the tab completion command
- */
-static void
-commands_prepare_tab_completion(struct annotate_two *a2, struct commands *c)
-{
-    c->tab_completion_ready = 0;
-    ibuf_clear(c->tab_completion_string);
-    commands_set_state(c, COMPLETE, NULL);
-    global_set_start_completion(a2->g);
-}
-
-/* commands_prepare_info_sources: 
- * ------------------------------
- *
- *  This prepares the command 'info sources' by setting certain variables.
- */
-static void
-commands_prepare_info_sources(struct annotate_two *a2, struct commands *c)
-{
-    ibuf_clear(c->info_sources_string);
-    commands_set_state(c, INFO_SOURCES, NULL);
 }
 
 int
@@ -570,18 +529,21 @@ commands_prepare_for_command(struct annotate_two *a2,
 
     switch (*a_com) {
         case ANNOTATE_INFO_SOURCES:
-            commands_prepare_info_sources(a2, c);
+            ibuf_clear(c->info_sources_string);
+            commands_set_state(c, INFO_SOURCES, NULL);
             break;
         case ANNOTATE_INFO_SOURCE:
             commands_prepare_info_source(a2, c);
             break;
         case ANNOTATE_INFO_BREAKPOINTS:
-            commands_prepare_info_breakpoints(c);
+            ibuf_clear(c->breakpoint_string);
+            commands_set_state(c, INFO_BREAKPOINTS, NULL);
             break;
         case ANNOTATE_TTY:
             break;              /* Nothing to do */
         case ANNOTATE_COMPLETE:
-            commands_prepare_tab_completion(a2, c);
+            ibuf_clear(c->tab_completion_string);
+            commands_set_state(c, COMMAND_COMPLETE, NULL);
             io_debug_write_fmt("<%s\n>", com->tgdb_command_data);
             break;              /* Nothing to do */
         case ANNOTATE_VOID:
@@ -634,9 +596,7 @@ static char *commands_create_command(struct commands *c,
             ncom = sys_aprintf("server interp mi \"-inferior-tty-set %s\"\n", data);
             break;
         case ANNOTATE_COMPLETE:
-            //$ TODO: server interp mi "complete info "
-            //$ TODO: use commands_send_gui_completions
-            //$ TODO: check for ^done to end completions
+            /* server complete */
             ncom = sys_aprintf("server interp mi \"complete %s\"\n", data);
             break;
         case ANNOTATE_VOID:

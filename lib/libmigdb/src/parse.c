@@ -47,7 +47,7 @@ int mi_get_cstring_r(mi_results *r, const char *str, const char **end)
     return 0;
    }
  str++;
- /* Meassure. */
+ /* Measure. */
  for (s=str, len=0; *s && !EndOfStr(s); s++)
     {
      if (*s=='\\')
