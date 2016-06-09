@@ -81,9 +81,6 @@ struct commands {
     /* info sources information {{{ */
     /*@{ */
 
-  /** ??? Finished parsing the data being looked for.  */
-    int sources_ready;
-
   /** All of the sources.  */
     struct ibuf *info_sources_string;
 
@@ -136,7 +133,6 @@ struct commands *commands_initialize(void)
     c->info_source_relative_path = ibuf_init();
     c->info_source_absolute_path = ibuf_init();
 
-    c->sources_ready = 0;
     c->info_sources_string = ibuf_init();
     c->inferior_source_files = tgdb_list_init();
 
@@ -342,8 +338,24 @@ static void mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
     }
 }
 
+static void commands_send_gui_sources(struct commands *c, struct tgdb_list *list)
+{
+    /* If the inferior program was not compiled with debug, then no sources
+     * will be available. If no sources are available, do not return the
+     * TGDB_UPDATE_SOURCE_FILES command. */
+    if (tgdb_list_size(c->inferior_source_files) > 0) {
+        struct tgdb_response *response = (struct tgdb_response *)
+                cgdb_malloc(sizeof (struct tgdb_response));
+
+        response->header = TGDB_UPDATE_SOURCE_FILES;
+        response->choice.update_source_files.source_files =
+                c->inferior_source_files;
+        tgdb_types_append_command(list, response);
+    }
+}
+
 /* process's source files */
-static void commands_process_sources(struct commands *c, char a)
+static void commands_process_sources(struct commands *c, char a, struct tgdb_list *list)
 {
     if (a == '\n') {
         /* parse gdbmi -file-list-exec-source-files output */
@@ -351,11 +363,11 @@ static void commands_process_sources(struct commands *c, char a)
         if (miout) {
             /* Add source files to our file list */
             mi_parse_sources(miout, c->inferior_source_files);
-
             mi_free_output(miout);
+
+            commands_send_gui_sources(c, list);
         }
 
-        c->sources_ready = 1;
         ibuf_clear(c->info_sources_string);
     } else {
         ibuf_addchar(c->info_sources_string, a);
@@ -471,22 +483,6 @@ void commands_free(struct commands *c, void *item)
     free((char *) item);
 }
 
-void commands_send_gui_sources(struct commands *c, struct tgdb_list *list)
-{
-    /* If the inferior program was not compiled with debug, then no sources
-     * will be available. If no sources are available, do not return the
-     * TGDB_UPDATE_SOURCE_FILES command. */
-    if (tgdb_list_size(c->inferior_source_files) > 0) {
-        struct tgdb_response *response = (struct tgdb_response *)
-                cgdb_malloc(sizeof (struct tgdb_response));
-
-        response->header = TGDB_UPDATE_SOURCE_FILES;
-        response->choice.update_source_files.source_files =
-                c->inferior_source_files;
-        tgdb_types_append_command(list, response);
-    }
-}
-
 void commands_send_gui_completions(struct commands *c, struct tgdb_list *list)
 {
     /* If the inferior program was not compiled with debug, then no sources
@@ -504,7 +500,7 @@ void commands_send_gui_completions(struct commands *c, struct tgdb_list *list)
 void commands_process(struct commands *c, char a, struct tgdb_list *list)
 {
     if (commands_get_state(c) == INFO_SOURCES) {
-        commands_process_sources(c, a);
+        commands_process_sources(c, a, list);
     } else if (commands_get_state(c) == INFO_BREAKPOINTS) {
         commands_process_breakpoints(c, a, list);
     } else if (commands_get_state(c) == COMPLETE) {
@@ -552,10 +548,8 @@ commands_prepare_tab_completion(struct annotate_two *a2, struct commands *c)
 static void
 commands_prepare_info_sources(struct annotate_two *a2, struct commands *c)
 {
-    c->sources_ready = 0;
     ibuf_clear(c->info_sources_string);
     commands_set_state(c, INFO_SOURCES, NULL);
-    global_set_start_info_sources(a2->g);
 }
 
 int
