@@ -19,6 +19,8 @@ enum COMMAND_STATE {
     INFO_SOURCE,
     /* Related to the 'info frame' command */
     INFO_FRAME,
+    /* Related to the '-data-disassemble' command */
+    INFO_DISASSEMBLE,
     /* Related to the 'server complete' command for tab completion */
     COMMAND_COMPLETE,
 };

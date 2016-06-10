@@ -58,6 +58,9 @@ struct commands {
   /** The current breakpoint being parsed.  */
     struct ibuf *breakpoint_string;
 
+  /** The disassemble string being parsed.  */
+    struct ibuf *disassemble_string;
+
     /*@} */
 
   /** 'info source' information */
@@ -118,6 +121,7 @@ struct commands *commands_initialize(void)
 
     c->breakpoint_list = tgdb_list_init();
     c->breakpoint_string = ibuf_init();
+    c->disassemble_string = ibuf_init();
 
     c->info_source_string = ibuf_init();
     c->info_sources_string = ibuf_init();
@@ -177,6 +181,9 @@ void commands_shutdown(struct commands *c)
     ibuf_free(c->breakpoint_string);
     c->breakpoint_string = NULL;
 
+    ibuf_free(c->disassemble_string);
+    c->disassemble_string = NULL;
+
     ibuf_free(c->info_source_string);
     c->info_source_string = NULL;
 
@@ -193,8 +200,6 @@ void commands_shutdown(struct commands *c)
 
     tgdb_list_free(c->inferior_source_files, free_char_star);
     tgdb_list_destroy(c->inferior_source_files);
-
-    /* TODO: free source_files queue */
 
     free(c);
     c = NULL;
@@ -214,6 +219,7 @@ enum COMMAND_STATE commands_get_state(struct commands *c)
 
 //$ TODO mikesart: Document and put these in mi_gdb.h
 extern "C" mi_bkpt *mi_get_bkpt(mi_results *p);
+extern "C" mi_asm_insns *mi_parse_insns(mi_results *c);
 
 mi_results *mi_find_var(mi_results *res, const char *var, mi_val_type type)
 {
@@ -221,7 +227,7 @@ mi_results *mi_find_var(mi_results *res, const char *var, mi_val_type type)
         if (res->var && (type == res->type) && !strcmp(res->var, var))
             return res;
 
-        // if (res->type == t_const) res->v.cstr;
+        /* if (res->type == t_const) res->v.cstr; */
         if ((res->type == t_tuple) || (res->type == t_list)) {
             mi_results *t = mi_find_var(res->v.rs, var, type);
             if (t)
@@ -438,8 +444,7 @@ static void commands_process_breakpoints(struct commands *c, char a, struct tgdb
         mi_output *miout = mi_parse_gdb_output(ibuf_get(c->breakpoint_string));
 
         if (miout && (miout->type == MI_T_RESULT_RECORD)) {
-            mi_results *res = miout->c;
-            mi_results *bplist = mi_find_var(res, "bkpt", t_tuple);
+            mi_results *bplist = mi_find_var(miout->c, "bkpt", t_tuple);
 
             while (bplist) {
                 mi_bkpt *bkpt = mi_get_bkpt(bplist->v.rs);
@@ -546,19 +551,67 @@ static void commands_process_complete(struct commands *c, char a, struct tgdb_li
     }
 }
 
+static void
+commands_process_disassemble(struct annotate_two *a2, struct commands *c,
+                             char a, struct tgdb_list *list)
+{
+    /*
+        interp mi "-data-disassemble -s $pc -e $pc+20 -- 0"
+        ^done,asm_insns=[{address="0x0000000000400908",inst="mov    edi,0x400e40"},
+            address="0x000000000040090d",inst="call   0x400760 <puts@plt>"},
+            {address="0x0000000000400912",inst="mov    edi,0x400ea0"},
+            {address="0x0000000000400917",inst="call   0x400760 <puts@plt>"}]
+     */
+    if (a == '\n') {
+        /* parse gdbmi -data-disassemble command */
+        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->disassemble_string));
+
+        if (miout && (miout->type == MI_T_RESULT_RECORD)) {
+            mi_asm_insns *ins;
+            mi_results *insns = mi_find_var(miout->c, "asm_insns", t_list);
+
+            if (insns) {
+                ins = mi_parse_insns(insns->v.rs);
+
+                if (ins) {
+                    mi_free_asm_insns(ins);
+                }
+            }
+        }
+
+        mi_free_output(miout);
+        ibuf_clear(c->disassemble_string);
+    } else {
+        ibuf_addchar(c->disassemble_string, a);
+    }
+}
+
 void commands_process(struct annotate_two *a2, struct commands *c, char a, struct tgdb_list *list)
 {
-    if (commands_get_state(c) == INFO_SOURCES) {
-        commands_process_sources(c, a, list);
-    } else if (commands_get_state(c) == INFO_BREAKPOINTS) {
-        commands_process_breakpoints(c, a, list);
-    } else if (commands_get_state(c) == COMMAND_COMPLETE) {
-        commands_process_complete(c, a, list);
-    } else if (commands_get_state(c) == INFO_SOURCE) {
-        commands_process_info_source(c, a, list);
-    } else if (commands_get_state(c) == INFO_FRAME) {
-        commands_process_info_frame(a2, c, a, list);
-    }
+    enum COMMAND_STATE state = commands_get_state(c);
+
+    switch (state) {
+        case VOID_COMMAND:
+            break;
+        case INFO_SOURCES:
+            commands_process_sources(c, a, list);
+            break;
+        case INFO_BREAKPOINTS:
+            commands_process_breakpoints(c, a, list);
+            break;
+        case COMMAND_COMPLETE:
+            commands_process_complete(c, a, list);
+            break;
+        case INFO_SOURCE:
+            commands_process_info_source(c, a, list);
+            break;
+        case INFO_FRAME:
+            commands_process_info_frame(a2, c, a, list);
+            break;
+        case INFO_DISASSEMBLE:
+            commands_process_disassemble(a2, c, a, list);
+            break;
+        }
 }
 
 int
@@ -603,6 +656,11 @@ commands_prepare_for_command(struct annotate_two *a2,
             commands_set_state(c, COMMAND_COMPLETE, NULL);
             io_debug_write_fmt("<%s\n>", com->tgdb_command_data);
             break;              /* Nothing to do */
+        case ANNOTATE_DISASSEMBLE:
+            ibuf_clear(c->disassemble_string);
+            data_set_state(a2, INTERNAL_COMMAND);
+            commands_set_state(c, INFO_DISASSEMBLE, NULL);
+            break;
         case ANNOTATE_VOID:
             break;
         default:
@@ -647,6 +705,12 @@ static char *commands_create_command(struct commands *c,
         case ANNOTATE_INFO_FRAME:
             /* server info frame */
             ncom = strdup("server interp mi \"-stack-info-frame\"\n");
+            break;
+        case ANNOTATE_DISASSEMBLE:
+            /* x/20i $pc */
+            if (!data)
+                data = "-s $pc -e $pc+100 -- 0";
+            ncom = sys_aprintf("server interp mi \"-data-disassemble %s\"\n", data);
             break;
         case ANNOTATE_INFO_BREAKPOINTS:
             /* server info breakpoints */

@@ -63,6 +63,11 @@ enum annotate_commands {
      * Shows information on the current frame
      */
     ANNOTATE_INFO_FRAME,
+
+    /**
+     * Get disassembly for specified address range
+     */
+    ANNOTATE_DISASSEMBLE,
 };
 
 /******************************************************************************/

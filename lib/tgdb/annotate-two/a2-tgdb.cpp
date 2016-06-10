@@ -304,6 +304,12 @@ struct tgdb_list *a2_get_client_commands(struct annotate_two *a2)
 
 int a2_get_current_location(struct annotate_two *a2)
 {
+#if 0
+    //$ TODO mikesart: temp test code - remove this...
+    commands_issue_command(a2->c, a2->client_command_list,
+                           ANNOTATE_DISASSEMBLE, NULL, 1);
+#endif
+
     /* Try to get frame information */
     return commands_issue_command(a2->c, a2->client_command_list,
                            ANNOTATE_INFO_FRAME, NULL, 1);
