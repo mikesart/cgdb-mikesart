@@ -643,46 +643,38 @@ commands_prepare_for_command(struct annotate_two *a2,
 static char *commands_create_command(struct commands *c,
         enum annotate_commands com, const char *data)
 {
-    char *ncom = NULL;
-
     switch (com) {
         case ANNOTATE_INFO_SOURCES:
             /* server info sources */
-            ncom = strdup("server interp mi \"-file-list-exec-source-files\"\n");
-            break;
+            return strdup("server interp mi \"-file-list-exec-source-files\"\n");
         case ANNOTATE_INFO_SOURCE:
             /* server info source */
-            ncom = strdup("server interp mi \"-file-list-exec-source-file\"\n");
-            break;
+            return strdup("server interp mi \"-file-list-exec-source-file\"\n");
         case ANNOTATE_INFO_FRAME:
             /* server info frame */
-            ncom = strdup("server interp mi \"-stack-info-frame\"\n");
-            break;
+            return strdup("server interp mi \"-stack-info-frame\"\n");
         case ANNOTATE_DISASSEMBLE:
             /* x/20i $pc */
             if (!data)
                 data = "-s $pc -e $pc+100 -- 0";
-            ncom = sys_aprintf("server interp mi \"-data-disassemble %s\"\n", data);
-            break;
+            return sys_aprintf("server interp mi \"-data-disassemble %s\"\n", data);
         case ANNOTATE_INFO_BREAKPOINTS:
             /* server info breakpoints */
-            ncom = strdup("server interp mi \"-break-info\"\n");
-            break;
+            return strdup("server interp mi \"-break-info\"\n");
         case ANNOTATE_TTY:
             /* server tty %s */
-            ncom = sys_aprintf("server interp mi \"-inferior-tty-set %s\"\n", data);
-            break;
+            return sys_aprintf("server interp mi \"-inferior-tty-set %s\"\n", data);
         case ANNOTATE_COMPLETE:
             /* server complete */
-            ncom = sys_aprintf("server interp mi \"complete %s\"\n", data);
-            break;
+            return sys_aprintf("server interp mi \"complete %s\"\n", data);
+
         case ANNOTATE_VOID:
         default:
             logger_write_pos(logger, __FILE__, __LINE__, "switch error");
             break;
     };
 
-    return ncom;
+    return NULL;
 }
 
 int
