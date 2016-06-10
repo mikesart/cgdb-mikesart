@@ -399,7 +399,7 @@ static void commands_process_breakpoints(struct commands *c, char a, struct tgdb
         mi_output *miout = mi_parse_gdb_output(ibuf_get(c->breakpoint_string));
 
         if (miout && (miout->type == MI_T_RESULT_RECORD)) {
-            struct tgdb_list *breakpoint_list = NULL;
+            struct tgdb_list *breakpoint_list = tgdb_list_init();
             mi_results *bplist = mi_find_var(miout->c, "bkpt", t_tuple);
 
             while (bplist) {
@@ -413,8 +413,6 @@ static void commands_process_breakpoints(struct commands *c, char a, struct tgdb
                     tb->line = bkpt->line;
                     tb->enabled = bkpt->enabled;
 
-                    if (!breakpoint_list)
-                        breakpoint_list = tgdb_list_init();
                     tgdb_list_append(breakpoint_list, tb);
 
                     bkpt->func = NULL;
@@ -426,18 +424,16 @@ static void commands_process_breakpoints(struct commands *c, char a, struct tgdb
                 bplist = bplist->next;
             }
 
-            if (breakpoint_list) {
-                struct tgdb_response *response = (struct tgdb_response *)
-                        cgdb_malloc(sizeof (struct tgdb_response));
+            struct tgdb_response *response = (struct tgdb_response *)
+                    cgdb_malloc(sizeof (struct tgdb_response));
 
-                response->header = TGDB_UPDATE_BREAKPOINTS;
-                response->choice.update_breakpoints.breakpoint_list =
-                        breakpoint_list;
+            response->header = TGDB_UPDATE_BREAKPOINTS;
+            response->choice.update_breakpoints.breakpoint_list =
+                    breakpoint_list;
 
-                /* At this point, annotate needs to send the breakpoints to the gui.
-                 * All of the valid breakpoints are stored in breakpoint_queue. */
-                tgdb_types_append_command(list, response);
-            }
+            /* At this point, annotate needs to send the breakpoints to the gui.
+             * All of the valid breakpoints are stored in breakpoint_queue. */
+            tgdb_types_append_command(list, response);
         }
 
         mi_free_output(miout);
@@ -695,6 +691,7 @@ int
 commands_user_ran_command(struct commands *c,
         struct tgdb_list *client_command_list)
 {
+    //$ TODO mikesart: move this to breakpoints-invalid annotation?
     return commands_issue_command(c,
                     client_command_list,
                     ANNOTATE_INFO_BREAKPOINTS, NULL, 0);
