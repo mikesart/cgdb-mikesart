@@ -32,8 +32,7 @@ void commands_shutdown(struct commands *c);
 /* command_set_state: Sets the state of the command package. This should usually be called
  *                      after an annotation has been read.
  */
-void commands_set_state(struct commands *c,
-        enum COMMAND_STATE state, struct tgdb_list *list);
+void commands_set_state(struct commands *c, enum COMMAND_STATE state);
 
 /* command_get_state:   Gets the state of the command package 
  * Returns:          The current state.

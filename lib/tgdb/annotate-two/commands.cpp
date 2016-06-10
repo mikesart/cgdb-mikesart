@@ -160,8 +160,7 @@ void commands_shutdown(struct commands *c)
 }
 
 void
-commands_set_state(struct commands *c,
-        enum COMMAND_STATE state, struct tgdb_list *list)
+commands_set_state(struct commands *c, enum COMMAND_STATE state)
 {
     c->cur_command_state = state;
 }
@@ -194,7 +193,7 @@ mi_results *mi_find_var(mi_results *res, const char *var, mi_val_type type)
     return NULL;
 }
 
-static int commands_parse_file_position( mi_results *res,
+static int commands_parse_file_position(mi_results *res,
         struct tgdb_list *list)
 {
     struct tgdb_file_position fp;
@@ -338,7 +337,8 @@ commands_process_info_source(struct commands *c, char a, struct tgdb_list *list)
     }
 }
 
-static void mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
+static void
+mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
 {
     if (miout) {
         mi_results *res = (miout->type == MI_T_RESULT_RECORD) ? miout->c : NULL;
@@ -366,7 +366,8 @@ static void mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
 }
 
 /* process's source files */
-static void commands_process_sources(struct commands *c, char a, struct tgdb_list *list)
+static void
+commands_process_sources(struct commands *c, char a, struct tgdb_list *list)
 {
     if (a == '\n') {
         /* parse gdbmi -file-list-exec-source-files output */
@@ -392,7 +393,8 @@ static void commands_process_sources(struct commands *c, char a, struct tgdb_lis
     }
 }
 
-static void commands_process_breakpoints(struct commands *c, char a, struct tgdb_list *list)
+static void
+commands_process_breakpoints(struct commands *c, char a, struct tgdb_list *list)
 {
     if (a == '\n') {
         /* parse gdbmi -break-info output */
@@ -452,7 +454,8 @@ static void commands_process_breakpoints(struct commands *c, char a, struct tgdb
     ~"complete\n"
     ^done
 */
-static void commands_process_complete(struct commands *c, char a, struct tgdb_list *list)
+static void
+commands_process_complete(struct commands *c, char a, struct tgdb_list *list)
 {
     int len = ibuf_length(c->tab_completion_string);
     char *str = ibuf_get(c->tab_completion_string);
@@ -575,7 +578,7 @@ commands_prepare_for_command(struct annotate_two *a2,
     int a_com = com->tgdb_client_private_data;
 
     /* Set the commands state to nothing */
-    commands_set_state(c, VOID_COMMAND, NULL);
+    commands_set_state(c, VOID_COMMAND);
 
     if (a_com == -1) {
         data_set_state(a2, USER_COMMAND);
@@ -585,33 +588,30 @@ commands_prepare_for_command(struct annotate_two *a2,
     switch (a_com) {
         case ANNOTATE_INFO_SOURCES:
             ibuf_clear(c->info_sources_string);
-            commands_set_state(c, INFO_SOURCES, NULL);
+            commands_set_state(c, INFO_SOURCES);
             break;
         case ANNOTATE_INFO_SOURCE:
             ibuf_clear(c->info_source_string);
-            data_set_state(a2, INTERNAL_COMMAND);
-            commands_set_state(c, INFO_SOURCE, NULL);
+            commands_set_state(c, INFO_SOURCE);
             break;
         case ANNOTATE_INFO_FRAME:
             ibuf_clear(c->info_frame_string);
-            data_set_state(a2, INTERNAL_COMMAND);
-            commands_set_state(c, INFO_FRAME, NULL);
+            commands_set_state(c, INFO_FRAME);
             break;
         case ANNOTATE_INFO_BREAKPOINTS:
             ibuf_clear(c->breakpoint_string);
-            commands_set_state(c, INFO_BREAKPOINTS, NULL);
+            commands_set_state(c, INFO_BREAKPOINTS);
             break;
         case ANNOTATE_TTY:
             break;              /* Nothing to do */
         case ANNOTATE_COMPLETE:
             ibuf_clear(c->tab_completion_string);
-            commands_set_state(c, COMMAND_COMPLETE, NULL);
+            commands_set_state(c, COMMAND_COMPLETE);
             io_debug_write_fmt("<%s\n>", com->tgdb_command_data);
             break;              /* Nothing to do */
         case ANNOTATE_DISASSEMBLE:
             ibuf_clear(c->disassemble_string);
-            data_set_state(a2, INTERNAL_COMMAND);
-            commands_set_state(c, INFO_DISASSEMBLE, NULL);
+            commands_set_state(c, INFO_DISASSEMBLE);
             break;
         case ANNOTATE_VOID:
             break;
