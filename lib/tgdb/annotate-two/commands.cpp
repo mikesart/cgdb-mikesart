@@ -43,17 +43,8 @@ struct commands {
   /** The state of the command context.  */
     enum COMMAND_STATE cur_command_state;
 
-  /**
-   * This is related to parsing the breakpoint annotations.
-   * It keeps track of the current field we are in.
-   */
-    int cur_field_num;
-
   /** breakpoint information */
     /*@{ */
-
-  /** A list of breakpoints already parsed.  */
-    struct tgdb_list *breakpoint_list;
 
   /** The current breakpoint being parsed.  */
     struct ibuf *breakpoint_string;
@@ -81,9 +72,6 @@ struct commands {
   /** All of the sources.  */
     struct ibuf *info_sources_string;
 
-  /** All of the source, parsed in put in a list, 1 at a time.  */
-    struct tgdb_list *inferior_source_files;
-
     /*@} */
     /* }}} */
 
@@ -93,23 +81,8 @@ struct commands {
   /** A tab completion item */
     struct ibuf *tab_completion_string;
 
-  /** All of the tab completion items, parsed in put in a list, 1 at a time. */
-    struct tgdb_list *tab_completions;
-
     /*@} */
     /* }}} */
-
-  /** The absolute path prefix output by GDB when 'info source' is given */
-    const char *source_prefix;
-
-  /** The length of the line above.  */
-    int source_prefix_length;
-
-  /** The relative path prefix output by GDB when 'info source' is given */
-    const char *source_relative_prefix;
-
-  /** The length of the line above.  */
-    int source_relative_prefix_length;
 };
 
 struct commands *commands_initialize(void)
@@ -117,26 +90,15 @@ struct commands *commands_initialize(void)
     struct commands *c = (struct commands *) cgdb_malloc(sizeof (struct commands));
 
     c->cur_command_state = VOID_COMMAND;
-    c->cur_field_num = 0;
 
-    c->breakpoint_list = tgdb_list_init();
     c->breakpoint_string = ibuf_init();
     c->disassemble_string = ibuf_init();
 
     c->info_source_string = ibuf_init();
     c->info_sources_string = ibuf_init();
     c->info_frame_string = ibuf_init();
-    c->inferior_source_files = tgdb_list_init();
 
     c->tab_completion_string = ibuf_init();
-    c->tab_completions = tgdb_list_init();
-
-    c->source_prefix = "Located in ";
-    c->source_prefix_length = 11;
-
-    c->source_relative_prefix = "Current source file is ";
-    c->source_relative_prefix_length = 23;
-
     return c;
 }
 
@@ -175,9 +137,6 @@ void commands_shutdown(struct commands *c)
     if (c == NULL)
         return;
 
-    tgdb_list_free(c->breakpoint_list, free_breakpoint);
-    tgdb_list_destroy(c->breakpoint_list);
-
     ibuf_free(c->breakpoint_string);
     c->breakpoint_string = NULL;
 
@@ -195,11 +154,6 @@ void commands_shutdown(struct commands *c)
 
     ibuf_free(c->tab_completion_string);
     c->tab_completion_string = NULL;
-
-    tgdb_list_destroy(c->tab_completions);
-
-    tgdb_list_free(c->inferior_source_files, free_char_star);
-    tgdb_list_destroy(c->inferior_source_files);
 
     free(c);
     c = NULL;
@@ -419,14 +373,15 @@ static void commands_process_sources(struct commands *c, char a, struct tgdb_lis
         mi_output *miout = mi_parse_gdb_output(ibuf_get(c->info_sources_string));
         if (miout) {
             struct tgdb_response *response;
+            struct tgdb_list *inferior_source_files = tgdb_list_init();
 
             /* Add source files to our file list */
-            mi_parse_sources(miout, c->inferior_source_files);
+            mi_parse_sources(miout, inferior_source_files);
             mi_free_output(miout);
 
             response = (struct tgdb_response *) cgdb_malloc(sizeof (struct tgdb_response));
             response->header = TGDB_UPDATE_SOURCE_FILES;
-            response->choice.update_source_files.source_files = c->inferior_source_files;
+            response->choice.update_source_files.source_files = inferior_source_files;
 
             tgdb_types_append_command(list, response);
         }
@@ -444,6 +399,7 @@ static void commands_process_breakpoints(struct commands *c, char a, struct tgdb
         mi_output *miout = mi_parse_gdb_output(ibuf_get(c->breakpoint_string));
 
         if (miout && (miout->type == MI_T_RESULT_RECORD)) {
+            struct tgdb_list *breakpoint_list = NULL;
             mi_results *bplist = mi_find_var(miout->c, "bkpt", t_tuple);
 
             while (bplist) {
@@ -457,7 +413,9 @@ static void commands_process_breakpoints(struct commands *c, char a, struct tgdb
                     tb->line = bkpt->line;
                     tb->enabled = bkpt->enabled;
 
-                    tgdb_list_append(c->breakpoint_list, tb);
+                    if (!breakpoint_list)
+                        breakpoint_list = tgdb_list_init();
+                    tgdb_list_append(breakpoint_list, tb);
 
                     bkpt->func = NULL;
                     bkpt->fullname = NULL;
@@ -468,14 +426,13 @@ static void commands_process_breakpoints(struct commands *c, char a, struct tgdb
                 bplist = bplist->next;
             }
 
-
-            if (tgdb_list_size(c->breakpoint_list)) {
+            if (breakpoint_list) {
                 struct tgdb_response *response = (struct tgdb_response *)
                         cgdb_malloc(sizeof (struct tgdb_response));
 
                 response->header = TGDB_UPDATE_BREAKPOINTS;
                 response->choice.update_breakpoints.breakpoint_list =
-                        c->breakpoint_list;
+                        breakpoint_list;
 
                 /* At this point, annotate needs to send the breakpoints to the gui.
                  * All of the valid breakpoints are stored in breakpoint_queue. */
@@ -506,6 +463,7 @@ static void commands_process_complete(struct commands *c, char a, struct tgdb_li
 
     if ((len > 5) && !strcmp(str + len - 5, "^done")) {
         struct tgdb_response *response;
+        struct tgdb_list *tab_completions = tgdb_list_init();
 
         while (str) {
             char *end;
@@ -530,7 +488,7 @@ static void commands_process_complete(struct commands *c, char a, struct tgdb_li
                     if (cstr[length - 1] == '\n')
                         cstr[--length] = 0;
 
-                    tgdb_list_append(c->tab_completions, miout->c->v.cstr);
+                    tgdb_list_append(tab_completions, miout->c->v.cstr);
                     miout->c->v.cstr = NULL;
                 }
             }
@@ -541,7 +499,7 @@ static void commands_process_complete(struct commands *c, char a, struct tgdb_li
 
         response = (struct tgdb_response *)cgdb_malloc(sizeof (struct tgdb_response));
         response->header = TGDB_UPDATE_COMPLETIONS;
-        response->choice.update_completions.completion_list = c->tab_completions;
+        response->choice.update_completions.completion_list = tab_completions;
 
         tgdb_types_append_command(list, response);
 
