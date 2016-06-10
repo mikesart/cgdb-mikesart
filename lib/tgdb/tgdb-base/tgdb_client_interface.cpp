@@ -68,11 +68,6 @@ int tgdb_client_is_client_ready(struct tgdb_client_context *tcc)
     return a2_is_client_ready(tcc->tgdb_debugger_context);
 }
 
-int tgdb_client_tgdb_ran_command(struct tgdb_client_context *tcc)
-{
-    return a2_user_ran_command(tcc->tgdb_debugger_context);
-}
-
 int tgdb_client_prepare_for_command(struct tgdb_client_context *tcc,
         struct tgdb_command *com)
 {

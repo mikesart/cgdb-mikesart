@@ -397,11 +397,6 @@ int a2_completion_callback(struct annotate_two *a2, const char *command)
                     ANNOTATE_COMPLETE, command, 4);
 }
 
-int a2_user_ran_command(struct annotate_two *a2)
-{
-    return commands_user_ran_command(a2->c, a2->client_command_list);
-}
-
 int a2_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com)
 {
     return commands_prepare_for_command(a2, a2->c, com);

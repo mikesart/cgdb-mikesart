@@ -150,26 +150,6 @@ int tgdb_client_err_msg(struct tgdb_client_context *tcc);
 int tgdb_client_is_client_ready(struct tgdb_client_context *tcc);
 
 /** 
- * This is currently called after TGDB has sent a command to the debugger.
- * Currently, the client can run commands that has to be run ( for TGDB ) 
- * every time the user/GUI runs a command. For example, this is necessary 
- * for keeping the breakpoints current.
- *
- * In the future, it seems like this function should go away, and TGDB 
- * should be responsible for running the commands necessary ???.
- *
- * \param tcc
- * The client context.
- *
- * @return
- * -1 on error, 0 on success
- *
- * \post
- * command_container is set.
- */
-int tgdb_client_tgdb_ran_command(struct tgdb_client_context *tcc);
-
-/** 
  * This is currently called by TGDB before TGDB runs the command.
  * It can prepare the client for the command COM to be run.
  *

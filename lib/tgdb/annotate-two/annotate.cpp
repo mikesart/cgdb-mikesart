@@ -26,6 +26,14 @@ handle_frame_end(struct annotate_two *a2, const char *buf, size_t n,
     return a2_get_current_location(a2);
 }
 
+static int
+handle_breakpoints_invalid(struct annotate_two *a2, const char *buf, size_t n,
+        struct tgdb_list *list)
+{
+    return commands_issue_command(a2->c, a2->client_command_list,
+                           ANNOTATE_INFO_BREAKPOINTS, NULL, 1);
+}
+
 static int handle_misc_pre_prompt(struct annotate_two *a2, const char *buf,
         size_t n, struct tgdb_list *list)
 {
@@ -157,6 +165,7 @@ static struct annotation {
             struct tgdb_list * list);
 } annotations[] = {
     {
+    "breakpoints-invalid", 19, handle_breakpoints_invalid}, {
     "frame-end", 10, handle_frame_end}, {
     "pre-commands", 12, handle_misc_pre_prompt}, {
     "commands", 8, handle_misc_prompt}, {

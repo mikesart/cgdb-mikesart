@@ -553,12 +553,6 @@ tgdb_send(struct tgdb *tgdb, const char *command,
         return -1;
     }
 
-    if (tgdb_client_tgdb_ran_command(tgdb->tcc) == -1) {
-        logger_write_pos(logger, __FILE__, __LINE__,
-                "tgdb_client_tgdb_ran_command failed");
-        return -1;
-    }
-
     tgdb_process_client_commands(tgdb);
 
     return 0;

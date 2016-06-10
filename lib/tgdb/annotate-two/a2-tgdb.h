@@ -179,18 +179,6 @@ int a2_err_msg(struct annotate_two *a2);
 int a2_is_client_ready(struct annotate_two *a2);
 
 /** 
- * This lets the annotate_two know that the user ran a command.
- * The client can update itself here if it need to.
- *
- * \param ctx
- * The annotate two context.
- *
- * @return
- * -1 on error, 0 on success
- */
-int a2_user_ran_command(struct annotate_two *a2);
-
-/** 
  *  Prepare's the client for the command COM to be run.
  *
  * \param ctx

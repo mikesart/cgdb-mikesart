@@ -93,15 +93,4 @@ void commands_send_gui_completions(struct commands *c, struct tgdb_list *list);
 int commands_prepare_for_command(struct annotate_two *a2, struct commands *c,
         struct tgdb_command *com);
 
-/* commands_user_ran_command:
- * --------------------------
- *
- * This lets the clients know that the user ran a command.
- * The client can update itself here if it need to.
- *
- * Returns: -1 on error, 0 on success
- */
-int commands_user_ran_command(struct commands *c,
-        struct tgdb_list *client_command_list);
-
 #endif

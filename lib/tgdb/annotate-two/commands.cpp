@@ -688,31 +688,6 @@ static char *commands_create_command(struct commands *c,
 }
 
 int
-commands_user_ran_command(struct commands *c,
-        struct tgdb_list *client_command_list)
-{
-    //$ TODO mikesart: move this to breakpoints-invalid annotation?
-    return commands_issue_command(c,
-                    client_command_list,
-                    ANNOTATE_INFO_BREAKPOINTS, NULL, 0);
-
-#if 0
-    /* This was added to allow support for TGDB to tell the FE when the user
-     * switched locations due to a 'list foo:1' command. The info line would
-     * get issued and the FE would know exactly what GDB was currently looking
-     * at. However, it was noticed that the FE couldn't distinguish between when
-     * a new file location should be displayed, or when a new file location 
-     * shouldn't be displayed. For instance, if the user moves around in the
-     * source window, and then types 'p argc' it would then get the original
-     * position it was just at and the FE would show that spot again, but this
-     * isn't necessarily what the FE wants.
-     */
-    return commands_issue_command(c,
-                    client_command_list, ANNOTATE_INFO_LINE, NULL, 0);
-#endif
-}
-
-int
 commands_issue_command(struct commands *c,
         struct tgdb_list *client_command_list,
         enum annotate_commands com, const char *data, int oob)
