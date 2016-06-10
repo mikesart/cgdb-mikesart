@@ -307,7 +307,7 @@ int a2_get_current_location(struct annotate_two *a2)
 #if 0
     //$ TODO mikesart: temp test code - remove this...
     commands_issue_command(a2->c, a2->client_command_list,
-                           ANNOTATE_DISASSEMBLE, NULL, 1);
+                           ANNOTATE_DISASSEMBLE, NULL, 0);
 #endif
 
     /* Try to get frame information */
@@ -394,7 +394,7 @@ int a2_completion_callback(struct annotate_two *a2, const char *command)
 {
     return commands_issue_command(a2->c,
                     a2->client_command_list,
-                    ANNOTATE_COMPLETE, command, 4);
+                    ANNOTATE_COMPLETE, command, 1);
 }
 
 int a2_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com)
