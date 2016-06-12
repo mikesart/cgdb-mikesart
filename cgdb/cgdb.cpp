@@ -1036,6 +1036,44 @@ static void process_commands(struct tgdb *tgdb_in)
                     if_display_logo(0);
                     if_draw();
                 }
+
+#if 0
+                //$ TODO: request disassembly information
+
+                // Absolute path and/or function can be null.
+                if_print_message("\n===> %s %s %s\n", tfp->absolute_path, tfp->func, tfp->addr);
+                {
+                    //$ TODO: Only update if we don't already have this disassembly.
+                    const char *file = NULL;
+                    const char *function = NULL;
+                    tgdb_request_ptr request_ptr;
+
+                    //$ TODO: Store disasm under this:
+                    // tfp->absolute_path;
+                    // tfp->func;
+
+                    request_ptr = tgdb_request_disassemble_func(tgdb,
+                        DISASSEMBLE_FUNC_DISASSEMBLY, NULL, NULL);
+                    handle_request(tgdb, request_ptr);
+
+                    request_ptr = tgdb_request_disassemble_func(tgdb,
+                        DISASSEMBLE_FUNC_DISASSEMBLY, "driver.cpp", "main");
+                    handle_request(tgdb, request_ptr);
+
+                    request_ptr = tgdb_request_disassemble_func(tgdb,
+                        DISASSEMBLE_FUNC_DISASSEMBLY, NULL, "main");
+                    handle_request(tgdb, request_ptr);
+
+                    request_ptr = tgdb_request_disassemble_func(tgdb,
+                        DISASSEMBLE_FUNC_DISASSEMBLY, "driver.cpp", NULL);
+                    handle_request(tgdb, request_ptr);
+
+                    request_ptr = tgdb_request_disassemble_func(tgdb,
+                        DISASSEMBLE_FUNC_SOURCE_LINES, "driver.cpp", "main");
+                    handle_request(tgdb, request_ptr);
+                }
+#endif
+
                 break;
             }
 
@@ -1087,6 +1125,20 @@ static void process_commands(struct tgdb *tgdb_in)
                 do_tab_completion(list);
                 break;
             }
+            case TGDB_DISASSEMBLE_FUNC:
+            {
+#if 0
+                //$ TODO mikesart: display disassembly
+                int i;
+                char **disasm = item->choice.disassemble_function.disasm;
+
+                for (i = 0; i < sbcount(disasm); i++) {
+                    if_print_message("%s", disasm[i]);
+                }
+                if_print_message("\n");
+#endif
+                break;
+            }
             case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
             {
                 const char *new_prompt =
@@ -1134,6 +1186,7 @@ does_request_require_console_update(struct tgdb_request *request, int *update)
             break;
         case TGDB_REQUEST_INFO_SOURCES:
         case TGDB_REQUEST_CURRENT_LOCATION:
+        case TGDB_REQUEST_DISASSEMBLE_FUNC:
             *update = 0;
             break;
         case TGDB_REQUEST_DEBUGGER_COMMAND:

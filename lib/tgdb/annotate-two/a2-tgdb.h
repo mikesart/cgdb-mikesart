@@ -68,6 +68,11 @@ enum annotate_commands {
      * Get disassembly for specified address range
      */
     ANNOTATE_DISASSEMBLE,
+
+    /**
+     * Get disassembly for specified function
+     */
+    ANNOTATE_DISASSEMBLE_FUNC,
 };
 
 /******************************************************************************/
@@ -318,6 +323,9 @@ int a2_get_inferior_sources(struct annotate_two *a2);
  * 0 on success, otherwise -1 on error.
  */
 int a2_completion_callback(struct annotate_two *a2, const char *command);
+
+int a2_disassemble_func(struct annotate_two *a2, int raw, int source,
+    const char *file, const char *function);
 
 /** 
  * This returns the command to send to gdb for the enum C.

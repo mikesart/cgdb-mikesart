@@ -52,6 +52,9 @@ struct commands {
   /** The disassemble string being parsed.  */
     struct ibuf *disassemble_string;
 
+  /** The function disassemble string being parsed.  */
+    struct ibuf *disassemble_func_string;
+
     /*@} */
 
   /** 'info source' information */
@@ -93,11 +96,10 @@ struct commands *commands_initialize(void)
 
     c->breakpoint_string = ibuf_init();
     c->disassemble_string = ibuf_init();
-
+    c->disassemble_func_string = ibuf_init();
     c->info_source_string = ibuf_init();
     c->info_sources_string = ibuf_init();
     c->info_frame_string = ibuf_init();
-
     c->tab_completion_string = ibuf_init();
     return c;
 }
@@ -143,6 +145,9 @@ void commands_shutdown(struct commands *c)
     ibuf_free(c->disassemble_string);
     c->disassemble_string = NULL;
 
+    ibuf_free(c->disassemble_func_string);
+    c->disassemble_func_string = NULL;
+
     ibuf_free(c->info_source_string);
     c->info_source_string = NULL;
 
@@ -156,7 +161,6 @@ void commands_shutdown(struct commands *c)
     c->tab_completion_string = NULL;
 
     free(c);
-    c = NULL;
 }
 
 void
@@ -191,6 +195,39 @@ mi_results *mi_find_var(mi_results *res, const char *var, mi_val_type type)
     }
 
     return NULL;
+}
+
+static int mi_result_record(struct ibuf *buf, char **l)
+{
+    int pos;
+    int len = ibuf_length(buf);
+    char *line = ibuf_get(buf);
+
+    /* Find last \n or start of string */
+    for (pos = len - 1; pos > 0; pos--) {
+        if (line[pos] == '\n') {
+            line += pos + 1;
+            break;
+        }
+    }
+
+    *l = line;
+
+    /* Check for result classes */
+    if (*line++ == '^') {
+        if (!strncmp(line,"done",4))
+            return MI_CL_DONE;
+        else if (!strncmp(line,"running",7))
+            return MI_CL_RUNNING;
+        else if (!strncmp(line,"connected",9))
+            return MI_CL_CONNECTED;
+        else if (!strncmp(line,"error",5))
+            return MI_CL_ERROR;
+        else if (!strncmp(line,"exit",4))
+            return MI_CL_EXIT;
+    }
+
+    return -1;
 }
 
 static int commands_parse_file_position(mi_results *res,
@@ -457,10 +494,13 @@ commands_process_breakpoints(struct commands *c, char a, struct tgdb_list *list)
 static void
 commands_process_complete(struct commands *c, char a, struct tgdb_list *list)
 {
-    int len = ibuf_length(c->tab_completion_string);
+    char *line;
     char *str = ibuf_get(c->tab_completion_string);
+    int result_record = (a == '\n') ? mi_result_record(c->tab_completion_string, &line) : -1;
 
-    if ((len > 5) && !strcmp(str + len - 5, "^done")) {
+    ibuf_addchar(c->disassemble_func_string, a);
+
+    if (result_record != -1) {
         struct tgdb_response *response;
         struct tgdb_list *tab_completions = tgdb_list_init();
 
@@ -499,26 +539,120 @@ commands_process_complete(struct commands *c, char a, struct tgdb_list *list)
         response = (struct tgdb_response *)cgdb_malloc(sizeof (struct tgdb_response));
         response->header = TGDB_UPDATE_COMPLETIONS;
         response->choice.update_completions.completion_list = tab_completions;
-
         tgdb_types_append_command(list, response);
 
         ibuf_clear(c->tab_completion_string);
-    } else {
-        ibuf_addchar(c->tab_completion_string, a);
     }
 }
 
+/*
+    &"disassemble /s\n"
+    ~"Dump of assembler code for function main(int, char**):\n"
+    ~"driver.cpp:\n"
+    ~"54\t{\n"
+    ~"   0x00000000004008f6 <+0>:\tpush   rbp\n"
+    ~"   0x00000000004008f7 <+1>:\tmov    rbp,rsp\n"
+    ~"   0x00000000004008fa:\tpush   r12\n"
+    ~"   0x00000000004008fc:\tpush   rbx\n"
+    ~"   0x00000000004008fd:\tsub    rsp,0x30\n"
+    ~"   0x0000000000400901:\tmov    DWORD PTR [rbp-0x34],edi\n"
+    ~"   0x0000000000400904:\tmov    QWORD PTR [rbp-0x40],rsi\n"
+    ~"\n"
+    ~"55\t    int fg, bg, bold;\n"
+    ~"56\t\n"
+    ~"57\t    printf( \"\\n\\033[1;33m --- Terminal Color Chart ---\\033[0m\\n\\n\" );\n"
+    ~"=> 0x0000000000400908:\tmov    edi,0x400e40\n"
+    ~"   0x000000000040090d:\tcall   0x400760 <puts@plt>\n"
+    ~"\n"
+    ...
+    ~"   0x0000000000400d66:\tadd    rsp,0x30\n"
+    ~"   0x0000000000400d6a:\tpop    rbx\n"
+    ~"   0x0000000000400d6b:\tpop    r12\n"
+    ~"   0x0000000000400d6d:\tpop    rbp\n"
+    ~"   0x0000000000400d6e:\tret    \n"
+    ~"End of assembler dump.\n"
+    ^done
+ */
+
+static void
+commands_process_disassemble_func(struct annotate_two *a2, struct commands *c,
+                             char a, struct tgdb_list *list)
+{
+    char *line;
+    char *str = ibuf_get(c->disassemble_func_string);
+    int result_record = (a == '\n') ? mi_result_record(c->disassemble_func_string, &line) : -1;
+
+    ibuf_addchar(c->disassemble_func_string, a);
+
+    if (result_record != -1) {
+        char **disasm = NULL;
+        struct tgdb_response *response;
+
+        if (result_record == MI_CL_ERROR) {
+            mi_output *miout = mi_parse_gdb_output(line);
+
+            /* Grab the error message */
+            sbpush(disasm, miout->c->v.cstr);
+            miout->c->v.cstr = NULL;
+
+            mi_free_output(miout);
+        } else {
+            ibuf_addchar(c->disassemble_func_string, a);
+
+            while (str) {
+                char *end;
+                mi_output *miout;
+
+                /* Find end of line */
+                end = strchr(str, '\n');
+                if (!end)
+                    break;
+
+                /* Zero terminate line and parse the gdbmi string */
+                *end++ = 0;
+                miout = mi_parse_gdb_output(str);
+
+                /* If this is a console string, add it to our list */
+                if (miout && (miout->sstype == MI_SST_CONSOLE)) {
+                    char *cstr = miout->c->v.cstr;
+                    size_t length = strlen(cstr);
+
+                    if (length > 0) {
+                        /* Trim trailing newline */
+                        if (cstr[length - 1] == '\n')
+                            cstr[--length] = 0;
+
+                        sbpush(disasm, miout->c->v.cstr);
+                        miout->c->v.cstr = NULL;
+                    }
+                }
+                mi_free_output(miout);
+
+                str = end;
+            }
+        }
+
+        response = (struct tgdb_response *)cgdb_malloc(sizeof (struct tgdb_response));
+        response->header = TGDB_DISASSEMBLE_FUNC;
+        response->choice.disassemble_function.error = (result_record == MI_CL_ERROR);
+        response->choice.disassemble_function.disasm = disasm;
+        tgdb_types_append_command(list, response);
+
+        ibuf_clear(c->disassemble_func_string);
+    }
+}
+
+/*
+    interp mi "-data-disassemble -s $pc -e $pc+20 -- 0"
+    ^done,asm_insns=[{address="0x0000000000400908",inst="mov    edi,0x400e40"},
+        address="0x000000000040090d",inst="call   0x400760 <puts@plt>"},
+        {address="0x0000000000400912",inst="mov    edi,0x400ea0"},
+        {address="0x0000000000400917",inst="call   0x400760 <puts@plt>"}]
+ */
 static void
 commands_process_disassemble(struct annotate_two *a2, struct commands *c,
                              char a, struct tgdb_list *list)
 {
-    /*
-        interp mi "-data-disassemble -s $pc -e $pc+20 -- 0"
-        ^done,asm_insns=[{address="0x0000000000400908",inst="mov    edi,0x400e40"},
-            address="0x000000000040090d",inst="call   0x400760 <puts@plt>"},
-            {address="0x0000000000400912",inst="mov    edi,0x400ea0"},
-            {address="0x0000000000400917",inst="call   0x400760 <puts@plt>"}]
-     */
     if (a == '\n') {
         /* parse gdbmi -data-disassemble command */
         mi_output *miout = mi_parse_gdb_output(ibuf_get(c->disassemble_string));
@@ -568,6 +702,9 @@ void commands_process(struct annotate_two *a2, struct commands *c, char a, struc
         case INFO_DISASSEMBLE:
             commands_process_disassemble(a2, c, a, list);
             break;
+        case INFO_DISASSEMBLE_FUNC:
+            commands_process_disassemble_func(a2, c, a, list);
+            break;
         }
 }
 
@@ -612,6 +749,10 @@ commands_prepare_for_command(struct annotate_two *a2,
         case ANNOTATE_DISASSEMBLE:
             ibuf_clear(c->disassemble_string);
             commands_set_state(c, INFO_DISASSEMBLE);
+            break;
+        case ANNOTATE_DISASSEMBLE_FUNC:
+            ibuf_clear(c->disassemble_func_string);
+            commands_set_state(c, INFO_DISASSEMBLE_FUNC);
             break;
         case ANNOTATE_VOID:
             break;
@@ -658,6 +799,19 @@ static char *commands_create_command(struct commands *c,
             if (!data)
                 data = "-s $pc -e $pc+100 -- 0";
             return sys_aprintf("server interp mi \"-data-disassemble %s\"\n", data);
+        case ANNOTATE_DISASSEMBLE_FUNC:
+            /* disassemble 'driver.cpp'::main
+                 /m: source lines included
+                 /s: source lines included, output in pc order
+                 /r: raw instructions included in hex
+                 single argument: function surrounding is dumped
+                 two arguments: start,end or start,+length
+                 disassemble 'driver.cpp'::main
+                 interp mi "disassemble /s 'driver.cpp'::main,+10"
+                 interp mi "disassemble /r 'driver.cpp'::main,+10"
+             */
+            return sys_aprintf("server interp mi \"disassemble%s%s\"\n",
+                               data ? " " : "", data ? data : "");
         case ANNOTATE_INFO_BREAKPOINTS:
             /* server info breakpoints */
             return strdup("server interp mi \"-break-info\"\n");

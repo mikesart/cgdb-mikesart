@@ -21,6 +21,8 @@ enum COMMAND_STATE {
     INFO_FRAME,
     /* Related to the '-data-disassemble' command */
     INFO_DISASSEMBLE,
+    /* Related to the 'disassemble' command */
+    INFO_DISASSEMBLE_FUNC,
     /* Related to the 'server complete' command for tab completion */
     COMMAND_COMPLETE,
 };
