@@ -498,7 +498,7 @@ commands_process_complete(struct commands *c, char a, struct tgdb_list *list)
     char *str = ibuf_get(c->tab_completion_string);
     int result_record = (a == '\n') ? mi_result_record(c->tab_completion_string, &line) : -1;
 
-    ibuf_addchar(c->disassemble_func_string, a);
+    ibuf_addchar(c->tab_completion_string, a);
 
     if (result_record != -1) {
         struct tgdb_response *response;

@@ -328,7 +328,7 @@ static void cgdbhelp__init_buffer (YY_BUFFER_STATE b,FILE *file  );
 
 YY_BUFFER_STATE cgdbhelp__scan_buffer (char *base,yy_size_t size  );
 YY_BUFFER_STATE cgdbhelp__scan_string (yyconst char *yy_str  );
-YY_BUFFER_STATE cgdbhelp__scan_bytes (yyconst char *bytes,int len  );
+YY_BUFFER_STATE cgdbhelp__scan_bytes (yyconst char *bytes,yy_size_t len  );
 
 void *cgdbhelp_alloc (yy_size_t  );
 void *cgdbhelp_realloc (void *,yy_size_t  );
@@ -2001,7 +2001,7 @@ YY_BUFFER_STATE cgdbhelp__scan_string (yyconst char * yystr )
  * 
  * @return the newly allocated buffer state object.
  */
-YY_BUFFER_STATE cgdbhelp__scan_bytes  (yyconst char * yybytes, int  _yybytes_len )
+YY_BUFFER_STATE cgdbhelp__scan_bytes  (yyconst char * yybytes, yy_size_t _yybytes_len )
 {
 	YY_BUFFER_STATE b;
 	char *buf;

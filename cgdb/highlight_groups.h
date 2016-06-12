@@ -207,6 +207,8 @@ struct hl_line_attr {
 };
 void hl_printline(WINDOW *win, const char *line, int line_len,
         const hl_line_attr *attrs, int x, int y, int col, int width);
+void hl_printline_highlight(WINDOW *win, const char *line, int line_len,
+        const hl_line_attr *attrs, int x, int y, int col, int width);
 
 /*@}*/
 /* }}}*/
