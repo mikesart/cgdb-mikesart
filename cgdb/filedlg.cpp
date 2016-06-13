@@ -139,8 +139,10 @@ int filedlg_add_file_choice(struct filedlg *fd, const char *file_choice)
      * delete and it pollutes the file open dialog with files you
      * can't actually open.
      */
-    if (access(file_choice, F_OK) == -1)
-        return -4;
+    if (file_choice[0] != '*') {
+        if (access(file_choice, F_OK) == -1)
+            return -4;
+    }
 
     /* find index to insert by comparing:
      * Absolute paths go to the end

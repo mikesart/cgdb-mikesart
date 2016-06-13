@@ -9,6 +9,10 @@
 #include <stdlib.h>
 #endif /* HAVE_STDLIB_H */
 
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
+
 /* These are wrappers for the memory management functions 
  * If a memory allocation fails cgdb will exit
  * They act identical to the POSIX calls
@@ -29,6 +33,8 @@ int cgdb_is_debugger_attached();
 int log10_uint(unsigned int val);
 
 char *sys_aprintf(const char *fmt, ...);
+
+uint64_t sys_hexstr_to_u64(const char *line);
 
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))

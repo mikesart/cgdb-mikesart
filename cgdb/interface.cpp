@@ -48,6 +48,10 @@
 #include <limits.h> /* INT_MAX */
 #endif
 
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
+
 #if HAVE_CTYPE_H
 #include <ctype.h>
 #endif
@@ -388,7 +392,6 @@ static void separator_display(int draw)
 static void update_status_win(enum win_refresh dorefresh)
 {
     int pos;
-    char filename[FSUTIL_PATH_MAX];
     int attr;
 
     hl_groups_get_attr(hl_groups_instance, HLG_STATUS_BAR, &attr);
@@ -443,7 +446,9 @@ static void update_status_win(enum win_refresh dorefresh)
     /* Default: Current Filename */
     else {
         /* Print filename */
-        if (src_win != NULL && source_current_file(src_win, filename) != NULL) {
+        const char *filename = source_current_file(src_win);
+
+        if (filename) {
             if (G_line_number >= 0)
                 if_display_message("", dorefresh, WIDTH - 1, "%s %d", filename, G_line_number);
             else

@@ -14,6 +14,10 @@
  * any information about the current debugging session.
  */
 
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
+
 #include "tgdb_list.h"
 
 /******************************************************************************/
@@ -165,7 +169,7 @@
         int line_number;
 
     /** Line number corresponding to the $pc.  */
-        char *addr;
+        uint64_t addr;
 
     /** Shared library where this function is defined.  */
         char *from;
@@ -351,6 +355,8 @@
 
             /* header == TGDB_DISASSEMBLE_FUNC */
             struct {
+                uint64_t addr_start;
+                uint64_t addr_end;
                 int error;
                 char **disasm;
             } disassemble_function;

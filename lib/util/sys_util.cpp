@@ -18,6 +18,10 @@
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
+#if HAVE_CTYPE_H
+#include <ctype.h>
+#endif
+
 #if HAVE_ERRNO_H
 #include <errno.h>
 #endif /* HAVE_ERRNO_H */
@@ -206,4 +210,18 @@ char *sys_aprintf(const char *fmt, ...)
     }
 
     return NULL;
+}
+
+uint64_t sys_hexstr_to_u64(const char *line)
+{
+    char *end;
+    uint64_t val = 0;
+
+    while (isspace(*line))
+        line++;
+
+    if (line[0] == '0' && line[1] == 'x')
+        val = strtoull(line, &end, 16);
+
+    return val;
 }

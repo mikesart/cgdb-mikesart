@@ -16,6 +16,10 @@
 #include <regex.h>
 #endif /* HAVE_REGEX_H */
 
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
+
 /* Local Includes */
 #include "cgdb.h"
 #include "highlight.h"

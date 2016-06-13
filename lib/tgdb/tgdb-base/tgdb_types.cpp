@@ -191,7 +191,6 @@ static int tgdb_types_delete_item(void *command)
                     com->choice.update_file_position.file_position;
 
             free(tfp->absolute_path);
-            free(tfp->addr);
             free(tfp->from);
             free(tfp->func);
 

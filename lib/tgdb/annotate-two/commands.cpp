@@ -14,9 +14,9 @@
 #include <sys/types.h>
 #endif /* HAVE_SYS_TYPES_H */
 
-#if HAVE_REGEX_H
-#include <regex.h>
-#endif /* HAVE_REGEX_H */
+#if HAVE_CTYPE_H
+#include <ctype.h>
+#endif
 
 /* Local includes */
 #include "commands.h"
@@ -244,8 +244,7 @@ static int commands_parse_file_position(mi_results *res,
         } else if (!strcmp(res->var, "line")) {
             fp.line_number = atoi(res->v.cstr);
         } else if (!strcmp(res->var, "addr")) {
-            fp.addr = res->v.cstr;
-            res->v.cstr = NULL;
+            fp.addr = sys_hexstr_to_u64(res->v.cstr);
         } else if (!strcmp(res->var, "from")) {
             fp.from = res->v.cstr;
             res->v.cstr = NULL;
@@ -272,7 +271,6 @@ static int commands_parse_file_position(mi_results *res,
         return 1;
     } else {
         free(fp.absolute_path);
-        free(fp.addr);
         free(fp.from);
         free(fp.func);
     }
@@ -573,6 +571,19 @@ commands_process_complete(struct commands *c, char a, struct tgdb_list *list)
     ~"End of assembler dump.\n"
     ^done
  */
+static uint64_t disassemble_parse_address(const char *line)
+{
+    char *end;
+    uint64_t val = 0;
+
+    while (isspace(*line))
+        line++;
+
+    if (line[0] == '0' && line[1] == 'x')
+        val = strtoull(line, &end, 16);
+
+    return val;
+}
 
 static void
 commands_process_disassemble_func(struct annotate_two *a2, struct commands *c,
@@ -587,6 +598,8 @@ commands_process_disassemble_func(struct annotate_two *a2, struct commands *c,
     if (result_record != -1) {
         char **disasm = NULL;
         struct tgdb_response *response;
+        uint64_t addr_start = 0;
+        uint64_t addr_end = 0;
 
         if (result_record == MI_CL_ERROR) {
             mi_output *miout = mi_parse_gdb_output(line);
@@ -618,10 +631,23 @@ commands_process_disassemble_func(struct annotate_two *a2, struct commands *c,
                     size_t length = strlen(cstr);
 
                     if (length > 0) {
+                        uint64_t addr;
+
                         /* Trim trailing newline */
                         if (cstr[length - 1] == '\n')
                             cstr[--length] = 0;
 
+                        /* Trim the gdb current location pointer off */
+                        if (cstr[0] == '=' && cstr[1] == '>') {
+                            cstr[0] = ' ';
+                            cstr[1] = ' ';
+                        }
+
+                        addr = sys_hexstr_to_u64(cstr);
+                        if (addr) {
+                            addr_start = addr_start ? MIN(addr, addr_start) : addr;
+                            addr_end = MAX(addr, addr_end);
+                        }
                         sbpush(disasm, miout->c->v.cstr);
                         miout->c->v.cstr = NULL;
                     }
@@ -636,6 +662,8 @@ commands_process_disassemble_func(struct annotate_two *a2, struct commands *c,
         response->header = TGDB_DISASSEMBLE_FUNC;
         response->choice.disassemble_function.error = (result_record == MI_CL_ERROR);
         response->choice.disassemble_function.disasm = disasm;
+        response->choice.disassemble_function.addr_start = addr_start;
+        response->choice.disassemble_function.addr_end = addr_end;
         tgdb_types_append_command(list, response);
 
         ibuf_clear(c->disassemble_func_string);
