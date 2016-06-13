@@ -88,7 +88,7 @@ int mi_get_cstring_r(mi_results *r, const char *str, const char **end)
     }
  *d=0;
  if (end)
-    *end=s+1;
+    *end=*s ? s+1 : s;
 
  return 1;
 }
