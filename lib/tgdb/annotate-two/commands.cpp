@@ -827,22 +827,13 @@ static char *commands_create_command(struct commands *c,
             return strdup("server interp mi \"-stack-info-frame\"\n");
         case ANNOTATE_DISASSEMBLE:
             /* x/20i $pc */
-            if (!data) {
-                /* mode is:
-                    0 disassembly only
-                    1 mixed source and disassembly (deprecated)
-                    2 disassembly with raw opcodes
-                    3 mixed source and disassembly with raw opcodes (deprecated)
-                    4 mixed source and disassembly
-                    5 mixed source and disassembly with raw opcodes 
-
-                    data = "-s $pc -e $pc+100 -- 0";
-                    return sys_aprintf("server interp mi \"-data-disassemble %s\"\n", data);
-                */
-            }
             if (!data)
                 data = "100";
             return sys_aprintf("server interp mi \"x/%si $pc\"\n", data);
+            //$ TODO mikesart: We can send our own annotations using something like this:
+            // return sys_aprintf("echo \\n\\032\\032foo\nserver interp mi \"x/%si $pc\"\n", data);
+            // We should then be able to send an annotation saying gdbmi is coming and always
+            // parse until the gdbmi command is done...
         case ANNOTATE_DISASSEMBLE_FUNC:
             /* disassemble 'driver.cpp'::main
                  /m: source lines included
