@@ -480,6 +480,7 @@ void tgdb_request_destroy(tgdb_request_ptr request_ptr)
             free((char *) request_ptr->choice.complete.line);
             request_ptr->choice.complete.line = NULL;
             break;
+        case TGDB_REQUEST_DISASSEMBLE:
         case TGDB_REQUEST_DISASSEMBLE_FUNC:
             break;
         default:
@@ -1122,6 +1123,18 @@ tgdb_request_ptr tgdb_request_complete(struct tgdb * tgdb, const char *line)
     return request_ptr;
 }
 
+tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb, int lines)
+{
+    tgdb_request_ptr request_ptr;
+
+    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
+    request_ptr->header = TGDB_REQUEST_DISASSEMBLE;
+
+    request_ptr->choice.disassemble.lines = lines;
+
+    return request_ptr;
+}
+
 tgdb_request_ptr tgdb_request_disassemble_func(struct tgdb *tgdb,
         enum disassemble_func_type type, const char *file, const char *function)
 {
@@ -1221,6 +1234,16 @@ static int tgdb_process_complete(struct tgdb *tgdb, tgdb_request_ptr request)
     return ret;
 }
 
+static int tgdb_process_disassemble(struct tgdb *tgdb, tgdb_request_ptr request)
+{
+    int ret;
+
+    ret = tgdb_client_disassemble(tgdb->tcc, request->choice.disassemble.lines);
+    tgdb_process_client_commands(tgdb);
+
+    return ret;
+}
+
 static int tgdb_process_disassemble_func(struct tgdb *tgdb, tgdb_request_ptr request)
 {
     int ret;
@@ -1255,6 +1278,8 @@ int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request)
         return tgdb_process_modify_breakpoint(tgdb, request);
     else if (request->header == TGDB_REQUEST_COMPLETE)
         return tgdb_process_complete(tgdb, request);
+    else if (request->header == TGDB_REQUEST_DISASSEMBLE)
+        return tgdb_process_disassemble(tgdb, request);
     else if (request->header == TGDB_REQUEST_DISASSEMBLE_FUNC)
         return tgdb_process_disassemble_func(tgdb, request);
 

@@ -1063,44 +1063,6 @@ static void process_commands(struct tgdb *tgdb_in)
                         handle_request(tgdb, request_ptr);
                     }
                 }
-
-#if 0
-                //$ TODO mikesart: request disassembly information
-
-                // Absolute path and/or function can be null.
-                if_print_message("\n===> %s %s %s\n", tfp->absolute_path, tfp->func, tfp->addr);
-                {
-                    //$ TODO: Only update if we don't already have this disassembly.
-                    const char *file = NULL;
-                    const char *function = NULL;
-                    tgdb_request_ptr request_ptr;
-
-                    //$ TODO: Store disasm under this:
-                    // tfp->absolute_path;
-                    // tfp->func;
-
-                    request_ptr = tgdb_request_disassemble_func(tgdb,
-                        DISASSEMBLE_FUNC_DISASSEMBLY, NULL, NULL);
-                    handle_request(tgdb, request_ptr);
-
-//                    request_ptr = tgdb_request_disassemble_func(tgdb,
-//                        DISASSEMBLE_FUNC_DISASSEMBLY, "driver.cpp", "main");
-//                    handle_request(tgdb, request_ptr);
-
-//                    request_ptr = tgdb_request_disassemble_func(tgdb,
-//                        DISASSEMBLE_FUNC_DISASSEMBLY, NULL, "main");
-//                    handle_request(tgdb, request_ptr);
-
-//                    request_ptr = tgdb_request_disassemble_func(tgdb,
-//                        DISASSEMBLE_FUNC_DISASSEMBLY, "driver.cpp", NULL);
-//                    handle_request(tgdb, request_ptr);
-
-//                    request_ptr = tgdb_request_disassemble_func(tgdb,
-//                        DISASSEMBLE_FUNC_SOURCE_LINES, "driver.cpp", "main");
-//                    handle_request(tgdb, request_ptr);
-                }
-#endif
-
                 break;
             }
 
@@ -1164,47 +1126,59 @@ static void process_commands(struct tgdb *tgdb_in)
                 do_tab_completion(list);
                 break;
             }
+            case TGDB_DISASSEMBLE:
             case TGDB_DISASSEMBLE_FUNC:
             {
-                uint64_t addr_start = item->choice.disassemble_function.addr_start;
-                uint64_t addr_end = item->choice.disassemble_function.addr_end;
-                char **disasm = item->choice.disassemble_function.disasm;
+                if (item->choice.disassemble_function.error) {
+                    tgdb_request_ptr request_ptr;
 
-                //$ TODO mikesart: If we got an error here and no disasm exists, we should use
-                // TGDB_DISASSEMBLE and just disassemble 100 instructions or something?
-                if (disasm && disasm[0]) {
-                    int i;
-                    char *path;
-                    struct list_node *node;
-                    sviewer *sview = if_get_sview();
+                    //$ TODO mikesart: Get module name in here somehow? Passed in when calling tgdb_request_disassemble?
+                    //      or info sharedlibrary?
+                    //$ TODO mikesart: Need way to make sure we don't recurse here on error.
+                    //$ TODO mikesart: 100 lines? Way to load more at end?
+                    request_ptr = tgdb_request_disassemble(tgdb, 100);
+                    handle_request(tgdb, request_ptr);
+                } else {
+                    uint64_t addr_start = item->choice.disassemble_function.addr_start;
+                    uint64_t addr_end = item->choice.disassemble_function.addr_end;
+                    char **disasm = item->choice.disassemble_function.disasm;
 
-                    if (addr_start) {
-                        path = sys_aprintf("** %s (%" PRIx64 " - %" PRIx64 ") **",
-                                        disasm[0], addr_start, addr_end);
-                    } else {
-                        path = sys_aprintf("** %s **", disasm[0]);
-                    }
+                    //$ TODO mikesart: If we got an error here and no disasm exists, we should use
+                    // TGDB_DISASSEMBLE and just disassemble 100 instructions or something?
+                    if (disasm && disasm[0]) {
+                        int i;
+                        char *path;
+                        struct list_node *node;
+                        sviewer *sview = if_get_sview();
 
-                    node = source_get_node(sview, path);
-                    if (!node) {
-                        node = source_add(sview, path);
-
-                        //$ TODO mikesart: Add asm colors
-                        node->language = TOKENIZER_LANGUAGE_ASM;
-                        node->addr_start = addr_start;
-                        node->addr_end = addr_end;
-
-                        for (i = 0; i < sbcount(disasm); i++) {
-                            source_add_disasm_line(node, disasm[i]);
+                        if (addr_start) {
+                            path = sys_aprintf("** %s (%" PRIx64 " - %" PRIx64 ") **",
+                                               disasm[0], addr_start, addr_end);
+                        } else {
+                            path = sys_aprintf("** %s **", disasm[0]);
                         }
 
-                        source_highlight(node);
+                        node = source_get_node(sview, path);
+                        if (!node) {
+                            node = source_add(sview, path);
+
+                            //$ TODO mikesart: Add asm colors
+                            node->language = TOKENIZER_LANGUAGE_ASM;
+                            node->addr_start = addr_start;
+                            node->addr_end = addr_end;
+
+                            for (i = 0; i < sbcount(disasm); i++) {
+                                source_add_disasm_line(node, disasm[i]);
+                            }
+
+                            source_highlight(node);
+                        }
+
+                        source_set_exec_addr(sview, path, if_get_sview()->addr_frame);
+                        if_draw();
+
+                        free(path);
                     }
-
-                    source_set_exec_addr(sview, path, if_get_sview()->addr_frame);
-                    if_draw();
-
-                    free(path);
                 }
                 break;
             }
@@ -1255,6 +1229,7 @@ does_request_require_console_update(struct tgdb_request *request, int *update)
             break;
         case TGDB_REQUEST_INFO_SOURCES:
         case TGDB_REQUEST_CURRENT_LOCATION:
+        case TGDB_REQUEST_DISASSEMBLE:
         case TGDB_REQUEST_DISASSEMBLE_FUNC:
             *update = 0;
             break;

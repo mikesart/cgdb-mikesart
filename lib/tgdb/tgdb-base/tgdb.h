@@ -412,6 +412,8 @@
    */
     tgdb_request_ptr tgdb_request_complete(struct tgdb *tgdb, const char *line);
 
+    tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb, int lines);
+
   /**
    * Used to get disassembly for function.
    *

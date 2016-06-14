@@ -731,7 +731,7 @@ void commands_process(struct annotate_two *a2, struct commands *c, char a, struc
             commands_process_info_frame(a2, c, a, list);
             break;
         case INFO_DISASSEMBLE:
-            commands_process_disassemble(a2, c, a, list);
+            commands_process_disassemble_func(a2, c, a, list);
             break;
         case INFO_DISASSEMBLE_FUNC:
             commands_process_disassemble_func(a2, c, a, list);
@@ -827,9 +827,22 @@ static char *commands_create_command(struct commands *c,
             return strdup("server interp mi \"-stack-info-frame\"\n");
         case ANNOTATE_DISASSEMBLE:
             /* x/20i $pc */
+            if (!data) {
+                /* mode is:
+                    0 disassembly only
+                    1 mixed source and disassembly (deprecated)
+                    2 disassembly with raw opcodes
+                    3 mixed source and disassembly with raw opcodes (deprecated)
+                    4 mixed source and disassembly
+                    5 mixed source and disassembly with raw opcodes 
+
+                    data = "-s $pc -e $pc+100 -- 0";
+                    return sys_aprintf("server interp mi \"-data-disassemble %s\"\n", data);
+                */
+            }
             if (!data)
-                data = "-s $pc -e $pc+100 -- 0";
-            return sys_aprintf("server interp mi \"-data-disassemble %s\"\n", data);
+                data = "100";
+            return sys_aprintf("server interp mi \"x/%si $pc\"\n", data);
         case ANNOTATE_DISASSEMBLE_FUNC:
             /* disassemble 'driver.cpp'::main
                  /m: source lines included

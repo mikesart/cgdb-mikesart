@@ -309,6 +309,19 @@ int a2_get_current_location(struct annotate_two *a2)
                            ANNOTATE_INFO_FRAME, NULL, 1);
 }
 
+int a2_disassemble(struct annotate_two *a2, int lines)
+{
+    int ret;
+    char *data = NULL;
+
+    data = lines ? sys_aprintf("%d", lines) : NULL;
+    ret = commands_issue_command(a2->c, a2->client_command_list,
+                                 ANNOTATE_DISASSEMBLE, data, 0);
+
+    free(data);
+    return ret;
+}
+
 int a2_disassemble_func(struct annotate_two *a2, int raw, int source,
     const char *file, const char *function)
 {
@@ -387,7 +400,7 @@ const char *a2_return_client_command(struct annotate_two *a2, enum tgdb_command_
         case TGDB_UNTIL:
             ret = "until";
             break;
-        case TGDB_DISASSEMBLE:
+        case TGDB_DISASSEMBLE_INSTR:
             ret = "disassemble";
             break;
         case TGDB_UP:
