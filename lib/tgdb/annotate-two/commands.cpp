@@ -623,6 +623,9 @@ commands_process_disassemble_func(struct annotate_two *a2, struct commands *c,
 
                 /* Zero terminate line and parse the gdbmi string */
                 *end++ = 0;
+                if (!end[0])
+                    continue;
+
                 miout = mi_parse_gdb_output(str);
 
                 /* If this is a console string, add it to our list */
