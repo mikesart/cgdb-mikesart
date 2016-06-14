@@ -486,7 +486,8 @@ mi_output *mi_parse_gdb_output(const char *str)
          return mi_target_stream(r,str);
     case '&':
          return mi_log_stream(r,str);
-   }   
+   }
+ free(r);
  mi_error=MI_PARSER;
  return NULL;
 }
