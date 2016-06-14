@@ -442,20 +442,9 @@ static int tgdb_has_command_to_run(struct tgdb *tgdb)
     return 0;
 }
 
-int tgdb_is_busy(struct tgdb *tgdb, int *is_busy)
+int tgdb_is_busy(struct tgdb *tgdb)
 {
-    /* Validate parameters */
-    if (!tgdb || !is_busy) {
-        logger_write_pos(logger, __FILE__, __LINE__, "tgdb_is_busy failed");
-        return -1;
-    }
-
-    if (tgdb_can_issue_command(tgdb) == 1)
-        *is_busy = 0;
-    else
-        *is_busy = 1;
-
-    return 0;
+    return !tgdb_can_issue_command(tgdb);
 }
 
 void tgdb_request_destroy(tgdb_request_ptr request_ptr)
@@ -855,7 +844,6 @@ size_t tgdb_process(struct tgdb * tgdb, char *buf, size_t n, int *is_finished)
     char local_buf[10 * n];
     ssize_t size;
     size_t buf_size = 0;
-    int is_busy;
 
     /* make the queue empty */
     tgdb_delete_responses(tgdb);
@@ -872,11 +860,7 @@ size_t tgdb_process(struct tgdb * tgdb, char *buf, size_t n, int *is_finished)
     if (tgdb->last_gui_command != NULL) {
         int ret;
 
-        if (tgdb_is_busy(tgdb, &is_busy) == -1) {
-            logger_write_pos(logger, __FILE__, __LINE__, "tgdb_is_busy failed");
-            return -1;
-        }
-        *is_finished = !is_busy;
+        *is_finished = !tgdb_is_busy(tgdb);
 
         if (tgdb->show_gui_commands) {
             strncpy(buf, tgdb->last_gui_command, n);
@@ -979,11 +963,7 @@ size_t tgdb_process(struct tgdb * tgdb, char *buf, size_t n, int *is_finished)
      */
     tgdb->command_list_iterator = tgdb_list_get_first(tgdb->command_list);
 
-    if (tgdb_is_busy(tgdb, &is_busy) == -1) {
-        logger_write_pos(logger, __FILE__, __LINE__, "tgdb_is_busy failed");
-        return -1;
-    }
-    *is_finished = !is_busy;
+    *is_finished = !tgdb_is_busy(tgdb);
 
     return buf_size;
 }
