@@ -107,7 +107,6 @@
      * single stepping through loops.
      */
         TGDB_UNTIL,
-        TGDB_DISASSEMBLE_INSTR,
 
     /** This will instruct TGDB to tell the debugger to go up a frame.  */
         TGDB_UP,
