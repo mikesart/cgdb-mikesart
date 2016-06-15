@@ -95,9 +95,9 @@ static int tgdb_types_print_item(void *command)
         }
         case TGDB_INFERIOR_EXITED:
         {
-            int *status = com->choice.inferior_exited.exit_status;
+            int status = com->choice.inferior_exited.exit_status;
 
-            fprintf(fd, "TGDB_INFERIOR_EXITED(%d)\n", *status);
+            fprintf(fd, "TGDB_INFERIOR_EXITED(%d)\n", status);
             break;
         }
         case TGDB_UPDATE_COMPLETIONS:
@@ -118,6 +118,7 @@ static int tgdb_types_print_item(void *command)
             fprintf(fd, "completions end\n");
             break;
         }
+        case TGDB_DISASSEMBLE:
         case TGDB_DISASSEMBLE_FUNC:
             //$ TODO
             break;
@@ -211,12 +212,6 @@ static int tgdb_types_delete_item(void *command)
             break;
         }
         case TGDB_INFERIOR_EXITED:
-        {
-            int *status = com->choice.inferior_exited.exit_status;
-
-            free(status);
-            com->choice.inferior_exited.exit_status = NULL;
-        }
             break;
         case TGDB_UPDATE_COMPLETIONS:
         {
@@ -229,6 +224,7 @@ static int tgdb_types_delete_item(void *command)
             com->choice.update_completions.completion_list = NULL;
             break;
         }
+        case TGDB_DISASSEMBLE:
         case TGDB_DISASSEMBLE_FUNC:
         {
             int i;
