@@ -459,9 +459,31 @@ mi_output *mi_log_stream(mi_output *r,const char *str)
  return mi_console(r,str);
 }
 
-mi_output *mi_parse_gdb_output(const char *str)
+mi_output *mi_parse_gdb_output(const char *str, int *id)
 {
- char type=str[0];
+ char type;
+
+ if (*id)
+   *id = -1;
+
+ /* Check for result class id. Ie:
+      500^done or 243^error, etc */
+ if (isdigit(str[0]))
+ {
+   int i;
+
+   for (i = 0; isdigit(str[i]); i++)
+     ;
+
+   if (str[i] == '^')
+   {
+       if (id)
+           *id = atoi(str);
+       str += i;
+   }
+ }
+
+ type=str[0];
 
  mi_output *r=mi_alloc_output();
  if (!r)

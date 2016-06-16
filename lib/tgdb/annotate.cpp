@@ -75,6 +75,16 @@ static int handle_pre_prompt(struct annotate_two *a2, const char *buf, size_t n,
     return 0;
 }
 
+static int handle_cgdb_gdbmi(struct annotate_two *a2, const char *buf, size_t n,
+        struct tgdb_list *list)
+{
+    //$ TODO mikesart: use this id to find our command?
+    int id = atoi(buf + strlen("cgdb-gdbmi"));
+
+    data_set_state(a2, CGDB_GDBMI);
+    return 0;
+}
+
 static int handle_prompt(struct annotate_two *a2, const char *buf, size_t n,
         struct tgdb_list *list)
 {
@@ -158,6 +168,7 @@ static struct annotation {
             struct tgdb_list * list);
 } annotations[] = {
     {
+    "cgdb-gdbmi", 10, handle_cgdb_gdbmi}, {
     "breakpoints-invalid", 19, handle_breakpoints_invalid}, {
     "frame-end", 10, handle_frame_end}, {
     "pre-commands", 12, handle_misc_pre_prompt}, {

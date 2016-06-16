@@ -183,7 +183,7 @@ int mi_get_response(mi_h *h)
    {/* Add to the response. */
     mi_output *o;
     int add=1, is_exit=0;
-    o=mi_parse_gdb_output(h->line);
+    o=mi_parse_gdb_output(h->line, NULL);
 
     if (!o)
        return 0;

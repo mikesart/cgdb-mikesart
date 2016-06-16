@@ -627,7 +627,7 @@ static int tgdb_deliver_command(struct tgdb *tgdb, struct tgdb_command *command)
         return -1;
 
     /* A regular command from the client */
-    io_debug_write_fmt("<%s>", command->tgdb_command_data);
+    io_debug_write_fmt(" tgdb_deliver_command: <%s>", command->tgdb_command_data);
 
     io_writen(tgdb->debugger_stdin, command->tgdb_command_data,
             strlen(command->tgdb_command_data));

@@ -197,7 +197,7 @@ mi_results *mi_find_var(mi_results *res, const char *var, mi_val_type type)
     return NULL;
 }
 
-static int mi_result_record(struct ibuf *buf, char **l)
+static int mi_result_record(struct ibuf *buf, char **lstart)
 {
     int pos;
     int len = ibuf_length(buf);
@@ -211,7 +211,11 @@ static int mi_result_record(struct ibuf *buf, char **l)
         }
     }
 
-    *l = line;
+    *lstart = line;
+
+    /* Skip over result class id */
+    while (isdigit(*line))
+        line++;
 
     /* Check for result classes */
     if (*line++ == '^') {
@@ -315,12 +319,14 @@ commands_process_info_frame(struct annotate_two *a2, struct commands *c,
     */
 
     if (a == '\n') {
-        char *str = ibuf_get(c->info_frame_string);
+        char *line;
+        int result_record = mi_result_record(c->info_frame_string, &line);
 
         /* Check for result record */
-        if (*str == '^') {
+        if (result_record != -1) {
+            int id;
             int success = 0;
-            mi_output *miout = mi_parse_gdb_output(ibuf_get(c->info_frame_string));
+            mi_output *miout = mi_parse_gdb_output(ibuf_get(c->info_frame_string), &id);
 
             if (miout && (miout->tclass == MI_CL_DONE)) {
                 mi_results *res = mi_find_var(miout->c, "frame", t_tuple);
@@ -356,7 +362,8 @@ commands_process_info_source(struct commands *c, char a, struct tgdb_list *list)
 {
     if (a == '\n') {
         /* parse gdbmi -file-list-exec-source-file output */
-        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->info_source_string));
+        int id;
+        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->info_source_string), &id);
 
         if (miout) {
             mi_results *res = (miout->type == MI_T_RESULT_RECORD) ? miout->c : NULL;
@@ -406,7 +413,8 @@ commands_process_sources(struct commands *c, char a, struct tgdb_list *list)
 {
     if (a == '\n') {
         /* parse gdbmi -file-list-exec-source-files output */
-        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->info_sources_string));
+        int id;
+        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->info_sources_string), &id);
         if (miout) {
             struct tgdb_response *response;
             struct tgdb_list *inferior_source_files = tgdb_list_init();
@@ -433,7 +441,8 @@ commands_process_breakpoints(struct commands *c, char a, struct tgdb_list *list)
 {
     if (a == '\n') {
         /* parse gdbmi -break-info output */
-        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->breakpoint_string));
+        int id;
+        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->breakpoint_string), &id);
 
         if (miout && (miout->type == MI_T_RESULT_RECORD)) {
             struct tgdb_list *breakpoint_list = tgdb_list_init();
@@ -503,6 +512,7 @@ commands_process_complete(struct commands *c, char a, struct tgdb_list *list)
         struct tgdb_list *tab_completions = tgdb_list_init();
 
         while (str) {
+            int id;
             char *end;
             mi_output *miout;
 
@@ -513,7 +523,7 @@ commands_process_complete(struct commands *c, char a, struct tgdb_list *list)
 
             /* Zero terminate line and parse the gdbmi string */
             *end++ = 0;
-            miout = mi_parse_gdb_output(str);
+            miout = mi_parse_gdb_output(str, &id);
 
             /* If this is a console string, add it to our list */
             if (miout && (miout->sstype == MI_SST_CONSOLE)) {
@@ -596,13 +606,14 @@ commands_process_disassemble_func(struct annotate_two *a2, struct commands *c,
     ibuf_addchar(c->disassemble_func_string, a);
 
     if (result_record != -1) {
+        int id;
         char **disasm = NULL;
         struct tgdb_response *response;
         uint64_t addr_start = 0;
         uint64_t addr_end = 0;
 
         if (result_record == MI_CL_ERROR) {
-            mi_output *miout = mi_parse_gdb_output(line);
+            mi_output *miout = mi_parse_gdb_output(line, &id);
 
             /* Grab the error message */
             sbpush(disasm, miout->c->v.cstr);
@@ -626,7 +637,7 @@ commands_process_disassemble_func(struct annotate_two *a2, struct commands *c,
                 if (!end[0])
                     continue;
 
-                miout = mi_parse_gdb_output(str);
+                miout = mi_parse_gdb_output(str, &id);
 
                 /* If this is a console string, add it to our list */
                 if (miout && (miout->sstype == MI_SST_CONSOLE)) {
@@ -686,7 +697,8 @@ commands_process_disassemble(struct annotate_two *a2, struct commands *c,
 {
     if (a == '\n') {
         /* parse gdbmi -data-disassemble command */
-        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->disassemble_string));
+        int id;
+        mi_output *miout = mi_parse_gdb_output(ibuf_get(c->disassemble_string), &id);
 
         if (miout && (miout->type == MI_T_RESULT_RECORD)) {
             mi_asm_insns *ins;
@@ -793,10 +805,18 @@ commands_prepare_for_command(struct annotate_two *a2,
             break;
     };
 
+    //$ TODO: Should be able to skip this - use the CGDB_GDBMI annotation.
     data_set_state(a2, INTERNAL_COMMAND);
-    io_debug_write_fmt("<%s\n>", com->tgdb_command_data);
+    io_debug_write_fmt("commands_prepare_for_command: <%s\n>", com->tgdb_command_data);
 
     return 0;
+}
+
+static int command_get_next_id()
+{
+    static int command_id = 100;
+
+    return command_id++;
 }
 
 /** 
@@ -815,53 +835,56 @@ commands_prepare_for_command(struct annotate_two *a2,
 static char *commands_create_command(struct commands *c,
         enum annotate_commands com, const char *data)
 {
+    char *cmd = NULL;
+    int command_id = command_get_next_id();
+
     switch (com) {
         case ANNOTATE_INFO_SOURCES:
             /* server info sources */
-            return strdup("server interp mi \"-file-list-exec-source-files\"\n");
+            cmd = strdup("-file-list-exec-source-files");
+            break;
         case ANNOTATE_INFO_SOURCE:
             /* server info source */
-            return strdup("server interp mi \"-file-list-exec-source-file\"\n");
+            cmd = strdup("-file-list-exec-source-file");
+            break;
         case ANNOTATE_INFO_FRAME:
             /* server info frame */
-            return strdup("server interp mi \"-stack-info-frame\"\n");
+            cmd = strdup("-stack-info-frame");
+            break;
         case ANNOTATE_DISASSEMBLE:
             /* x/20i $pc */
-            if (!data)
-                data = "100";
-            return sys_aprintf("server interp mi \"x/%si $pc\"\n", data);
-            //$ TODO mikesart: We can send our own annotations using something like this:
-            // return sys_aprintf("echo \\n\\032\\032foo\nserver interp mi \"x/%si $pc\"\n", data);
-            // We should then be able to send an annotation saying gdbmi is coming and always
-            // parse until the gdbmi command is done...
+            cmd = sys_aprintf("x/%si $pc", data ? data : "100");
+            break;
         case ANNOTATE_DISASSEMBLE_FUNC:
-            /* disassemble 'driver.cpp'::main
-                 /m: source lines included
-                 /s: source lines included, output in pc order
-                 /r: raw instructions included in hex
-                 single argument: function surrounding is dumped
-                 two arguments: start,end or start,+length
-                 disassemble 'driver.cpp'::main
-                 interp mi "disassemble /s 'driver.cpp'::main,+10"
-                 interp mi "disassemble /r 'driver.cpp'::main,+10"
-             */
-            return sys_aprintf("server interp mi \"disassemble%s%s\"\n",
-                               data ? " " : "", data ? data : "");
+            cmd = sys_aprintf("disassemble %s", data ? data : "");
+            break;
         case ANNOTATE_INFO_BREAKPOINTS:
             /* server info breakpoints */
-            return strdup("server interp mi \"-break-info\"\n");
+            cmd = strdup("-break-info");
+            break;
         case ANNOTATE_TTY:
             /* server tty %s */
-            return sys_aprintf("server interp mi \"-inferior-tty-set %s\"\n", data);
+            cmd = sys_aprintf("-inferior-tty-set %s", data);
+            break;
         case ANNOTATE_COMPLETE:
             /* server complete */
-            return sys_aprintf("server interp mi \"complete %s\"\n", data);
+            cmd = sys_aprintf("complete %s", data);
+            break;
 
         case ANNOTATE_VOID:
         default:
             logger_write_pos(logger, __FILE__, __LINE__, "switch error");
             break;
     };
+
+    if (cmd) {
+        /* Add our gdbmi command with the cgdb-gdbmi pre-command annotation */
+        char *fullcmd = sys_aprintf("server echo \\n\\032\\032cgdb-gdbmi%d\n"
+                              "server interp mi \"%d%s\"\n",
+                              command_id, command_id, cmd);
+        free(cmd);
+        return fullcmd;
+    }
 
     return NULL;
 }

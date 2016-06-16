@@ -76,12 +76,29 @@ void data_set_state(struct annotate_two *a2, enum internal_state state)
     /* if tgdb is at an internal command, than nothing changes that
      * state unless tgdb gets to the prompt annotation. This means that
      * the internal command is done */
-    if (a2->data->data_state == INTERNAL_COMMAND && state != USER_AT_PROMPT)
+
+    //$ TODO: Hacks right now.
+    // If we're in the INTERNAL_COMMAND state and we get CGDB_GDBMI, then switch to it
+    // If we are in CGDB_GDBMI, ignore AT_PROMPT
+    // If we are in CGDB_GDBMI and we get USER_AT_PROMPT, switch back to INTERNAL_COMMAND
+
+    //$ TODO: I think we can ignore everything when we switch to CGDB_GDBMI and switch out
+    //  when we get the result record.
+    if (a2->data->data_state == INTERNAL_COMMAND && state == CGDB_GDBMI)
+        ;
+    else if (a2->data->data_state == INTERNAL_COMMAND && state != USER_AT_PROMPT)
         return;
+
+    if (a2->data->data_state == CGDB_GDBMI && state == AT_PROMPT)
+        return;
+    else if (a2->data->data_state == CGDB_GDBMI && state == USER_AT_PROMPT)
+        state = INTERNAL_COMMAND;
 
     a2->data->data_state = state;
 
     switch (a2->data->data_state) {
+        case CGDB_GDBMI:
+            break;
         case VOID:
             break;
         case AT_PROMPT:
@@ -119,13 +136,11 @@ void data_set_state(struct annotate_two *a2, enum internal_state state)
         case POST_PROMPT:
             a2->data->data_state = VOID;
             break;
-        case GUI_COMMAND:
-            break;
         case INTERNAL_COMMAND:
             break;
         case USER_COMMAND:
             break;
-    }                           /* end switch */
+    }
 }
 
 void data_process(struct annotate_two *a2,
@@ -137,21 +152,17 @@ void data_process(struct annotate_two *a2,
             break;
         case AT_PROMPT:
             a2->data->gdb_prompt[a2->data->gdb_prompt_size++] = a;
-/*            buf[(*n)++] = a;*/
             break;
         case USER_AT_PROMPT:
             break;
-        case GUI_COMMAND:
         case INTERNAL_COMMAND:
-            if (a2->data->data_state == INTERNAL_COMMAND)
-                commands_process(a2, a2->c, a, list);
-            else if (a2->data->data_state == GUI_COMMAND)
-                buf[(*n)++] = a;
-
-            break;              /* do nothing */
+            commands_process(a2, a2->c, a, list);
+            break;
+        case CGDB_GDBMI:
+            break;
         case USER_COMMAND:
             break;
         case POST_PROMPT:
             break;
-    }                           /* end switch */
+    }
 }

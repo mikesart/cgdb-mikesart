@@ -415,7 +415,7 @@ void  mi_force_version(mi_h *h, unsigned vMajor, unsigned vMiddle,
 void  mi_set_workaround(unsigned wa, int enable);
 int   mi_get_workaround(unsigned wa);
 /* Parse gdb output. */
-mi_output *mi_parse_gdb_output(const char *str);
+mi_output *mi_parse_gdb_output(const char *str, int *id);
 /* Functions to set/get the tunneled streams callbacks. */
 void mi_set_console_cb(mi_h *h, stream_cb cb, void *data);
 void mi_set_target_cb(mi_h *h, stream_cb cb, void *data);
