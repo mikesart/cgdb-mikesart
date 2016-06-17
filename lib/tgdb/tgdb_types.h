@@ -325,6 +325,7 @@
   */
     struct tgdb_response {
     /** This is the type of response.  */
+        int result_id;
         enum INTERFACE_RESPONSE_COMMANDS header;
 
         union {

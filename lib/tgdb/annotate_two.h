@@ -66,11 +66,6 @@ struct annotate_two {
 	 */
     struct state_machine *sm;
 
-    /**
-	 * This module is used for parsing the commands output of gdb
-	 */
-    struct commands *c;
-
     /** 
 	 * This module is used for keeping shared global data
 	 */

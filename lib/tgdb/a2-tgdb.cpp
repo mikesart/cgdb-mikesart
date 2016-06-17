@@ -56,8 +56,7 @@ static int a2_set_inferior_tty(void *ctx)
         return -1;
     }
 
-    return commands_issue_command(a2->c,
-                    a2->client_command_list,
+    return commands_issue_command(a2->client_command_list,
                     ANNOTATE_TTY,
                     pty_pair_get_slavename(a2->pty_pair), 0);
 }
@@ -200,7 +199,6 @@ int a2_initialize(struct annotate_two *a2,
 
     a2->data = data_initialize();
     a2->sm = state_machine_initialize();
-    a2->c = commands_initialize();
     a2->g = globals_initialize();
     a2->client_command_list = tgdb_list_init();
 
@@ -217,8 +215,7 @@ int a2_initialize(struct annotate_two *a2,
      * if the user puts breakpoints in there .gdbinit.
      * This makes sure that TGDB asks for the breakpoints on start up.
      */
-    if (commands_issue_command(a2->c,
-                    a2->client_command_list,
+    if (commands_issue_command(a2->client_command_list,
                     ANNOTATE_INFO_BREAKPOINTS, NULL, 0) == -1) {
         return -1;
     }
@@ -245,7 +242,6 @@ int a2_shutdown(struct annotate_two *a2)
 
     data_shutdown(a2->data);
     state_machine_shutdown(a2->sm);
-    commands_shutdown(a2->c);
 
     tgdb_list_free(a2->client_command_list, tgdb_command_destroy_list_item);
     tgdb_list_destroy(a2->client_command_list);
@@ -285,10 +281,7 @@ int a2_parse_io(struct annotate_two *a2,
 
     a2->cur_response_list = NULL;
 
-    if (a2->command_finished)
-        return 1;
-    else
-        return 0;
+    return a2->command_finished;
 }
 
 struct tgdb_list *a2_get_client_commands(struct annotate_two *a2)
@@ -299,7 +292,7 @@ struct tgdb_list *a2_get_client_commands(struct annotate_two *a2)
 int a2_get_current_location(struct annotate_two *a2)
 {
     /* Try to get frame information */
-    return commands_issue_command(a2->c, a2->client_command_list,
+    return commands_issue_command(a2->client_command_list,
                            ANNOTATE_INFO_FRAME, NULL, 1);
 }
 
@@ -309,7 +302,7 @@ int a2_disassemble(struct annotate_two *a2, int lines)
     char *data = NULL;
 
     data = lines ? sys_aprintf("%d", lines) : NULL;
-    ret = commands_issue_command(a2->c, a2->client_command_list,
+    ret = commands_issue_command(a2->client_command_list,
                                  ANNOTATE_DISASSEMBLE, data, 0);
 
     free(data);
@@ -352,7 +345,7 @@ int a2_disassemble_func(struct annotate_two *a2, int raw, int source,
             data = sys_aprintf("%s%s%s", raw_flag, source_flag, function ? function : "");
     }
 
-    ret = commands_issue_command(a2->c, a2->client_command_list,
+    ret = commands_issue_command(a2->client_command_list,
                                   ANNOTATE_DISASSEMBLE_FUNC, data, 0);
 
     free(data);
@@ -361,7 +354,7 @@ int a2_disassemble_func(struct annotate_two *a2, int raw, int source,
 
 int a2_get_inferior_sources(struct annotate_two *a2)
 {
-    return commands_issue_command(a2->c, a2->client_command_list,
+    return commands_issue_command(a2->client_command_list,
                     ANNOTATE_INFO_SOURCES, NULL, 0);
 }
 
@@ -426,13 +419,13 @@ pid_t a2_get_debugger_pid(struct annotate_two *a2)
 
 int a2_completion_callback(struct annotate_two *a2, const char *command)
 {
-    return commands_issue_command(a2->c, a2->client_command_list,
+    return commands_issue_command(a2->client_command_list,
                     ANNOTATE_COMPLETE, command, 1);
 }
 
 int a2_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com)
 {
-    return commands_prepare_for_command(a2, a2->c, com);
+    return commands_prepare_for_command(a2, com);
 }
 
 int a2_is_misc_prompt(struct annotate_two *a2)

@@ -327,7 +327,7 @@ mi_output *mi_get_results_alone(mi_output *r,const char *str)
  last_r=NULL;
  do
    {
-    if (!*str)
+    if (!*str || *str == '\n')
        return r;
     if (*str!=',')
       {

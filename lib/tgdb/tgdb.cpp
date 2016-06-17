@@ -769,6 +769,7 @@ static int tgdb_add_quit_command(struct tgdb *tgdb)
 
     response =
             (struct tgdb_response *) cgdb_malloc(sizeof (struct tgdb_response));
+    response->result_id = -1;
     response->header = TGDB_QUIT;
     response->choice.quit.exit_status = tstatus;
 
@@ -827,6 +828,7 @@ static int tgdb_get_quit_command(struct tgdb *tgdb, int *tgdb_will_quit)
     }
 
     response->header = TGDB_QUIT;
+    response->result_id = -1;
     response->choice.quit.exit_status = tstatus;
     tgdb_types_append_command(tgdb->command_list, response);
     *tgdb_will_quit = 1;
@@ -972,8 +974,7 @@ struct tgdb_response *tgdb_get_response(struct tgdb *tgdb)
     if (tgdb->command_list_iterator == NULL)
         return NULL;
 
-    command =
-            (struct tgdb_response *) tgdb_list_get_item(tgdb->
+    command = (struct tgdb_response *) tgdb_list_get_item(tgdb->
             command_list_iterator);
 
     tgdb->command_list_iterator = tgdb_list_next(tgdb->command_list_iterator);

@@ -4,45 +4,6 @@
 #include "tgdb_types.h"
 #include "a2-tgdb.h"
 
-struct commands;
-
-/* These are the state that an internal command could lead to */
-enum COMMAND_STATE {
-    /* not a state */
-    VOID_COMMAND,
-    /* Related to the 'info breakpoints' command */
-    INFO_BREAKPOINTS,
-    /* Related to the 'info sources' command */
-    INFO_SOURCES,
-    /* Related to the 'info source' command */
-    INFO_SOURCE,
-    /* Related to the 'info frame' command */
-    INFO_FRAME,
-    /* Related to the '-data-disassemble' command */
-    INFO_DISASSEMBLE,
-    /* Related to the 'disassemble' command */
-    INFO_DISASSEMBLE_FUNC,
-    /* Related to the 'server complete' command for tab completion */
-    COMMAND_COMPLETE,
-};
-
-/* commands_initialize: Initialize the commands unit */
-struct commands *commands_initialize(void);
-void commands_shutdown(struct commands *c);
-
-/* command_set_state: Sets the state of the command package. This should usually be called
- *                      after an annotation has been read.
- */
-void commands_set_state(struct commands *c, enum COMMAND_STATE state);
-
-/* command_get_state:   Gets the state of the command package 
- * Returns:          The current state.
- */
-enum COMMAND_STATE commands_get_state(struct commands *c);
-
-/* runs a simple command, output goes to user  */
-/*int commands_run_command(int fd, struct tgdb_client_command *com);*/
-
 /* commands_issue_command:
  * -----------------------
  *  
@@ -51,8 +12,7 @@ enum COMMAND_STATE commands_get_state(struct commands *c);
  *
  *  Returns -1 on error, 0 on success
  */
-int commands_issue_command(struct commands *c,
-        struct tgdb_list *client_command_list,
+int commands_issue_command(struct tgdb_list *client_command_list,
         enum annotate_commands com, const char *data, int oob);
 
 /* commands_process: This function receives the output from gdb when gdb
@@ -61,8 +21,9 @@ int commands_issue_command(struct commands *c,
  *    a     -> the character received from gdb.
  *    com   -> commands to give back to gdb.
  */
-void commands_process(struct annotate_two *a2, struct commands *c,
-                      char a, struct tgdb_list *list);
+void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
+                                 int result_record, char *result_line, int id,
+                                 struct tgdb_list *command_list);
 
 /* This gives the gui all of the completions that were just read from gdb 
  * through a 'complete' command.
@@ -90,8 +51,7 @@ void commands_send_gui_completions(struct commands *c, struct tgdb_list *list);
  *
  *  Returns: -1 if this command should not be run. 0 otherwise.
  */
-int commands_prepare_for_command(struct annotate_two *a2, struct commands *c,
-        struct tgdb_command *com);
+int commands_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com);
 
 /**
  * The current command type. TGDB is capable of having any commands of this

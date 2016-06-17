@@ -13,6 +13,7 @@
 #include "annotate_two.h"
 
 int tgdb_parse_annotation(struct annotate_two *a2,
-        char *data, size_t size, struct tgdb_list *list);
+        char *data, size_t size, struct tgdb_list *list,
+        int *is_cgdb_gdbmi);
 
 #endif

@@ -30,7 +30,7 @@ static int
 handle_breakpoints_invalid(struct annotate_two *a2, const char *buf, size_t n,
         struct tgdb_list *list)
 {
-    return commands_issue_command(a2->c, a2->client_command_list,
+    return commands_issue_command(a2->client_command_list,
                            ANNOTATE_INFO_BREAKPOINTS, NULL, 0);
 }
 
@@ -38,14 +38,7 @@ static int handle_misc_pre_prompt(struct annotate_two *a2, const char *buf,
         size_t n, struct tgdb_list *list)
 {
     /* If tgdb is sending a command, then continue past it */
-    if (data_get_state(a2->data) == INTERNAL_COMMAND) {
-        if (io_write_byte(a2->debugger_stdin, '\n') == -1)
-            logger_write_pos(logger, __FILE__, __LINE__,
-                    "Could not send command");
-    } else {
-        data_set_state(a2, AT_PROMPT);
-    }
-
+    data_set_state(a2, AT_PROMPT);
     return 0;
 }
 
@@ -78,11 +71,7 @@ static int handle_pre_prompt(struct annotate_two *a2, const char *buf, size_t n,
 static int handle_cgdb_gdbmi(struct annotate_two *a2, const char *buf, size_t n,
         struct tgdb_list *list)
 {
-    //$ TODO mikesart: use this id to find our command?
-    int id = atoi(buf + strlen("cgdb-gdbmi"));
-
-    data_set_state(a2, CGDB_GDBMI);
-    return 0;
+    return atoi(buf + strlen("cgdb-gdbmi"));
 }
 
 static int handle_prompt(struct annotate_two *a2, const char *buf, size_t n,
@@ -137,8 +126,8 @@ static int handle_exited(struct annotate_two *a2, const char *buf, size_t n,
     //    "exited 0"
     exit_status = (n >= 7) ? atoi(buf + 7) : -1;
 
-    response = (struct tgdb_response *)
-            cgdb_malloc(sizeof (struct tgdb_response));
+    response = (struct tgdb_response *)cgdb_malloc(sizeof (struct tgdb_response));
+    response->result_id = -1;
     response->header = TGDB_INFERIOR_EXITED;
     response->choice.inferior_exited.exit_status = exit_status;
     tgdb_types_append_command(list, response);
@@ -197,18 +186,17 @@ static struct annotation {
 };
 
 int tgdb_parse_annotation(struct annotate_two *a2, char *data, size_t size,
-        struct tgdb_list *list)
+        struct tgdb_list *list, int *is_cgdb_gdbmi)
 {
     int i;
 
+    *is_cgdb_gdbmi = 0;
+
     for (i = 0; annotations[i].data != NULL; ++i) {
         if (strncmp(data, annotations[i].data, annotations[i].size) == 0) {
-            if (annotations[i].f(a2, data, size, list) == -1) {
-                logger_write_pos(logger, __FILE__, __LINE__,
-                        "parsing annotation failed");
-            } else {
-                break; /* only match one annotation */
-            }
+            *is_cgdb_gdbmi = (annotations[i].f == handle_cgdb_gdbmi);
+
+            return annotations[i].f(a2, data, size, list);
         }
     }
 

@@ -77,28 +77,9 @@ void data_set_state(struct annotate_two *a2, enum internal_state state)
      * state unless tgdb gets to the prompt annotation. This means that
      * the internal command is done */
 
-    //$ TODO: Hacks right now.
-    // If we're in the INTERNAL_COMMAND state and we get CGDB_GDBMI, then switch to it
-    // If we are in CGDB_GDBMI, ignore AT_PROMPT
-    // If we are in CGDB_GDBMI and we get USER_AT_PROMPT, switch back to INTERNAL_COMMAND
-
-    //$ TODO: I think we can ignore everything when we switch to CGDB_GDBMI and switch out
-    //  when we get the result record.
-    if (a2->data->data_state == INTERNAL_COMMAND && state == CGDB_GDBMI)
-        ;
-    else if (a2->data->data_state == INTERNAL_COMMAND && state != USER_AT_PROMPT)
-        return;
-
-    if (a2->data->data_state == CGDB_GDBMI && state == AT_PROMPT)
-        return;
-    else if (a2->data->data_state == CGDB_GDBMI && state == USER_AT_PROMPT)
-        state = INTERNAL_COMMAND;
-
     a2->data->data_state = state;
 
     switch (a2->data->data_state) {
-        case CGDB_GDBMI:
-            break;
         case VOID:
             break;
         case AT_PROMPT:
@@ -116,6 +97,7 @@ void data_set_state(struct annotate_two *a2, enum internal_state state)
                             cgdb_malloc(sizeof (struct tgdb_response));
 
                     response->header = TGDB_UPDATE_CONSOLE_PROMPT_VALUE;
+                    response->result_id = -1;
                     response->choice.update_console_prompt_value.prompt_value =
                             cgdb_strdup(a2->data->gdb_prompt_last);
                     tgdb_list_append(a2->cur_response_list, response);
@@ -123,20 +105,9 @@ void data_set_state(struct annotate_two *a2, enum internal_state state)
             }
 
             a2->command_finished = 1;
-
-            /* This is important, because it resets the commands state.
-             * With this line not here, if the user hits 'o' from cgdb,
-             * then the commands state gets set to INFO_SOURCES, then the
-             * user hits ^c from the gdb window, the error occurs because 
-             * commands state is INFO_SOURCES instead of VOID.
-             */
-            commands_set_state(a2->c, VOID_COMMAND);
-
             break;
         case POST_PROMPT:
             a2->data->data_state = VOID;
-            break;
-        case INTERNAL_COMMAND:
             break;
         case USER_COMMAND:
             break;
@@ -154,14 +125,7 @@ void data_process(struct annotate_two *a2,
             a2->data->gdb_prompt[a2->data->gdb_prompt_size++] = a;
             break;
         case USER_AT_PROMPT:
-            break;
-        case INTERNAL_COMMAND:
-            commands_process(a2, a2->c, a, list);
-            break;
-        case CGDB_GDBMI:
-            break;
         case USER_COMMAND:
-            break;
         case POST_PROMPT:
             break;
     }
