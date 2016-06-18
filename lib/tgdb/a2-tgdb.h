@@ -285,7 +285,7 @@ struct tgdb_list *a2_get_client_commands(struct annotate_two *a2);
  */
 int a2_get_current_location(struct annotate_two *a2);
 
-/** 
+/**
  * Gets all the source files that the inferior makes up.
  *
  * \param ctx
@@ -296,7 +296,7 @@ int a2_get_current_location(struct annotate_two *a2);
  */
 int a2_get_inferior_sources(struct annotate_two *a2);
 
-/** 
+/**
  * This is called when readline determines a command needs to be completed.
  *
  * \param ctx

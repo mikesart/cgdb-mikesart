@@ -334,20 +334,6 @@
     tgdb_request_ptr tgdb_request_inferiors_source_files(struct tgdb *tgdb);
 
   /**
-   * This will ask the debugger for it's current file and line number.
-   * It will return to the caller a tgdb_response with the 
-   * response->update_source_files set. This is the same response you 
-   * will get when TGDB asynchronously sends the update_file_postition.
-   *
-   * \param tgdb
-   * An instance of the tgdb library to operate on.
-   * 
-   * \return
-   * Will return as a tgdb request command on success, otherwise NULL.
-   */
-    tgdb_request_ptr tgdb_request_current_location(struct tgdb *tgdb);
-
-  /**
    * This tells libtgdb to run a command through the debugger.
    *
    * \param tgdb
@@ -423,6 +409,10 @@
    * Request pointer from tgdb_request_* function to destroy.
    */
     void tgdb_request_destroy(tgdb_request_ptr request_ptr);
+
+    struct tgdb_request *tgdb_get_last_request();
+    void tgdb_set_last_request(struct tgdb_request *request);
+    int tgdb_does_request_require_console_update(struct tgdb_request *request);
 
 /*@}*/
 /* }}}*/

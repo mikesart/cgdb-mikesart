@@ -48,7 +48,6 @@ enum win_refresh { WIN_NO_REFRESH, WIN_REFRESH };
  */
 struct tgdb;
 struct tgdb_request;
-int handle_request(struct tgdb *tgdb, struct tgdb_request *request);
 
 void cleanup();
 
