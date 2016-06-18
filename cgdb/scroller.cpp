@@ -136,12 +136,13 @@ static char *parse(struct scroller *scr, struct hl_line_attr **attrs,
 
     scr->current.pos = i;
 
-    /* Remove trailing space from the line if we don't have color */
     if (*attrs) {
         j = strlen(rv);
     } else {
+        /* Remove trailing space from the line if we don't have color */
         for (j = strlen(rv) - 1; j > i && isspace(rv[j]); j--)
             ;
+        rv[j + 1] = 0;
     }
 
     /* Only realloc if it's going to save us more than ~128 bytes */
