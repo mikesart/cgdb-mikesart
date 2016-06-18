@@ -998,17 +998,16 @@ static void process_commands(struct tgdb *tgdb_in)
 
                     if_show_file(tfp->absolute_path, tfp->line_number, tfp->line_number);
                 } else {
-                    int ret;
-
                     /* Try to show the disasm for ths function */
-                    ret = source_set_exec_addr(sview, NULL, 0);
+                    int ret = source_set_exec_addr(sview, NULL, 0);
 
                     if (!ret) {
                         if_draw();
                     } else if (sview->addr_frame) {
                         /* No disasm found - request it */
                         tgdb_request_disassemble_func(tgdb,
-                            DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL);
+                            DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL, tfp);
+                        item->choice.update_file_position.file_position = NULL;
                     }
                 }
                 break;
@@ -1077,21 +1076,32 @@ static void process_commands(struct tgdb *tgdb_in)
             case TGDB_DISASSEMBLE:
             case TGDB_DISASSEMBLE_FUNC:
             {
-                if (item->choice.disassemble_function.error) {
-                    //$ TODO mikesart: Get module name in here somehow? Passed in when calling tgdb_request_disassemble?
-                    //      or info sharedlibrary?
-                    //$ TODO mikesart: Need way to make sure we don't recurse here on error.
-                    //$ TODO mikesart: 100 lines? Way to load more at end?
-                    tgdb_request_disassemble(tgdb, 100);
-                } else {
-                    uint64_t addr_start = item->choice.disassemble_function.addr_start;
-                    uint64_t addr_end = item->choice.disassemble_function.addr_end;
-                    char **disasm = item->choice.disassemble_function.disasm;
+                if ((item->header == TGDB_DISASSEMBLE_FUNC) &&
+                        item->choice.disassemble.error) {
+                    struct tgdb_file_position *tfp = NULL;
 
-                    //$ TODO: If addr_start is equal to addr_end of some other
+                    if (item->request && item->request->choice.disassemble_func.tfp) {
+                        tfp = item->request->choice.disassemble_func.tfp;
+                        item->request->choice.disassemble_func.tfp = NULL;
+                    }
+
+                    tgdb_request_disassemble(tgdb, tfp ? tfp->func : NULL, 100, tfp);
+                } else {
+                    struct tgdb_file_position *tfp = NULL;
+                    uint64_t addr_start = item->choice.disassemble.addr_start;
+                    uint64_t addr_end = item->choice.disassemble.addr_end;
+                    char **disasm = item->choice.disassemble.disasm;
+
+                    if (item->request) {
+                        tfp = (item->request->header == TGDB_REQUEST_DISASSEMBLE) ?
+                                    item->request->choice.disassemble.tfp :
+                                    item->request->choice.disassemble_func.tfp;
+                    }
+
+                    //$ TODO mikesart: If addr_start is equal to addr_end of some other
                     // buffer, then append it to that buffer?
 
-                    //$ TODO: If there is a disassembly view, update the location
+                    //$ TODO mikesart: If there is a disassembly view, update the location
                     // even if we don't display it? Useful with global marks, etc.
 
                     if (disasm && disasm[0]) {
@@ -1099,22 +1109,30 @@ static void process_commands(struct tgdb *tgdb_in)
                         char *path;
                         struct list_node *node;
                         sviewer *sview = if_get_sview();
+                        const char *func = (tfp && tfp->func) ? tfp->func : disasm[0];
+                        const char *from = (tfp && tfp->from) ? tfp->from : "??";
+                        const char *from_module = strrchr(from, '/');
+                        const char *sep = from_module ? ", " : "";
 
-                        if (addr_start) {
-                            path = sys_aprintf("** %s (%" PRIx64 " - %" PRIx64 ") **",
-                                               disasm[0], addr_start, addr_end);
-                        } else {
-                            path = sys_aprintf("** %s **", disasm[0]);
-                        }
+                        from_module = from_module ? from_module + 1 : "";
+
+                        path = sys_aprintf("** %s%s%s (%" PRIx64 " - %" PRIx64 ") **",
+                                           func, sep, from_module, addr_start, addr_end);
 
                         node = source_get_node(sview, path);
                         if (!node) {
                             node = source_add(sview, path);
 
-                            //$ TODO mikesart: Add asm colors
                             node->language = TOKENIZER_LANGUAGE_ASM;
                             node->addr_start = addr_start;
                             node->addr_end = addr_end;
+
+                            if (tfp) {
+                                if (tfp->func)
+                                    source_add_disasm_line(node, tfp->func);
+                                if (tfp->from)
+                                    source_add_disasm_line(node, tfp->from);
+                            }
 
                             for (i = 0; i < sbcount(disasm); i++) {
                                 source_add_disasm_line(node, disasm[i]);
@@ -1219,13 +1237,10 @@ static int gdb_input()
         }
       /** If the user is currently completing, do not update the prompt */
         else if (!completion_ptr) {
-            int update = 1;
-            struct tgdb_request *last_request = tgdb_get_last_request();
+            int last_update = tgdb_last_request_requires_update();
+            int update = (last_update == -1) ? 1 : last_update;
 
-            if (last_request) {
-                update = tgdb_does_request_require_console_update(last_request);
-                tgdb_set_last_request(NULL);
-            }
+            tgdb_set_last_request(NULL);
 
             if (update)
                 rline_rl_forced_update_display(rline);

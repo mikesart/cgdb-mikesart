@@ -98,6 +98,7 @@ void data_set_state(struct annotate_two *a2, enum internal_state state)
 
                     response->header = TGDB_UPDATE_CONSOLE_PROMPT_VALUE;
                     response->result_id = -1;
+                    response->request = NULL;
                     response->choice.update_console_prompt_value.prompt_value =
                             cgdb_strdup(a2->data->gdb_prompt_last);
                     tgdb_list_append(a2->cur_response_list, response);

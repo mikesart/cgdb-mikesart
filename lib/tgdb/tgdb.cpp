@@ -41,7 +41,8 @@
 
 static int num_loggers = 0;
 
-struct tgdb_request *last_request = NULL;
+static int last_request_requires_update = -1;
+static tgdb_request_ptr *requests_with_ids = NULL;
 
 /* struct tgdb {{{ */
 
@@ -199,15 +200,57 @@ static void handle_request(struct tgdb *tgdb_in, struct tgdb_request *request)
     }
 }
 
-struct tgdb_request *tgdb_get_last_request()
-{
-    return last_request;
+//$ TODO mikesart: Should make it so we always get a response?
+//$ TODO: How to check for leaks?
+//$ TODO: clean up error responding in commands.cpp: should always reply.
+
+tgdb_request_ptr tgdb_pop_request_id(int id) {
+    if (id > 0) {
+        int i;
+        int count = sbcount(requests_with_ids);
+
+        for (i = 0; i < count; i++) {
+            if (requests_with_ids[i]->id == id) {
+                tgdb_request_ptr ptr = requests_with_ids[i];
+
+                requests_with_ids[i] = requests_with_ids[count - 1];
+                sbsetcount(requests_with_ids, count - 1);
+                return ptr;
+            }
+        }
+    }
+
+    return NULL;
 }
 
 void tgdb_set_last_request(struct tgdb_request *request)
 {
-    tgdb_request_destroy(last_request);
-    last_request = request;
+    if (request) {
+        switch (request->header) {
+            case TGDB_REQUEST_CONSOLE_COMMAND:
+            case TGDB_REQUEST_DEBUGGER_COMMAND:
+            case TGDB_REQUEST_MODIFY_BREAKPOINT:
+            case TGDB_REQUEST_COMPLETE:
+                last_request_requires_update = 1;
+                break;
+            case TGDB_REQUEST_INFO_SOURCES:
+            case TGDB_REQUEST_CURRENT_LOCATION:
+            case TGDB_REQUEST_DISASSEMBLE:
+            case TGDB_REQUEST_DISASSEMBLE_FUNC:
+            default:
+                last_request_requires_update =  0;
+                break;
+        }
+
+        if (request->id > 0) {
+            sbpush(requests_with_ids, request);
+        }
+        else {
+            tgdb_request_destroy(request);
+        }
+    } else {
+        last_request_requires_update = -1;
+    }
 }
 
 /**
@@ -228,21 +271,9 @@ void tgdb_set_last_request(struct tgdb_request *request)
  * 0 on success or -1 on error
  */
 int
-tgdb_does_request_require_console_update(struct tgdb_request *request)
+tgdb_last_request_requires_update()
 {
-    switch (request->header) {
-        case TGDB_REQUEST_CONSOLE_COMMAND:
-        case TGDB_REQUEST_DEBUGGER_COMMAND:
-        case TGDB_REQUEST_MODIFY_BREAKPOINT:
-        case TGDB_REQUEST_COMPLETE:
-            return 1;
-        case TGDB_REQUEST_INFO_SOURCES:
-        case TGDB_REQUEST_CURRENT_LOCATION:
-        case TGDB_REQUEST_DISASSEMBLE:
-        case TGDB_REQUEST_DISASSEMBLE_FUNC:
-        default:
-            return 0;
-    }
+    return last_request_requires_update;
 }
 
 /**
@@ -534,9 +565,34 @@ void tgdb_request_destroy(tgdb_request_ptr request_ptr)
             free((char *) request_ptr->choice.complete.line);
             request_ptr->choice.complete.line = NULL;
             break;
-        case TGDB_REQUEST_DISASSEMBLE:
-        case TGDB_REQUEST_DISASSEMBLE_FUNC:
+        case TGDB_REQUEST_DISASSEMBLE_FUNC: {
+            struct tgdb_file_position *tfp =
+                    request_ptr->choice.disassemble_func.tfp;
+
+            if (tfp) {
+                free(tfp->absolute_path);
+                free(tfp->from);
+                free(tfp->func);
+                free(tfp);
+
+                request_ptr->choice.disassemble_func.tfp = NULL;
+            }
             break;
+        }
+        case TGDB_REQUEST_DISASSEMBLE: {
+            struct tgdb_file_position *tfp =
+                    request_ptr->choice.disassemble.tfp;
+
+            if (tfp) {
+                free(tfp->absolute_path);
+                free(tfp->from);
+                free(tfp->func);
+                free(tfp);
+
+                request_ptr->choice.disassemble.tfp = NULL;
+            }
+            break;
+        }
         default:
             break;
     }
@@ -733,7 +789,7 @@ static int tgdb_unqueue_and_deliver_command(struct tgdb *tgdb)
          * However, if an assumption is made that a misc
          * prompt can never be set while in this spot.
          */
-        struct tgdb_command *item = NULL;
+        struct tgdb_command *item;
 
         item = (struct tgdb_command *)queue_pop(tgdb->oob_input_queue);
         tgdb_deliver_command(tgdb, item);
@@ -741,9 +797,12 @@ static int tgdb_unqueue_and_deliver_command(struct tgdb *tgdb)
     }
     /* If the queue is not empty, run a command */
     else if (queue_size(tgdb->gdb_input_queue) > 0) {
-        struct tgdb_command *item = NULL;
+        struct tgdb_command *item;
 
         item = (struct tgdb_command *)queue_pop(tgdb->gdb_input_queue);
+
+        //$ TODO mikesart: is this true now?
+        // We have internal commands for frame info, source info, disasm, etc.
 
         /* If at the misc prompt, don't run the internal tgdb commands,
          * In fact throw them out for now, since they are only 
@@ -834,6 +893,7 @@ static int tgdb_add_quit_command(struct tgdb *tgdb)
     response =
             (struct tgdb_response *) cgdb_malloc(sizeof (struct tgdb_response));
     response->result_id = -1;
+    response->request = NULL;
     response->header = TGDB_QUIT;
     response->choice.quit.exit_status = tstatus;
 
@@ -893,6 +953,7 @@ static int tgdb_get_quit_command(struct tgdb *tgdb, int *tgdb_will_quit)
 
     response->header = TGDB_QUIT;
     response->result_id = -1;
+    response->request = NULL;
     response->choice.quit.exit_status = tstatus;
     tgdb_types_append_command(tgdb->command_list, response);
     *tgdb_will_quit = 1;
@@ -1043,6 +1104,8 @@ struct tgdb_response *tgdb_get_response(struct tgdb *tgdb)
 
     tgdb->command_list_iterator = tgdb_list_next(tgdb->command_list_iterator);
 
+    command->request = tgdb_pop_request_id(command->result_id);
+
     return command;
 }
 
@@ -1094,6 +1157,7 @@ tgdb_request_run_console_command(struct tgdb *tgdb, const char *command)
 
     request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
 
+    request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_CONSOLE_COMMAND;
     request_ptr->choice.console_command.command = (const char *)
             cgdb_strdup(command);
@@ -1108,6 +1172,7 @@ tgdb_request_ptr tgdb_request_inferiors_source_files(struct tgdb * tgdb)
 
     request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
 
+    request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_INFO_SOURCES;
 
     handle_request(tgdb, request_ptr);
@@ -1121,6 +1186,7 @@ tgdb_request_run_debugger_command(struct tgdb * tgdb, enum tgdb_command_type c)
 
     request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
 
+    request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_DEBUGGER_COMMAND;
     request_ptr->choice.debugger_command.c = c;
 
@@ -1136,6 +1202,7 @@ tgdb_request_modify_breakpoint(struct tgdb * tgdb, const char *file, int line,
 
     request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
 
+    request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_MODIFY_BREAKPOINT;
     request_ptr->choice.modify_breakpoint.file = (const char *)cgdb_strdup(file);
     request_ptr->choice.modify_breakpoint.line = line;
@@ -1150,6 +1217,8 @@ tgdb_request_ptr tgdb_request_complete(struct tgdb * tgdb, const char *line)
     tgdb_request_ptr request_ptr;
 
     request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
+
+    request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_COMPLETE;
     request_ptr->choice.complete.line = (const char *)cgdb_strdup(line);
 
@@ -1157,31 +1226,38 @@ tgdb_request_ptr tgdb_request_complete(struct tgdb * tgdb, const char *line)
     return request_ptr;
 }
 
-tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb, int lines)
+tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb, const char *func, int lines,
+        struct tgdb_file_position *tfp)
 {
     tgdb_request_ptr request_ptr;
 
     request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
-    request_ptr->header = TGDB_REQUEST_DISASSEMBLE;
 
+    request_ptr->id = -1;
+    request_ptr->header = TGDB_REQUEST_DISASSEMBLE;
+    request_ptr->choice.disassemble.func = func;
     request_ptr->choice.disassemble.lines = lines;
+    request_ptr->choice.disassemble.tfp = tfp;
 
     handle_request(tgdb, request_ptr);
     return request_ptr;
 }
 
 tgdb_request_ptr tgdb_request_disassemble_func(struct tgdb *tgdb,
-        enum disassemble_func_type type, const char *file, const char *function)
+        enum disassemble_func_type type, const char *file, const char *function,
+        struct tgdb_file_position *tfp)
 {
     tgdb_request_ptr request_ptr;
 
     request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
-    request_ptr->header = TGDB_REQUEST_DISASSEMBLE_FUNC;
 
+    request_ptr->id = -1;
+    request_ptr->header = TGDB_REQUEST_DISASSEMBLE_FUNC;
     request_ptr->choice.disassemble_func.raw = (type == DISASSEMBLE_FUNC_RAW_INSTRUCTIONS);
     request_ptr->choice.disassemble_func.source = (type == DISASSEMBLE_FUNC_SOURCE_LINES);
     request_ptr->choice.disassemble_func.file = file;
     request_ptr->choice.disassemble_func.function = function;
+    request_ptr->choice.disassemble_func.tfp = tfp;
 
     handle_request(tgdb, request_ptr);
     return request_ptr;
@@ -1200,9 +1276,6 @@ int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request)
 
     if (!tgdb_can_issue_command(tgdb))
         return -1;
-
-    tgdb_request_destroy(last_request);
-    last_request = request;
 
     if (request->header == TGDB_REQUEST_CONSOLE_COMMAND) {
         ret = tgdb_send(tgdb, request->choice.console_command.command,
@@ -1223,23 +1296,27 @@ int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request)
         }
     } else {
         if (request->header == TGDB_REQUEST_INFO_SOURCES) {
-            ret = a2_get_inferior_sources(tgdb->tcc);
+            ret = a2_get_inferior_sources(tgdb->tcc, &request->id);
         }
         else if (request->header == TGDB_REQUEST_CURRENT_LOCATION) {
-            ret = a2_get_current_location(tgdb->tcc);
+            ret = a2_get_current_location(tgdb->tcc, &request->id);
         }
         else if (request->header == TGDB_REQUEST_COMPLETE) {
-            ret = a2_completion_callback(tgdb->tcc, request->choice.complete.line);
+            ret = a2_completion_callback(tgdb->tcc, request->choice.complete.line,
+                                         &request->id);
         }
         else if (request->header == TGDB_REQUEST_DISASSEMBLE) {
-            ret = a2_disassemble(tgdb->tcc, request->choice.disassemble.lines);
+            ret = a2_disassemble(tgdb->tcc, request->choice.disassemble.func,
+                                 request->choice.disassemble.lines,
+                                 &request->id);
         }
         else if (request->header == TGDB_REQUEST_DISASSEMBLE_FUNC) {
             ret = a2_disassemble_func(tgdb->tcc,
                                       request->choice.disassemble_func.raw,
                                       request->choice.disassemble_func.source,
                                       request->choice.disassemble_func.file,
-                                      request->choice.disassemble_func.function);
+                                      request->choice.disassemble_func.function,
+                                      &request->id);
         }
 
         if (!ret) {
@@ -1247,6 +1324,7 @@ int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request)
         }
     }
 
+    tgdb_set_last_request(request);
     return ret;
 }
 

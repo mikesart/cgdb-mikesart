@@ -383,7 +383,9 @@
    */
     tgdb_request_ptr tgdb_request_complete(struct tgdb *tgdb, const char *line);
 
-    tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb, int lines);
+    tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb,
+            const char *func, int lines,
+            struct tgdb_file_position *tfp);
 
   /**
    * Used to get disassembly for function.
@@ -400,7 +402,8 @@
         DISASSEMBLE_FUNC_RAW_INSTRUCTIONS,
     };
     tgdb_request_ptr tgdb_request_disassemble_func(struct tgdb *tgdb,
-            enum disassemble_func_type type, const char *file, const char *function);
+            enum disassemble_func_type type, const char *file, const char *function,
+            struct tgdb_file_position *tfp);
 
   /**
    * Free the tgdb request pointer data.
@@ -410,9 +413,10 @@
    */
     void tgdb_request_destroy(tgdb_request_ptr request_ptr);
 
-    struct tgdb_request *tgdb_get_last_request();
     void tgdb_set_last_request(struct tgdb_request *request);
-    int tgdb_does_request_require_console_update(struct tgdb_request *request);
+    int tgdb_last_request_requires_update();
+
+    tgdb_request_ptr tgdb_pop_request_id(int id);
 
 /*@}*/
 /* }}}*/

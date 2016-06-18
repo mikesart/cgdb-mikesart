@@ -19,6 +19,7 @@
 #endif /* HAVE_STDLIB_H */
 
 /* Local includes */
+#include "tgdb.h"
 #include "tgdb_types.h"
 #include "logger.h"
 #include "sys_util.h"
@@ -174,6 +175,11 @@ static int tgdb_types_delete_item(void *command)
     if (!com)
         return -1;
 
+    if (com->request) {
+        tgdb_request_destroy(com->request);
+        com->request = NULL;
+    }
+
     switch (com->header) {
         case TGDB_UPDATE_BREAKPOINTS:
         {
@@ -191,13 +197,15 @@ static int tgdb_types_delete_item(void *command)
             struct tgdb_file_position *tfp =
                     com->choice.update_file_position.file_position;
 
-            free(tfp->absolute_path);
-            free(tfp->from);
-            free(tfp->func);
+            if (tfp) {
+                free(tfp->absolute_path);
+                free(tfp->from);
+                free(tfp->func);
 
-            free(tfp);
+                free(tfp);
 
-            com->choice.update_file_position.file_position = NULL;
+                com->choice.update_file_position.file_position = NULL;
+            }
             break;
         }
         case TGDB_UPDATE_SOURCE_FILES:
@@ -228,7 +236,7 @@ static int tgdb_types_delete_item(void *command)
         case TGDB_DISASSEMBLE_FUNC:
         {
             int i;
-            char **disasm = com->choice.disassemble_function.disasm;
+            char **disasm = com->choice.disassemble.disasm;
 
             for (i = 0; i < sbcount(disasm); i++) {
                 free(disasm[i]);

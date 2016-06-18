@@ -710,7 +710,7 @@ int command_do_disassemble(int param)
     } else if (sview->addr_frame) {
         /* No disasm found - request it */
         tgdb_request_disassemble_func(tgdb,
-                DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL);
+                DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL, NULL);
     }
 
     return 0;

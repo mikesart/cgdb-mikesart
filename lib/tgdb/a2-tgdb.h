@@ -283,7 +283,7 @@ struct tgdb_list *a2_get_client_commands(struct annotate_two *a2);
  * @return
  * 0 on success, otherwise -1 on error.
  */
-int a2_get_current_location(struct annotate_two *a2);
+int a2_get_current_location(struct annotate_two *a2, int *id);
 
 /**
  * Gets all the source files that the inferior makes up.
@@ -294,7 +294,7 @@ int a2_get_current_location(struct annotate_two *a2);
  * @return
  * 0 on success, otherwise -1 on error.
  */
-int a2_get_inferior_sources(struct annotate_two *a2);
+int a2_get_inferior_sources(struct annotate_two *a2, int *id);
 
 /**
  * This is called when readline determines a command needs to be completed.
@@ -308,11 +308,11 @@ int a2_get_inferior_sources(struct annotate_two *a2);
  * @return
  * 0 on success, otherwise -1 on error.
  */
-int a2_completion_callback(struct annotate_two *a2, const char *command);
+int a2_completion_callback(struct annotate_two *a2, const char *command, int *id);
 
-int a2_disassemble(struct annotate_two *a2, int lines);
+int a2_disassemble(struct annotate_two *a2, const char *func, int lines, int *id);
 int a2_disassemble_func(struct annotate_two *a2, int raw, int source,
-    const char *file, const char *function);
+    const char *file, const char *function, int *id);
 
 /** 
  * This returns the command to send to gdb for the enum C.

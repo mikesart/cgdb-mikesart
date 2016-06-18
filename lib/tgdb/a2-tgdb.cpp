@@ -58,7 +58,7 @@ static int a2_set_inferior_tty(void *ctx)
 
     return commands_issue_command(a2->client_command_list,
                     ANNOTATE_TTY,
-                    pty_pair_get_slavename(a2->pty_pair), 0);
+                    pty_pair_get_slavename(a2->pty_pair), 0, NULL);
 }
 
 static int close_inferior_connection(void *ctx)
@@ -209,14 +209,14 @@ int a2_initialize(struct annotate_two *a2,
      * because there are no source files to add the breakpoints to.
      */
 
-    a2_get_current_location(a2);
+    a2_get_current_location(a2, NULL);
 
     /* gdb may already have some breakpoints when it starts. This could happen
      * if the user puts breakpoints in there .gdbinit.
      * This makes sure that TGDB asks for the breakpoints on start up.
      */
     if (commands_issue_command(a2->client_command_list,
-                    ANNOTATE_INFO_BREAKPOINTS, NULL, 0) == -1) {
+                    ANNOTATE_INFO_BREAKPOINTS, NULL, 0, NULL) == -1) {
         return -1;
     }
 
@@ -289,28 +289,34 @@ struct tgdb_list *a2_get_client_commands(struct annotate_two *a2)
     return a2->client_command_list;
 }
 
-int a2_get_current_location(struct annotate_two *a2)
+int a2_get_current_location(struct annotate_two *a2, int *id)
 {
     /* Try to get frame information */
     return commands_issue_command(a2->client_command_list,
-                           ANNOTATE_INFO_FRAME, NULL, 1);
+                           ANNOTATE_INFO_FRAME, NULL, 1, id);
 }
 
-int a2_disassemble(struct annotate_two *a2, int lines)
+int a2_disassemble(struct annotate_two *a2, const char *func, int lines, int *id)
 {
     int ret;
-    char *data = NULL;
+    char *data;
 
-    data = lines ? sys_aprintf("%d", lines) : NULL;
+    if (!lines)
+        lines = 100;
+    if (!func)
+        func = "$pc";
+
+    data = sys_aprintf("%di %s", lines, func);
+
     ret = commands_issue_command(a2->client_command_list,
-                                 ANNOTATE_DISASSEMBLE, data, 0);
+                                 ANNOTATE_DISASSEMBLE, data, 0, id);
 
     free(data);
     return ret;
 }
 
 int a2_disassemble_func(struct annotate_two *a2, int raw, int source,
-    const char *file, const char *function)
+    const char *file, const char *function, int *id)
 {
     /* GDB 7.11 adds /s command to disassemble
 
@@ -346,16 +352,16 @@ int a2_disassemble_func(struct annotate_two *a2, int raw, int source,
     }
 
     ret = commands_issue_command(a2->client_command_list,
-                    ANNOTATE_DISASSEMBLE_FUNC, data, 0);
+                    ANNOTATE_DISASSEMBLE_FUNC, data, 0, id);
 
     free(data);
     return ret;
 }
 
-int a2_get_inferior_sources(struct annotate_two *a2)
+int a2_get_inferior_sources(struct annotate_two *a2, int *id)
 {
     return commands_issue_command(a2->client_command_list,
-                    ANNOTATE_INFO_SOURCES, NULL, 0);
+                    ANNOTATE_INFO_SOURCES, NULL, 0, id);
 }
 
 const char *a2_return_client_command(struct annotate_two *a2, enum tgdb_command_type c)
@@ -405,10 +411,10 @@ pid_t a2_get_debugger_pid(struct annotate_two *a2)
     return a2->debugger_pid;
 }
 
-int a2_completion_callback(struct annotate_two *a2, const char *command)
+int a2_completion_callback(struct annotate_two *a2, const char *command, int *id)
 {
     return commands_issue_command(a2->client_command_list,
-                    ANNOTATE_COMPLETE, command, 1);
+                    ANNOTATE_COMPLETE, command, 1, id);
 }
 
 int a2_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com)

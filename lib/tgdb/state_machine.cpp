@@ -142,11 +142,10 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
                     break;
                 case SM_ANNOTATION: {
                     /* Found an annotation */
-                    int id;
                     int is_cgdb_gdbmi;
 
                     sm->tgdb_state = SM_NL_DATA;
-                    id = tgdb_parse_annotation(a2, ibuf_get(sm->tgdb_buffer),
+                    tgdb_parse_annotation(a2, ibuf_get(sm->tgdb_buffer),
                             ibuf_length(sm->tgdb_buffer), command_list,
                             &is_cgdb_gdbmi);
 

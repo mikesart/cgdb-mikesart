@@ -219,6 +219,9 @@
     };
 
     struct tgdb_request {
+    /** This is the gdbmi request id number */
+        int id;
+
     /** This is the type of request.  */
         enum INTERFACE_REQUEST_COMMANDS header;
 
@@ -248,7 +251,9 @@
             } complete;
 
             struct {
+                const char *func;
                 int lines;
+                struct tgdb_file_position *tfp;
             } disassemble;
 
             struct {
@@ -256,6 +261,7 @@
                 int raw;
                 const char *file;
                 const char *function;
+                struct tgdb_file_position *tfp;
             } disassemble_func;
         } choice;
     };
@@ -324,8 +330,10 @@
   * end.
   */
     struct tgdb_response {
-    /** This is the type of response.  */
         int result_id;
+        struct tgdb_request *request;
+
+    /** This is the type of response.  */
         enum INTERFACE_RESPONSE_COMMANDS header;
 
         union {
@@ -366,7 +374,7 @@
                 uint64_t addr_end;
                 int error;
                 char **disasm;
-            } disassemble_function;
+            } disassemble;
 
             /* header == TGDB_UPDATE_CONSOLE_PROMPT_VALUE */
             struct {

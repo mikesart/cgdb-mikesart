@@ -23,7 +23,7 @@ handle_frame_end(struct annotate_two *a2, const char *buf, size_t n,
         struct tgdb_list *list)
 {
     /* set up the info_source command to get file info */
-    return a2_get_current_location(a2);
+    return a2_get_current_location(a2, NULL);
 }
 
 static int
@@ -31,7 +31,7 @@ handle_breakpoints_invalid(struct annotate_two *a2, const char *buf, size_t n,
         struct tgdb_list *list)
 {
     return commands_issue_command(a2->client_command_list,
-                           ANNOTATE_INFO_BREAKPOINTS, NULL, 0);
+                           ANNOTATE_INFO_BREAKPOINTS, NULL, 0, NULL);
 }
 
 static int handle_misc_pre_prompt(struct annotate_two *a2, const char *buf,
@@ -71,6 +71,7 @@ static int handle_pre_prompt(struct annotate_two *a2, const char *buf, size_t n,
 static int handle_cgdb_gdbmi(struct annotate_two *a2, const char *buf, size_t n,
         struct tgdb_list *list)
 {
+    /* Return cgdb-gdbmi ID */
     return atoi(buf + strlen("cgdb-gdbmi"));
 }
 
@@ -128,6 +129,7 @@ static int handle_exited(struct annotate_two *a2, const char *buf, size_t n,
 
     response = (struct tgdb_response *)cgdb_malloc(sizeof (struct tgdb_response));
     response->result_id = -1;
+    response->request = NULL;
     response->header = TGDB_INFERIOR_EXITED;
     response->choice.inferior_exited.exit_status = exit_status;
     tgdb_types_append_command(list, response);

@@ -463,7 +463,7 @@ mi_output *mi_parse_gdb_output(const char *str, int *id)
 {
  char type;
 
- if (*id)
+ if (id)
    *id = -1;
 
  /* Check for result class id. Ie:
