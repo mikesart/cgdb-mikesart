@@ -138,4 +138,6 @@ struct tgdb_command *tgdb_command_create(const char *tgdb_command_data,
  */
 void tgdb_command_destroy(void *item);
 
+int tgdb_get_gdb_version(int *major, int *minor);
+
 #endif

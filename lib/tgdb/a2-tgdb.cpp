@@ -204,6 +204,10 @@ int a2_initialize(struct annotate_two *a2,
 
     a2_open_new_tty(a2, inferior_stdin, inferior_stdout);
 
+    /* Initialize gdb_version_major, gdb_version_minor */
+    commands_issue_command(a2->client_command_list,
+                    ANNOTATE_GDB_VERSION, NULL, 0, NULL);
+
     /* Need to get source information before breakpoint information otherwise
      * the TGDB_UPDATE_BREAKPOINTS event will be ignored in process_commands()
      * because there are no source files to add the breakpoints to.
@@ -215,10 +219,8 @@ int a2_initialize(struct annotate_two *a2,
      * if the user puts breakpoints in there .gdbinit.
      * This makes sure that TGDB asks for the breakpoints on start up.
      */
-    if (commands_issue_command(a2->client_command_list,
-                    ANNOTATE_INFO_BREAKPOINTS, NULL, 0, NULL) == -1) {
-        return -1;
-    }
+    commands_issue_command(a2->client_command_list,
+                    ANNOTATE_INFO_BREAKPOINTS, NULL, 0, NULL);
 
     a2->tgdb_initialized = 1;
 
@@ -303,7 +305,7 @@ int a2_disassemble(struct annotate_two *a2, const char *func, int lines, int *id
 
     if (!lines)
         lines = 100;
-    if (!func)
+    if (!func || !strcmp(func, "??"))
         func = "$pc";
 
     data = sys_aprintf("%di %s", lines, func);
@@ -339,11 +341,21 @@ int a2_disassemble_func(struct annotate_two *a2, int raw, int source,
      */
     int ret;
     char *data = NULL;
+    int gdb_version_major;
+    int gdb_version_minor;
+    const char *source_line_flag = "/m ";
+
+    tgdb_get_gdb_version(&gdb_version_major, &gdb_version_minor);
+
+    /* GDB versions 7.11 and above support /s with disassemble. */
+    if ((gdb_version_major > 7) ||
+            (gdb_version_major == 7 && gdb_version_minor >= 11)) {
+        source_line_flag = "/s ";
+    }
 
     if (raw || source || function) {
         const char *raw_flag = raw ? "/r " : " ";
-        //$ TODO mikesart: Add -gdb-version check for 7.11 and the /s command
-        const char *source_flag = source ? "/s " : " ";
+        const char *source_flag = source ? source_line_flag : " ";
 
         if (file)
             data = sys_aprintf("%s%s'%s'::%s", raw_flag, source_flag, file, function);

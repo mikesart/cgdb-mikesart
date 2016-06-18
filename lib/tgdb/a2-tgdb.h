@@ -72,6 +72,8 @@ enum annotate_commands {
      * Get disassembly for specified function
      */
     ANNOTATE_DISASSEMBLE_FUNC,
+
+    ANNOTATE_GDB_VERSION,
 };
 
 /******************************************************************************/

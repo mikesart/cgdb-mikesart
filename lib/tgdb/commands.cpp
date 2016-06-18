@@ -34,6 +34,9 @@
 #include "annotate_two.h"
 #include "mi_gdb.h"
 
+static int gdb_version_major = 0;
+static int gdb_version_minor = 0;
+
 int free_breakpoint(void *item)
 {
     struct tgdb_breakpoint *bp = (struct tgdb_breakpoint *) item;
@@ -277,6 +280,58 @@ mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
                 res = res->next;
             }
         }
+    }
+}
+
+static void
+commands_process_gdbversion(struct annotate_two *a2, struct ibuf *buf,
+                            int record_result, char *result_line, int id,
+                            struct tgdb_list *list)
+{
+    char *str = ibuf_get(buf);
+
+    /*
+        (gdb) interp mi "-gdb-version"
+        ~"GNU gdb (Debian 7.10-1.1) 7.10\n"
+        ~"Copyright (C) 2015 Free Software Foundation, Inc.\n"
+        ~"License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.  Type \"show copying\"\nand \"show warranty\" for details.\n"
+        ~"This GDB was configured as \"x86_64-linux-gnu\".\nType \"show configuration\" for configuration details."
+        ~"\nFor bug reporting instructions, please see:\n"
+        ~"<http://www.gnu.org/software/gdb/bugs/>.\n"
+        ~"Find the GDB manual and other documentation resources online at:\n<http://www.gnu.org/software/gdb/documentation/>.\n"
+        ~"For help, type \"help\".\n"
+        ~"Type \"apropos word\" to search for commands related to \"word\".\n"
+        ^done
+     */
+    while (str && !gdb_version_major) {
+        char *end;
+        mi_output *miout;
+
+        /* Find end of line */
+        end = strchr(str, '\n');
+        if (!end)
+            break;
+
+        /* Zero terminate line and parse the gdbmi string */
+        *end++ = 0;
+        miout = mi_parse_gdb_output(str, NULL);
+
+        /* If this is a console string, add it to our list */
+        if (miout && (miout->sstype == MI_SST_CONSOLE)) {
+            char *version = strrchr(miout->c->v.cstr, ' ');
+
+            if (version) {
+                gdb_version_major = atoi(version + 1);
+
+                version = strchr(version, '.');
+
+                if (version)
+                    gdb_version_minor = atoi(version + 1);
+            }
+        }
+        mi_free_output(miout);
+
+        str = end;
     }
 }
 
@@ -570,6 +625,8 @@ void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
         commands_process_breakpoints(a2, buf, result_record, result_line, id, list);
     else if (!strncmp(state, "info_complete", 13))
         commands_process_complete(a2, buf, result_record, result_line, id, list);
+    else if (!strncmp(state, "gdb_version", 11))
+        commands_process_gdbversion(a2, buf, result_record, result_line, id, list);
     else if (!strncmp(state, "info_tty", 8))
         ;
     else
@@ -609,6 +666,10 @@ static char *commands_create_command(enum annotate_commands com, const char *dat
     const char *name = NULL;
 
     switch (com) {
+        case ANNOTATE_GDB_VERSION:
+            name = "gdb_version";
+            cmd = strdup("-gdb-version");
+            break;
         case ANNOTATE_INFO_SOURCES:
             /* server info sources */
             name = "info_sources";
@@ -687,6 +748,14 @@ void tgdb_command_destroy(void *item)
 
     free(tc->tgdb_command_data);
     free(tc);
+}
+
+int tgdb_get_gdb_version(int *major, int *minor)
+{
+    *major = gdb_version_major;
+    *minor = gdb_version_minor;
+
+    return (gdb_version_major > 0);
 }
 
 static int command_get_next_id()

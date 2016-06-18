@@ -1080,9 +1080,15 @@ static void process_commands(struct tgdb *tgdb_in)
                         item->choice.disassemble.error) {
                     struct tgdb_file_position *tfp = NULL;
 
-                    if (item->request && item->request->choice.disassemble_func.tfp) {
-                        tfp = item->request->choice.disassemble_func.tfp;
-                        item->request->choice.disassemble_func.tfp = NULL;
+                    if (item->request) {
+                        if (item->request->header == TGDB_REQUEST_DISASSEMBLE) {
+                            tfp = item->request->choice.disassemble.tfp;
+                            item->request->choice.disassemble.tfp = NULL;
+                        }
+                        else if (item->request->header == TGDB_REQUEST_DISASSEMBLE_FUNC) {
+                            tfp = item->request->choice.disassemble_func.tfp;
+                            item->request->choice.disassemble_func.tfp = NULL;
+                        }
                     }
 
                     tgdb_request_disassemble(tgdb, tfp ? tfp->func : NULL, 100, tfp);
