@@ -42,17 +42,6 @@ void commands_send_gui_completions(struct commands *c, struct tgdb_list *list);
  * THEY ARE STRICTLY FOR KEEPING TGDB UP TO DATE WITH GDB
  */
 
-/* commands_prepare_for_command:
- * -----------------------------
- *
- *  Prepare's the client for the command COM to be run.
- *
- *  com:    The command to be run.
- *
- *  Returns: -1 if this command should not be run. 0 otherwise.
- */
-int commands_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com);
-
 /**
  * The current command type. TGDB is capable of having any commands of this
  * type in it's queue.
@@ -93,40 +82,15 @@ enum tgdb_command_choice {
  * with it.
  */
 struct tgdb_command {
-    /**
-     * The actual command to give.
-     */
+    /** The actual command to give. */
     char *tgdb_command_data;
 
-    /**
-     * The type of command this one is.
-     */
+    /** The type of command this one is. */
     enum tgdb_command_choice command_choice;
 
     /** Private data the client context can use. */
-    int tgdb_client_private_data;
+    enum annotate_commands tgdb_client_private_data;
 };
-
-/**
- * Creates a new command and initializes it
- *
- * \param tgdb_command_data
- * The data needed to run the command
- *
- * \param command_choice
- * The type of command to run.
- *
- * \param action_choice
- * The type of action TGDB would like to perform.
- *
- * \param client_data
- * Data that the client can use when prepare_client_for_command is called
- *
- * @return
- * Always is successful, will call exit on failed malloc
- */
-struct tgdb_command *tgdb_command_create(const char *tgdb_command_data,
-        enum tgdb_command_choice command_choice, int client_data);
 
 /**
  * This will free a TGDB queue command.

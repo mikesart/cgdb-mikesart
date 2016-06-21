@@ -81,6 +81,7 @@ void data_set_state(struct annotate_two *a2, enum internal_state state)
 
     switch (a2->data->data_state) {
         case VOID:
+        case USER_COMMAND:
             break;
         case AT_PROMPT:
             a2->data->gdb_prompt_size = 0;
@@ -109,8 +110,6 @@ void data_set_state(struct annotate_two *a2, enum internal_state state)
             break;
         case POST_PROMPT:
             a2->data->data_state = VOID;
-            break;
-        case USER_COMMAND:
             break;
     }
 }

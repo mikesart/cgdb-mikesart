@@ -644,20 +644,20 @@ tgdb_send(struct tgdb *tgdb, const char *command,
         enum tgdb_command_choice command_choice)
 {
     struct tgdb_command *tc;
-    char *temp_command = NULL;
+    char *command_data = NULL;
     int length = strlen(command);
 
     /* Add a newline to the end of the command if it doesn't exist */
-    if (!length || (command[length - 1] != '\n')) {
-        temp_command = sys_aprintf("%s\n", command);
-        command = temp_command;
-    }
+    if (!length || (command[length - 1] != '\n'))
+        command_data = sys_aprintf("%s\n", command);
+    else
+        command_data = strdup(command);
 
     /* Create the client command */
-    tc = tgdb_command_create(command, command_choice, -1);
-
-    free(temp_command);
-    temp_command = NULL;
+    tc = (struct tgdb_command *) cgdb_malloc(sizeof (struct tgdb_command));
+    tc->command_choice = command_choice;
+    tc->tgdb_client_private_data = ANNOTATE_USER_COMMAND;
+    tc->tgdb_command_data = command_data;
 
     if (tgdb_run_or_queue_command(tgdb, tc) == -1) {
         logger_write_pos(logger, __FILE__, __LINE__,

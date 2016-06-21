@@ -28,52 +28,38 @@ struct annotate_two;
  */
 enum annotate_commands {
 
-    /**
-     * Currently not used.
-     */
+    /** Currently not used. */
     ANNOTATE_VOID = 0,
 
-    /**
-     * Get a list of breakpoints.
-     */
+    /** Get a list of breakpoints. */
     ANNOTATE_INFO_BREAKPOINTS,
 
-    /**
-     * Tell gdb where to send inferior's output
-     */
+    /** Tell gdb where to send inferior's output */
     ANNOTATE_TTY,
 
-    /**
-     * Complete the current console line
-     */
+    /** Complete the current console line */
     ANNOTATE_COMPLETE,
 
-    /**
-     * Show all the sources inferior is made of
-     */
+    /** Show all the sources inferior is made of */
     ANNOTATE_INFO_SOURCES,
 
-    /**
-     * Shows information on the current source file
-     */
+    /** Shows information on the current source file */
     ANNOTATE_INFO_SOURCE,
 
-    /**
-     * Shows information on the current frame
-     */
+    /** Shows information on the current frame */
     ANNOTATE_INFO_FRAME,
 
-    /**
-     * Get disassembly for specified address range
-     */
+    /** Get disassembly for specified address range */
     ANNOTATE_DISASSEMBLE,
 
-    /**
-     * Get disassembly for specified function
-     */
+    /** Get disassembly for specified function */
     ANNOTATE_DISASSEMBLE_FUNC,
 
+    /** Run gdb/mi -gdb-version command */
     ANNOTATE_GDB_VERSION,
+
+    /** This is a command issued by the user (tgdb_send) */
+    ANNOTATE_USER_COMMAND,
 };
 
 /******************************************************************************/

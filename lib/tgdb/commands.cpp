@@ -634,19 +634,6 @@ void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
                          "commands_process_cgdb_gdbmi error");
 }
 
-int
-commands_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com)
-{
-    int a_com = com->tgdb_client_private_data;
-
-    io_debug_write_fmt("commands_prepare_for_command: <%s\n>", com->tgdb_command_data);
-
-    if (a_com == -1)
-        data_set_state(a2, USER_COMMAND);
-
-    return 0;
-}
-
 /** 
  * This is responsible for creating a command to run through the debugger.
  *
@@ -660,7 +647,8 @@ commands_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com)
  * A command ready to be run through the debugger or NULL on error.
  * The memory is malloc'd, and must be freed.
  */
-static char *commands_create_command(enum annotate_commands com, const char *data, int command_id)
+static char *commands_create_command(enum annotate_commands com,
+        const char *data, int command_id)
 {
     char *cmd = NULL;
     const char *name = NULL;
@@ -728,20 +716,6 @@ static char *commands_create_command(enum annotate_commands com, const char *dat
     return NULL;
 }
 
-struct tgdb_command *tgdb_command_create(const char *tgdb_command_data,
-        enum tgdb_command_choice command_choice, int client_data)
-{
-    struct tgdb_command *tc;
-
-    tc = (struct tgdb_command *) cgdb_malloc(sizeof (struct tgdb_command));
-
-    tc->command_choice = command_choice;
-    tc->tgdb_client_private_data = client_data;
-    tc->tgdb_command_data = tgdb_command_data ? strdup(tgdb_command_data) : NULL;
-
-    return tc;
-}
-
 void tgdb_command_destroy(void *item)
 {
     struct tgdb_command *tc = (struct tgdb_command *) item;
@@ -769,20 +743,20 @@ int
 commands_issue_command(struct tgdb_list *client_command_list,
         enum annotate_commands com, const char *data, int oob, int *id)
 {
+    struct tgdb_command *tc;
     int command_id = command_get_next_id();
-    char *ncom = commands_create_command(com, data, command_id);
-    struct tgdb_command *client_command = NULL;
+    char *command = commands_create_command(com, data, command_id);
 
     enum tgdb_command_choice choice = (oob == 1) ?
            TGDB_COMMAND_TGDB_CLIENT_PRIORITY : TGDB_COMMAND_TGDB_CLIENT;
 
-    /* This should send the command to tgdb-base to handle */
-    client_command = tgdb_command_create(ncom, choice, com);
+    tc = (struct tgdb_command *) cgdb_malloc(sizeof (struct tgdb_command));
+    tc->command_choice = choice;
+    tc->tgdb_client_private_data = com;
+    tc->tgdb_command_data = command;
 
     /* Append to the command_container the commands */
-    tgdb_list_append(client_command_list, client_command);
-
-    free(ncom);
+    tgdb_list_append(client_command_list, tc);
 
     if (id)
         *id = command_id;

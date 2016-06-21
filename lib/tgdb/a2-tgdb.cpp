@@ -57,8 +57,7 @@ static int a2_set_inferior_tty(void *ctx)
     }
 
     return commands_issue_command(a2->client_command_list,
-                    ANNOTATE_TTY,
-                    pty_pair_get_slavename(a2->pty_pair), 0, NULL);
+        ANNOTATE_TTY, pty_pair_get_slavename(a2->pty_pair), 0, NULL);
 }
 
 static int close_inferior_connection(void *ctx)
@@ -431,7 +430,12 @@ int a2_completion_callback(struct annotate_two *a2, const char *command, int *id
 
 int a2_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com)
 {
-    return commands_prepare_for_command(a2, com);
+    io_debug_write_fmt("commands_prepare_for_command: <%s\n>", com->tgdb_command_data);
+
+    if (com->tgdb_client_private_data == ANNOTATE_USER_COMMAND)
+        data_set_state(a2, USER_COMMAND);
+
+    return 0;
 }
 
 int a2_is_misc_prompt(struct annotate_two *a2)
