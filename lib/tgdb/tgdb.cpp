@@ -30,6 +30,7 @@
 #include "io.h"
 #include "queue.h"
 #include "a2-tgdb.h"
+#include "annotate_two.h"
 
 #include "pseudo.h"             /* SLAVE_SIZE constant */
 #include "fork_util.h"
@@ -291,7 +292,7 @@ static int tgdb_process_client_commands(struct tgdb *tgdb)
     tgdb_list_iterator *iterator;
     struct tgdb_command *command;
 
-    client_command_list = a2_get_client_commands(tgdb->tcc);
+    client_command_list = tgdb->tcc->client_command_list;
     iterator = tgdb_list_get_first(client_command_list);
 
     while (iterator) {
@@ -486,21 +487,119 @@ int tgdb_shutdown(struct tgdb *tgdb)
 
 /* }}}*/
 
-void command_completion_callback(struct tgdb *tgdb)
-{
-    tgdb->IS_SUBSYSTEM_READY_FOR_NEXT_COMMAND = 1;
-}
-
 static const char *tgdb_get_client_command(struct tgdb *tgdb,
         enum tgdb_command_type c)
 {
-    return a2_return_client_command(tgdb->tcc, c);
+    switch (c) {
+        case TGDB_CONTINUE:
+            return "continue";
+        case TGDB_FINISH:
+            return "finish";
+        case TGDB_NEXT:
+            return "next";
+        case TGDB_START:
+            return "start";
+        case TGDB_RUN:
+            return "run";
+        case TGDB_KILL:
+            return "kill";
+        case TGDB_STEP:
+            return "step";
+        case TGDB_UNTIL:
+            return "until";
+        case TGDB_UP:
+            return "up";
+        case TGDB_DOWN:
+            return "down";
+        case TGDB_ERROR:
+            break;
+    }
+
+    return NULL;
 }
 
 static char *tgdb_client_modify_breakpoint_call(struct tgdb *tgdb,
         const char *file, int line, enum tgdb_breakpoint_action b)
 {
-    return a2_client_modify_breakpoint(tgdb->tcc, file, line, b);
+    switch (b) {
+    case TGDB_BREAKPOINT_ADD:    return sys_aprintf("break \"%s\":%d", file, line);
+    case TGDB_BREAKPOINT_DELETE: return sys_aprintf("clear \"%s\":%d", file, line);
+    case TGDB_TBREAKPOINT_ADD:   return sys_aprintf("tbreak \"%s\":%d", file, line);
+    }
+
+    return NULL;
+}
+
+static int tgdb_disassemble(struct annotate_two *a2, const char *func, int lines, int *id)
+{
+    int ret;
+    char *data;
+
+    if (!lines)
+        lines = 100;
+    if (!func || !strcmp(func, "??"))
+        func = "$pc";
+
+    data = sys_aprintf("%di %s", lines, func);
+
+    ret = commands_issue_command(a2->client_command_list,
+                                 ANNOTATE_DISASSEMBLE, data, 0, id);
+
+    free(data);
+    return ret;
+}
+
+static int tgdb_disassemble_func(struct annotate_two *a2, int raw, int source,
+    const char *file, const char *function, int *id)
+{
+    /* GDB 7.11 adds /s command to disassemble
+
+    https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=commit;h=6ff0ba5f7b8a2b10642bbb233a32043595c55670
+        The "source centric" /m option to the disassemble command is often
+        unhelpful, e.g., in the presence of optimized code.
+        This patch adds a /s modifier that is better.
+        For one, /m only prints instructions from the originating source file,
+        leaving out instructions from e.g., inlined functions from other files.
+
+    disassemble
+         /m: source lines included
+         /s: source lines included, output in pc order (7.10 and higher)
+         /r: raw instructions included in hex
+         single argument: function surrounding is dumped
+         two arguments: start,end or start,+length
+         disassemble 'driver.cpp'::main
+         interp mi "disassemble /s 'driver.cpp'::main,+10"
+         interp mi "disassemble /r 'driver.cpp'::main,+10"
+     */
+    int ret;
+    char *data = NULL;
+    int gdb_version_major;
+    int gdb_version_minor;
+    const char *source_line_flag = "/m ";
+
+    tgdb_get_gdb_version(&gdb_version_major, &gdb_version_minor);
+
+    /* GDB versions 7.11 and above support /s with disassemble. */
+    if ((gdb_version_major > 7) ||
+            (gdb_version_major == 7 && gdb_version_minor >= 11)) {
+        source_line_flag = "/s ";
+    }
+
+    if (raw || source || function) {
+        const char *raw_flag = raw ? "/r " : " ";
+        const char *source_flag = source ? source_line_flag : " ";
+
+        if (file)
+            data = sys_aprintf("%s%s'%s'::%s", raw_flag, source_flag, file, function);
+        else
+            data = sys_aprintf("%s%s%s", raw_flag, source_flag, function ? function : "");
+    }
+
+    ret = commands_issue_command(a2->client_command_list,
+                    ANNOTATE_DISASSEMBLE_FUNC, data, 0, id);
+
+    free(data);
+    return ret;
 }
 
 /* These functions are used to determine the state of libtgdb */
@@ -890,8 +989,7 @@ static int tgdb_add_quit_command(struct tgdb *tgdb)
     tstatus->exit_status = -1;
     tstatus->return_value = 0;
 
-    response =
-            (struct tgdb_response *) cgdb_malloc(sizeof (struct tgdb_response));
+    response = (struct tgdb_response *)cgdb_malloc(sizeof (struct tgdb_response));
     response->result_id = -1;
     response->request = NULL;
     response->header = TGDB_QUIT;
@@ -1058,7 +1156,7 @@ size_t tgdb_process(struct tgdb * tgdb, char *buf, size_t n, int *is_finished)
             /* success, and more to parse, ss isn't done */
         } else if (result == 1) {
             /* success, and finished command */
-            command_completion_callback(tgdb);
+            tgdb->IS_SUBSYSTEM_READY_FOR_NEXT_COMMAND = 1;
         } else if (result == -1) {
             logger_write_pos(logger, __FILE__, __LINE__,
                     "a2_parse_io failed");
@@ -1099,8 +1197,8 @@ struct tgdb_response *tgdb_get_response(struct tgdb *tgdb)
     if (tgdb->command_list_iterator == NULL)
         return NULL;
 
-    command = (struct tgdb_response *) tgdb_list_get_item(tgdb->
-            command_list_iterator);
+    command = (struct tgdb_response *) tgdb_list_get_item(
+                tgdb->command_list_iterator);
 
     tgdb->command_list_iterator = tgdb_list_next(tgdb->command_list_iterator);
 
@@ -1141,7 +1239,7 @@ int tgdb_get_inferior_fd(struct tgdb *tgdb)
 
 const char *tgdb_tty_name(struct tgdb *tgdb)
 {
-    return a2_get_tty_name(tgdb->tcc);
+    return pty_pair_get_slavename(tgdb->tcc->pty_pair);
 }
 
 /* }}}*/
@@ -1296,22 +1394,25 @@ int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request)
         }
     } else {
         if (request->header == TGDB_REQUEST_INFO_SOURCES) {
-            ret = a2_get_inferior_sources(tgdb->tcc, &request->id);
+            ret = commands_issue_command(tgdb->tcc->client_command_list,
+                    ANNOTATE_INFO_SOURCES, NULL, 0, &request->id);
         }
         else if (request->header == TGDB_REQUEST_CURRENT_LOCATION) {
-            ret = a2_get_current_location(tgdb->tcc, &request->id);
+            ret = commands_issue_command(tgdb->tcc->client_command_list,
+                                         ANNOTATE_INFO_FRAME, NULL, 1, &request->id);
         }
         else if (request->header == TGDB_REQUEST_COMPLETE) {
-            ret = a2_completion_callback(tgdb->tcc, request->choice.complete.line,
-                                         &request->id);
+            ret = commands_issue_command(tgdb->tcc->client_command_list,
+                    ANNOTATE_COMPLETE, request->choice.complete.line, 1,
+                    &request->id);
         }
         else if (request->header == TGDB_REQUEST_DISASSEMBLE) {
-            ret = a2_disassemble(tgdb->tcc, request->choice.disassemble.func,
+            ret = tgdb_disassemble(tgdb->tcc, request->choice.disassemble.func,
                                  request->choice.disassemble.lines,
                                  &request->id);
         }
         else if (request->header == TGDB_REQUEST_DISASSEMBLE_FUNC) {
-            ret = a2_disassemble_func(tgdb->tcc,
+            ret = tgdb_disassemble_func(tgdb->tcc,
                                       request->choice.disassemble_func.raw,
                                       request->choice.disassemble_func.source,
                                       request->choice.disassemble_func.file,

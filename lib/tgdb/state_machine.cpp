@@ -189,7 +189,8 @@ handle_frame_end(struct annotate_two *a2, const char *buf, size_t n,
         struct tgdb_list *list)
 {
     /* set up the info_source command to get file info */
-    return a2_get_current_location(a2, NULL);
+    return commands_issue_command(a2->client_command_list,
+                           ANNOTATE_INFO_FRAME, NULL, 1, NULL);
 }
 
 static int

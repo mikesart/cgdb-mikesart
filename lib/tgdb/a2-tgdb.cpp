@@ -44,43 +44,14 @@
 #include "ibuf.h"
 #include "annotate_two.h"
 
-static int a2_set_inferior_tty(void *ctx)
-{
-    struct annotate_two *a2 = (struct annotate_two *) ctx;
-
-    if (!a2) {
-        logger_write_pos(logger, __FILE__, __LINE__,
-                "a2_set_inferior_tty error");
-        return -1;
-    }
-
-    return commands_issue_command(a2->client_command_list,
-        ANNOTATE_TTY, pty_pair_get_slavename(a2->pty_pair), 0, NULL);
-}
-
-static int close_inferior_connection(void *ctx)
-{
-    struct annotate_two *a2 = (struct annotate_two *) ctx;
-
-    if (!a2) {
-        logger_write_pos(logger, __FILE__, __LINE__,
-                "close_inferior_connection error");
-        return -1;
-    }
-
-    if (a2->pty_pair)
-        pty_pair_destroy(a2->pty_pair);
-
-    return 0;
-}
-
 /* Here are the two functions that deal with getting tty information out
  * of the annotate_two subsystem.
  */
 
 int a2_open_new_tty(struct annotate_two *a2, int *inferior_stdin, int *inferior_stdout)
 {
-    close_inferior_connection(a2);
+    if (a2->pty_pair)
+        pty_pair_destroy(a2->pty_pair);
 
     a2->pty_pair = pty_pair_create();
     if (!a2->pty_pair) {
@@ -91,19 +62,10 @@ int a2_open_new_tty(struct annotate_two *a2, int *inferior_stdin, int *inferior_
     *inferior_stdin = pty_pair_get_masterfd(a2->pty_pair);
     *inferior_stdout = pty_pair_get_masterfd(a2->pty_pair);
 
-    a2_set_inferior_tty(a2);
+    commands_issue_command(a2->client_command_list,
+            ANNOTATE_TTY, pty_pair_get_slavename(a2->pty_pair), 0, NULL);
 
     return 0;
-}
-
-const char *a2_get_tty_name(struct annotate_two *a2)
-{
-    if (!a2) {
-        logger_write_pos(logger, __FILE__, __LINE__, "a2_get_tty_name failed");
-        return NULL;
-    }
-
-    return pty_pair_get_slavename(a2->pty_pair);
 }
 
 /* initialize_annotate_two
@@ -207,8 +169,8 @@ int a2_initialize(struct annotate_two *a2,
      * the TGDB_UPDATE_BREAKPOINTS event will be ignored in process_commands()
      * because there are no source files to add the breakpoints to.
      */
-
-    a2_get_current_location(a2, NULL);
+    commands_issue_command(a2->client_command_list,
+                           ANNOTATE_INFO_FRAME, NULL, 1, NULL);
 
     /* gdb may already have some breakpoints when it starts. This could happen
      * if the user puts breakpoints in there .gdbinit.
@@ -278,147 +240,9 @@ int a2_parse_io(struct annotate_two *a2,
     return a2->command_finished;
 }
 
-struct tgdb_list *a2_get_client_commands(struct annotate_two *a2)
-{
-    return a2->client_command_list;
-}
-
-int a2_get_current_location(struct annotate_two *a2, int *id)
-{
-    /* Try to get frame information */
-    return commands_issue_command(a2->client_command_list,
-                           ANNOTATE_INFO_FRAME, NULL, 1, id);
-}
-
-int a2_disassemble(struct annotate_two *a2, const char *func, int lines, int *id)
-{
-    int ret;
-    char *data;
-
-    if (!lines)
-        lines = 100;
-    if (!func || !strcmp(func, "??"))
-        func = "$pc";
-
-    data = sys_aprintf("%di %s", lines, func);
-
-    ret = commands_issue_command(a2->client_command_list,
-                                 ANNOTATE_DISASSEMBLE, data, 0, id);
-
-    free(data);
-    return ret;
-}
-
-int a2_disassemble_func(struct annotate_two *a2, int raw, int source,
-    const char *file, const char *function, int *id)
-{
-    /* GDB 7.11 adds /s command to disassemble
-
-    https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=commit;h=6ff0ba5f7b8a2b10642bbb233a32043595c55670
-        The "source centric" /m option to the disassemble command is often
-        unhelpful, e.g., in the presence of optimized code.
-        This patch adds a /s modifier that is better.
-        For one, /m only prints instructions from the originating source file,
-        leaving out instructions from e.g., inlined functions from other files.
-
-    disassemble
-         /m: source lines included
-         /s: source lines included, output in pc order (7.10 and higher)
-         /r: raw instructions included in hex
-         single argument: function surrounding is dumped
-         two arguments: start,end or start,+length
-         disassemble 'driver.cpp'::main
-         interp mi "disassemble /s 'driver.cpp'::main,+10"
-         interp mi "disassemble /r 'driver.cpp'::main,+10"
-     */
-    int ret;
-    char *data = NULL;
-    int gdb_version_major;
-    int gdb_version_minor;
-    const char *source_line_flag = "/m ";
-
-    tgdb_get_gdb_version(&gdb_version_major, &gdb_version_minor);
-
-    /* GDB versions 7.11 and above support /s with disassemble. */
-    if ((gdb_version_major > 7) ||
-            (gdb_version_major == 7 && gdb_version_minor >= 11)) {
-        source_line_flag = "/s ";
-    }
-
-    if (raw || source || function) {
-        const char *raw_flag = raw ? "/r " : " ";
-        const char *source_flag = source ? source_line_flag : " ";
-
-        if (file)
-            data = sys_aprintf("%s%s'%s'::%s", raw_flag, source_flag, file, function);
-        else
-            data = sys_aprintf("%s%s%s", raw_flag, source_flag, function ? function : "");
-    }
-
-    ret = commands_issue_command(a2->client_command_list,
-                    ANNOTATE_DISASSEMBLE_FUNC, data, 0, id);
-
-    free(data);
-    return ret;
-}
-
-int a2_get_inferior_sources(struct annotate_two *a2, int *id)
-{
-    return commands_issue_command(a2->client_command_list,
-                    ANNOTATE_INFO_SOURCES, NULL, 0, id);
-}
-
-const char *a2_return_client_command(struct annotate_two *a2, enum tgdb_command_type c)
-{
-    switch (c) {
-        case TGDB_CONTINUE:
-            return "continue";
-        case TGDB_FINISH:
-            return "finish";
-        case TGDB_NEXT:
-            return "next";
-        case TGDB_START:
-            return "start";
-        case TGDB_RUN:
-            return "run";
-        case TGDB_KILL:
-            return "kill";
-        case TGDB_STEP:
-            return "step";
-        case TGDB_UNTIL:
-            return "until";
-        case TGDB_UP:
-            return "up";
-        case TGDB_DOWN:
-            return "down";
-        case TGDB_ERROR:
-            break;
-    }
-
-    return NULL;
-}
-
-char *a2_client_modify_breakpoint(struct annotate_two *a2,
-        const char *file, int line, enum tgdb_breakpoint_action b)
-{
-    switch (b) {
-    case TGDB_BREAKPOINT_ADD:    return sys_aprintf("break \"%s\":%d", file, line);
-    case TGDB_BREAKPOINT_DELETE: return sys_aprintf("clear \"%s\":%d", file, line);
-    case TGDB_TBREAKPOINT_ADD:   return sys_aprintf("tbreak \"%s\":%d", file, line);
-    }
-
-    return NULL;
-}
-
 pid_t a2_get_debugger_pid(struct annotate_two *a2)
 {
     return a2->debugger_pid;
-}
-
-int a2_completion_callback(struct annotate_two *a2, const char *command, int *id)
-{
-    return commands_issue_command(a2->client_command_list,
-                    ANNOTATE_COMPLETE, command, 1, id);
 }
 
 int a2_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com)
