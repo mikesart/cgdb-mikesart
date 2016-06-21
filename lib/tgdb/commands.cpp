@@ -20,10 +20,8 @@
 
 /* Local includes */
 #include "commands.h"
-#include "data.h"
 #include "io.h"
 #include "tgdb_types.h"
-#include "globals.h"
 #include "logger.h"
 #include "sys_util.h"
 #include "queue.h"

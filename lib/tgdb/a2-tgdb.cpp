@@ -37,9 +37,7 @@
 #include "logger.h"
 #include "io.h"
 #include "state_machine.h"
-#include "data.h"
 #include "commands.h"
-#include "globals.h"
 #include "tgdb_types.h"
 #include "queue.h"
 #include "sys_util.h"
@@ -196,9 +194,7 @@ int a2_initialize(struct annotate_two *a2,
     *debugger_stdin = a2->debugger_stdin;
     *debugger_stdout = a2->debugger_out;
 
-    a2->data = data_initialize();
     a2->sm = state_machine_initialize();
-    a2->g = globals_initialize();
     a2->client_command_list = tgdb_list_init();
 
     a2_open_new_tty(a2, inferior_stdin, inferior_stdout);
@@ -241,7 +237,6 @@ int a2_shutdown(struct annotate_two *a2)
 {
     cgdb_close(a2->debugger_stdin);
 
-    data_shutdown(a2->data);
     state_machine_shutdown(a2->sm);
 
     tgdb_list_free(a2->client_command_list, tgdb_command_destroy_list_item);
@@ -249,8 +244,6 @@ int a2_shutdown(struct annotate_two *a2)
 
     tgdb_list_free(a2->cur_response_list, tgdb_types_free_command);
     tgdb_list_destroy(a2->cur_response_list);
-
-    globals_shutdown(a2->g);
     return 0;
 }
 
@@ -260,7 +253,7 @@ int a2_is_client_ready(struct annotate_two *a2)
         return 0;
 
     /* If the user is at the prompt */
-    if (data_get_state(a2->data) == USER_AT_PROMPT)
+    if (data_get_state(a2->sm) == USER_AT_PROMPT)
         return 1;
 
     return 0;
@@ -440,5 +433,5 @@ int a2_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com)
 
 int a2_is_misc_prompt(struct annotate_two *a2)
 {
-    return globals_is_misc_prompt(a2->g);
+    return globals_is_misc_prompt(a2->sm);
 }

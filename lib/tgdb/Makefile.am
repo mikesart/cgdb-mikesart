@@ -15,15 +15,9 @@ libtgdb_a_SOURCES = \
     tgdb_types.h \
     a2-tgdb.cpp \
     a2-tgdb.h \
-    annotate.cpp \
-    annotate.h \
     annotate_two.h \
     commands.cpp \
     commands.h \
-    data.cpp \
-    data.h \
-    globals.cpp \
-    globals.h \
     state_machine.cpp \
     state_machine.h
 
