@@ -1091,6 +1091,8 @@ static void process_commands(struct tgdb *tgdb_in)
                         }
                     }
 
+                    /* Spew out a warning about disassemble failing and disasm next 100 instructions. */
+                    if_print_message("\nWarning: %s\n", item->choice.disassemble.disasm[0]);
                     tgdb_request_disassemble(tgdb, tfp ? tfp->func : NULL, 100, tfp);
                 } else {
                     struct tgdb_file_position *tfp = NULL;

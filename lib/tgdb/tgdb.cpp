@@ -249,7 +249,7 @@ void tgdb_set_last_request(struct tgdb_request *request)
             tgdb_request_destroy(request);
         }
     } else {
-        last_request_requires_update = -1;
+        last_request_requires_update = 0;
     }
 }
 

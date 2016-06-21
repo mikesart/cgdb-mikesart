@@ -30,7 +30,7 @@ int EndOfStr(const char *s)
  if (*s=='"')
    {
     s++;
-    return !*s || *s==',' || *s==']' || *s=='}';
+    return !*s || *s==',' || *s==']' || *s=='}' || *s=='\n';
    }
  return 0;
 }
