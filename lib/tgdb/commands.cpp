@@ -253,9 +253,11 @@ commands_process_info_source(struct annotate_two *a2, struct ibuf *buf,
     }
 }
 
-static void
-mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
+static char **
+mi_parse_sources(mi_output *miout)
 {
+    char **source_files = NULL;
+
     if (miout) {
         mi_results *res = (miout->type == MI_T_RESULT_RECORD) ? miout->c : NULL;
 
@@ -267,7 +269,7 @@ mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
 
                 while (sub && sub->var) {
                     if ((sub->type == t_const) && !strcmp(sub->var, "fullname")) {
-                        tgdb_list_append(source_files, sub->v.cstr);
+                        sbpush(source_files, sub->v.cstr);
                         sub->v.cstr = NULL;
                         break;
                     }
@@ -279,6 +281,8 @@ mi_parse_sources(mi_output *miout, struct tgdb_list *source_files)
             }
         }
     }
+
+    return source_files;
 }
 
 static void
@@ -343,17 +347,17 @@ commands_process_sources(struct annotate_two *a2, struct ibuf *buf,
     mi_output *miout = mi_parse_gdb_output(result_line, NULL);
 
     if (miout) {
+        char **source_files;
         struct tgdb_response *response;
-        struct tgdb_list *inferior_source_files = tgdb_list_init();
 
         /* Add source files to our file list */
-        mi_parse_sources(miout, inferior_source_files);
+        source_files = mi_parse_sources(miout);
 
         response = (struct tgdb_response *) cgdb_malloc(sizeof (struct tgdb_response));
         response->result_id = id;
         response->request = NULL;
         response->header = TGDB_UPDATE_SOURCE_FILES;
-        response->choice.update_source_files.source_files = inferior_source_files;
+        response->choice.update_source_files.source_files = source_files;
 
         tgdb_types_append_command(list, response);
 
