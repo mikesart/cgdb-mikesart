@@ -37,75 +37,81 @@
 /* ----------- */
 
 /* Max length of a line */
-#define MAX_LINE        4096
+#define MAX_LINE 4096
 
 /* Count of marks */
-#define MARK_COUNT      26
+#define MARK_COUNT 26
 
 /* --------------- */
 /* Data Structures */
 /* --------------- */
 
 /* Global mark: source file and line number */
-struct sviewer_mark {
+struct sviewer_mark
+{
     struct list_node *node;
     int line;
 };
 
 /* Source viewer object */
-struct sviewer {
+struct sviewer
+{
     struct list_node *list_head;           /* File list */
     struct list_node *cur;                 /* Current node we're displaying */
     sviewer_mark global_marks[MARK_COUNT]; /* Global A-Z marks */
     sviewer_mark jump_back_mark;           /* Location where last jump occurred from */
     WINDOW *win;                           /* Curses window */
 
-    uint64_t addr_frame;                   /* Current frame address */
+    uint64_t addr_frame; /* Current frame address */
     int regex_is_searching;
     struct hl_regex_info *hlregex;
 };
 
-struct source_line {
+struct source_line
+{
     char *line;
     int len;
     struct hl_line_attr *attrs;
 };
 
-struct buffer {
-    struct source_line *lines;  /* Stretch buffer array with line information */
+struct buffer
+{
+    struct source_line *lines; /* Stretch buffer array with line information */
     uint64_t *addrs;
-    int max_width;              /* Width of longest line in file */
-    char *file_data;            /* Entire file pointer if read in that way */
-    int tabstop;                /* Tabstop value used to load file */
-    enum tokenizer_language_support language;   /* The language type of this file */
+    int max_width;                            /* Width of longest line in file */
+    char *file_data;                          /* Entire file pointer if read in that way */
+    int tabstop;                              /* Tabstop value used to load file */
+    enum tokenizer_language_support language; /* The language type of this file */
 };
 
-struct line_flags {
+struct line_flags
+{
     unsigned char breakpt : 2;
     unsigned char has_mark : 1;
 };
 
 struct list_node;
-struct list_node {
-    char *path;                 /* Full path to source file */
-    struct buffer file_buf;     /* File buffer */
-    line_flags *lflags;         /* Breakpoints */
-    int sel_line;               /* Current line selected in viewer */
-    int sel_col;                /* Current column selected in viewer */
-    int exe_line;               /* Current line executing, or -1 if not set */
+struct list_node
+{
+    char *path;             /* Full path to source file */
+    struct buffer file_buf; /* File buffer */
+    line_flags *lflags;     /* Breakpoints */
+    int sel_line;           /* Current line selected in viewer */
+    int sel_col;            /* Current column selected in viewer */
+    int exe_line;           /* Current line executing, or -1 if not set */
 
-    int sel_rline;              /* Current line used by regex */
+    int sel_rline; /* Current line used by regex */
 
-    enum tokenizer_language_support language;   /* The language type of this file */
+    enum tokenizer_language_support language; /* The language type of this file */
 
-    time_t last_modification;   /* timestamp of last modification */
+    time_t last_modification; /* timestamp of last modification */
 
-    int local_marks[MARK_COUNT];/* Line numbers for local (a..z) marks */
+    int local_marks[MARK_COUNT]; /* Line numbers for local (a..z) marks */
 
-    uint64_t addr_start;        /* Disassembly start address */
-    uint64_t addr_end;          /* Disassembly end address */
+    uint64_t addr_start; /* Disassembly start address */
+    uint64_t addr_end;   /* Disassembly end address */
 
-    struct list_node *next;     /* Pointer to next link in list */
+    struct list_node *next; /* Pointer to next link in list */
 };
 
 /* --------- */
@@ -192,7 +198,7 @@ int source_display(struct sviewer *sview, int focus, enum win_refresh dorefresh)
  *   width:   Width (in columns) of the viewer
  */
 void source_move(struct sviewer *sview,
-        int pos_r, int pos_c, int height, int width);
+    int pos_r, int pos_c, int height, int width);
 
 /* source_vscroll:  Change current position in source file.
  * --------------
@@ -264,7 +270,7 @@ void source_search_regex_init(struct sviewer *sview);
  *               non-zero on failure.
  */
 int source_search_regex(struct sviewer *sview, const char *regex, int opt,
-        int direction, int icase);
+    int direction, int icase);
 
 /* source_free:  Release the memory associated with a source viewer.
  * ------------

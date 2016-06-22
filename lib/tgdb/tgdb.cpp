@@ -8,8 +8,8 @@
 #endif /* HAVE_STDLIB_H */
 
 #if HAVE_SIGNAL_H
-#include <signal.h>             /* sig_atomic_t */
-#endif /* HAVE_SIGNAL_H */
+#include <signal.h> /* sig_atomic_t */
+#endif              /* HAVE_SIGNAL_H */
 
 #if HAVE_STRING_H
 #include <string.h>
@@ -32,7 +32,7 @@
 #include "a2-tgdb.h"
 #include "annotate_two.h"
 
-#include "pseudo.h"             /* SLAVE_SIZE constant */
+#include "pseudo.h" /* SLAVE_SIZE constant */
 #include "fork_util.h"
 #include "sys_util.h"
 #include "tgdb_list.h"
@@ -50,29 +50,30 @@ static tgdb_request_ptr *requests_with_ids = NULL;
 /**
  * The TGDB context data structure.
  */
-struct tgdb {
+struct tgdb
+{
 
-  /** A client context to abstract the debugger.  */
+    /** A client context to abstract the debugger.  */
     struct annotate_two *tcc;
 
-  /** Reading from this will read from the debugger's output */
+    /** Reading from this will read from the debugger's output */
     int debugger_stdout;
 
-  /** Writing to this will write to the debugger's stdin */
+    /** Writing to this will write to the debugger's stdin */
     int debugger_stdin;
 
-  /** Reading from this will read the stdout from the program being debugged */
+    /** Reading from this will read the stdout from the program being debugged */
     int inferior_stdout;
 
-  /** Writing to this will write to the stdin of the program being debugged */
+    /** Writing to this will write to the stdin of the program being debugged */
     int inferior_stdin;
 
-  /***************************************************************************
+    /***************************************************************************
    * All the queue's the clients can run commands through
    * The different queue's can be slightly confusing.
    **************************************************************************/
 
-  /**
+    /**
    * The commands that need to be run through GDB.
    *
    * This is a buffered queue that represents all of the commands that TGDB
@@ -85,7 +86,7 @@ struct tgdb {
    */
     struct queue *gdb_input_queue;
 
-  /** 
+    /** 
    * The commands that the client has requested to run.
    *
    * TGDB buffers all of the commands that the FE wants to run. That is,
@@ -99,7 +100,7 @@ struct tgdb {
    */
     struct queue *gdb_client_request_queue;
 
-  /** 
+    /** 
    * The out of band input queue. 
    *
    * These commands are used by the client context. When a single client context 
@@ -117,9 +118,9 @@ struct tgdb {
    */
     struct queue *oob_input_queue;
 
-  /** These are 2 very important state variables.  */
+    /** These are 2 very important state variables.  */
 
-  /**
+    /**
    * If set to 1, libtgdb thinks the lower level subsystem is capable of 
    * receiving another command. It needs this so that it doesn't send 2
    * commands to the lower level before it can say it can't receive a command.
@@ -128,10 +129,10 @@ struct tgdb {
    * command.  */
     int IS_SUBSYSTEM_READY_FOR_NEXT_COMMAND;
 
-  /** If ^c was hit by user */
+    /** If ^c was hit by user */
     sig_atomic_t control_c;
 
-  /**
+    /**
    * This is the last GUI command that has been run.
    * It is used to display to the client the GUI commands.
    *
@@ -140,7 +141,7 @@ struct tgdb {
    * As anyone is allowed to call free on it.  */
     char *last_gui_command;
 
-  /**
+    /**
    * This is a TGDB option.
    * It determines if the user wants to see the commands the GUI is running.
    * 
@@ -150,15 +151,15 @@ struct tgdb {
 
     void (*print_message)(const char *fmt, ...);
 
-  /**
+    /**
    * This is the queue of commands TGDB has currently made to give to the 
    * front end.  */
     struct tgdb_list *command_list;
 
-  /** An iterator into command_list. */
+    /** An iterator into command_list. */
     tgdb_list_iterator *command_list_iterator;
 
-  /**
+    /**
    * When GDB dies (purposely or not), the SIGCHLD is sent to the application controlling TGDB.
    * This data structure represents the fact that SIGCHLD has been sent.
    *
@@ -172,10 +173,10 @@ struct tgdb {
 
 /* Temporary prototypes {{{ */
 static int tgdb_deliver_command(struct tgdb *tgdb,
-        struct tgdb_command *command);
+    struct tgdb_command *command);
 static int tgdb_unqueue_and_deliver_command(struct tgdb *tgdb);
 static int tgdb_run_or_queue_command(struct tgdb *tgdb,
-        struct tgdb_command *com);
+    struct tgdb_command *com);
 
 /* }}} */
 
@@ -194,9 +195,12 @@ static int tgdb_run_or_queue_command(struct tgdb *tgdb,
  */
 static void handle_request(struct tgdb *tgdb_in, struct tgdb_request *request)
 {
-    if (tgdb_is_busy(tgdb_in)) {
+    if (tgdb_is_busy(tgdb_in))
+    {
         tgdb_queue_append(tgdb_in, request);
-    } else {
+    }
+    else
+    {
         tgdb_process_command(tgdb_in, request);
     }
 }
@@ -205,13 +209,17 @@ static void handle_request(struct tgdb *tgdb_in, struct tgdb_request *request)
 //$ TODO: How to check for leaks?
 //$ TODO: clean up error responding in commands.cpp: should always reply.
 
-tgdb_request_ptr tgdb_pop_request_id(int id) {
-    if (id > 0) {
+tgdb_request_ptr tgdb_pop_request_id(int id)
+{
+    if (id > 0)
+    {
         int i;
         int count = sbcount(requests_with_ids);
 
-        for (i = 0; i < count; i++) {
-            if (requests_with_ids[i]->id == id) {
+        for (i = 0; i < count; i++)
+        {
+            if (requests_with_ids[i]->id == id)
+            {
                 tgdb_request_ptr ptr = requests_with_ids[i];
 
                 requests_with_ids[i] = requests_with_ids[count - 1];
@@ -226,30 +234,36 @@ tgdb_request_ptr tgdb_pop_request_id(int id) {
 
 void tgdb_set_last_request(struct tgdb_request *request)
 {
-    if (request) {
-        switch (request->header) {
-            case TGDB_REQUEST_CONSOLE_COMMAND:
-            case TGDB_REQUEST_DEBUGGER_COMMAND:
-            case TGDB_REQUEST_MODIFY_BREAKPOINT:
-            case TGDB_REQUEST_COMPLETE:
-                last_request_requires_update = 1;
-                break;
-            case TGDB_REQUEST_INFO_SOURCES:
-            case TGDB_REQUEST_CURRENT_LOCATION:
-            case TGDB_REQUEST_DISASSEMBLE:
-            case TGDB_REQUEST_DISASSEMBLE_FUNC:
-            default:
-                last_request_requires_update =  0;
-                break;
+    if (request)
+    {
+        switch (request->header)
+        {
+        case TGDB_REQUEST_CONSOLE_COMMAND:
+        case TGDB_REQUEST_DEBUGGER_COMMAND:
+        case TGDB_REQUEST_MODIFY_BREAKPOINT:
+        case TGDB_REQUEST_COMPLETE:
+            last_request_requires_update = 1;
+            break;
+        case TGDB_REQUEST_INFO_SOURCES:
+        case TGDB_REQUEST_CURRENT_LOCATION:
+        case TGDB_REQUEST_DISASSEMBLE:
+        case TGDB_REQUEST_DISASSEMBLE_FUNC:
+        default:
+            last_request_requires_update = 0;
+            break;
         }
 
-        if (request->id > 0) {
+        if (request->id > 0)
+        {
             sbpush(requests_with_ids, request);
         }
-        else {
+        else
+        {
             tgdb_request_destroy(request);
         }
-    } else {
+    }
+    else
+    {
         last_request_requires_update = 0;
     }
 }
@@ -271,8 +285,7 @@ void tgdb_set_last_request(struct tgdb_request *request)
  * \return
  * 0 on success or -1 on error
  */
-int
-tgdb_last_request_requires_update()
+int tgdb_last_request_requires_update()
 {
     return last_request_requires_update;
 }
@@ -295,12 +308,14 @@ static int tgdb_process_client_commands(struct tgdb *tgdb)
     client_command_list = tgdb->tcc->client_command_list;
     iterator = tgdb_list_get_first(client_command_list);
 
-    while (iterator) {
-        command = (struct tgdb_command *) tgdb_list_get_item(iterator);
+    while (iterator)
+    {
+        command = (struct tgdb_command *)tgdb_list_get_item(iterator);
 
-        if (tgdb_run_or_queue_command(tgdb, command) == -1) {
+        if (tgdb_run_or_queue_command(tgdb, command) == -1)
+        {
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "tgdb_run_or_queue_command failed");
+                "tgdb_run_or_queue_command failed");
             return -1;
         }
 
@@ -315,7 +330,7 @@ static int tgdb_process_client_commands(struct tgdb *tgdb)
 
 static struct tgdb *initialize_tgdb_context(void)
 {
-    struct tgdb *tgdb = (struct tgdb *) cgdb_malloc(sizeof (struct tgdb));
+    struct tgdb *tgdb = (struct tgdb *)cgdb_malloc(sizeof(struct tgdb));
 
     tgdb->tcc = NULL;
     tgdb->control_c = 0;
@@ -368,9 +383,10 @@ static int tgdb_initialize_config_dir(struct tgdb *tgdb, char *config_dir)
     const char *tgdb_dir = ".tgdb";
 
     /* Create the config directory */
-    if (!fs_util_create_dir_in_base(home_dir, tgdb_dir)) {
+    if (!fs_util_create_dir_in_base(home_dir, tgdb_dir))
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "fs_util_create_dir_in_base error");
+            "fs_util_create_dir_in_base error");
         return -1;
     }
 
@@ -401,10 +417,12 @@ static int tgdb_initialize_logger_interface(struct tgdb *tgdb, char *config_dir)
     fs_util_get_path(config_dir, tgdb_log_file, tgdb_log_path);
 
     /* Initialize the logger */
-    if (num_loggers == 0) {
+    if (num_loggers == 0)
+    {
         logger = logger_create();
 
-        if (!logger) {
+        if (!logger)
+        {
             printf("Error: Could not create log file\n");
             return -1;
         }
@@ -412,7 +430,8 @@ static int tgdb_initialize_logger_interface(struct tgdb *tgdb, char *config_dir)
 
     ++num_loggers;
 
-    if (logger_set_file(logger, tgdb_log_path) == -1) {
+    if (logger_set_file(logger, tgdb_log_path) == -1)
+    {
         printf("Error: Could not open log file\n");
         return -1;
     }
@@ -423,19 +442,21 @@ static int tgdb_initialize_logger_interface(struct tgdb *tgdb, char *config_dir)
 /* Createing and Destroying a libtgdb context. {{{*/
 
 struct tgdb *tgdb_initialize(const char *debugger,
-        int argc, char **argv, int *debugger_fd)
+    int argc, char **argv, int *debugger_fd)
 {
     /* Initialize the libtgdb context */
     struct tgdb *tgdb = initialize_tgdb_context();
     char config_dir[FSUTIL_PATH_MAX];
 
     /* Create config directory */
-    if (tgdb_initialize_config_dir(tgdb, config_dir) == -1) {
+    if (tgdb_initialize_config_dir(tgdb, config_dir) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "tgdb_initialize error");
         return NULL;
     }
 
-    if (tgdb_initialize_logger_interface(tgdb, config_dir) == -1) {
+    if (tgdb_initialize_logger_interface(tgdb, config_dir) == -1)
+    {
         printf("Could not initialize logger interface\n");
         return NULL;
     }
@@ -445,21 +466,23 @@ struct tgdb *tgdb_initialize(const char *debugger,
     tgdb->oob_input_queue = queue_init();
 
     tgdb->tcc = a2_create_context(debugger, argc, argv, config_dir,
-            logger);
+        logger);
 
     /* create an instance and initialize a tgdb_client_context */
-    if (tgdb->tcc == NULL) {
+    if (tgdb->tcc == NULL)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "a2_create_context failed");
+            "a2_create_context failed");
         return NULL;
     }
 
     if (a2_initialize(tgdb->tcc,
-                    &(tgdb->debugger_stdin),
-                    &(tgdb->debugger_stdout),
-                    &(tgdb->inferior_stdin), &(tgdb->inferior_stdout)) == -1) {
+            &(tgdb->debugger_stdin),
+            &(tgdb->debugger_stdout),
+            &(tgdb->inferior_stdin), &(tgdb->inferior_stdout)) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "tgdb_client_initialize failed");
+            "tgdb_client_initialize failed");
         return NULL;
     }
 
@@ -473,8 +496,10 @@ struct tgdb *tgdb_initialize(const char *debugger,
 int tgdb_shutdown(struct tgdb *tgdb)
 {
     /* Free the logger */
-    if (num_loggers == 1) {
-        if (logger_destroy(logger) == -1) {
+    if (num_loggers == 1)
+    {
+        if (logger_destroy(logger) == -1)
+        {
             printf("Could not destroy logger interface\n");
             return -1;
         }
@@ -488,41 +513,46 @@ int tgdb_shutdown(struct tgdb *tgdb)
 /* }}}*/
 
 static const char *tgdb_get_client_command(struct tgdb *tgdb,
-        enum tgdb_command_type c)
+    enum tgdb_command_type c)
 {
-    switch (c) {
-        case TGDB_CONTINUE:
-            return "continue";
-        case TGDB_FINISH:
-            return "finish";
-        case TGDB_NEXT:
-            return "next";
-        case TGDB_START:
-            return "start";
-        case TGDB_RUN:
-            return "run";
-        case TGDB_KILL:
-            return "kill";
-        case TGDB_STEP:
-            return "step";
-        case TGDB_UNTIL:
-            return "until";
-        case TGDB_UP:
-            return "up";
-        case TGDB_DOWN:
-            return "down";
+    switch (c)
+    {
+    case TGDB_CONTINUE:
+        return "continue";
+    case TGDB_FINISH:
+        return "finish";
+    case TGDB_NEXT:
+        return "next";
+    case TGDB_START:
+        return "start";
+    case TGDB_RUN:
+        return "run";
+    case TGDB_KILL:
+        return "kill";
+    case TGDB_STEP:
+        return "step";
+    case TGDB_UNTIL:
+        return "until";
+    case TGDB_UP:
+        return "up";
+    case TGDB_DOWN:
+        return "down";
     }
 
     return NULL;
 }
 
 static char *tgdb_client_modify_breakpoint_call(struct tgdb *tgdb,
-        const char *file, int line, enum tgdb_breakpoint_action b)
+    const char *file, int line, enum tgdb_breakpoint_action b)
 {
-    switch (b) {
-    case TGDB_BREAKPOINT_ADD:    return sys_aprintf("break \"%s\":%d", file, line);
-    case TGDB_BREAKPOINT_DELETE: return sys_aprintf("clear \"%s\":%d", file, line);
-    case TGDB_TBREAKPOINT_ADD:   return sys_aprintf("tbreak \"%s\":%d", file, line);
+    switch (b)
+    {
+    case TGDB_BREAKPOINT_ADD:
+        return sys_aprintf("break \"%s\":%d", file, line);
+    case TGDB_BREAKPOINT_DELETE:
+        return sys_aprintf("clear \"%s\":%d", file, line);
+    case TGDB_TBREAKPOINT_ADD:
+        return sys_aprintf("tbreak \"%s\":%d", file, line);
     }
 
     return NULL;
@@ -541,7 +571,7 @@ static int tgdb_disassemble(struct annotate_two *a2, const char *func, int lines
     data = sys_aprintf("%di %s", lines, func);
 
     ret = commands_issue_command(a2->client_command_list,
-                                 ANNOTATE_DISASSEMBLE, data, 0, id);
+        ANNOTATE_DISASSEMBLE, data, 0, id);
 
     free(data);
     return ret;
@@ -579,11 +609,13 @@ static int tgdb_disassemble_func(struct annotate_two *a2, int raw, int source,
 
     /* GDB versions 7.11 and above support /s with disassemble. */
     if ((gdb_version_major > 7) ||
-            (gdb_version_major == 7 && gdb_version_minor >= 11)) {
+        (gdb_version_major == 7 && gdb_version_minor >= 11))
+    {
         source_line_flag = "/s ";
     }
 
-    if (raw || source || function) {
+    if (raw || source || function)
+    {
         const char *raw_flag = raw ? "/r " : " ";
         const char *source_flag = source ? source_line_flag : " ";
 
@@ -594,7 +626,7 @@ static int tgdb_disassemble_func(struct annotate_two *a2, int raw, int source,
     }
 
     ret = commands_issue_command(a2->client_command_list,
-                    ANNOTATE_DISASSEMBLE_FUNC, data, 0, id);
+        ANNOTATE_DISASSEMBLE_FUNC, data, 0, id);
 
     free(data);
     return ret;
@@ -612,8 +644,8 @@ static int tgdb_disassemble_func(struct annotate_two *a2, int raw, int source,
 static int tgdb_can_issue_command(struct tgdb *tgdb)
 {
     if (tgdb->IS_SUBSYSTEM_READY_FOR_NEXT_COMMAND &&
-            a2_is_client_ready(tgdb->tcc) &&
-            (queue_size(tgdb->gdb_input_queue) == 0))
+        a2_is_client_ready(tgdb->tcc) &&
+        (queue_size(tgdb->gdb_input_queue) == 0))
         return 1;
 
     return 0;
@@ -628,8 +660,8 @@ static int tgdb_can_issue_command(struct tgdb *tgdb)
 static int tgdb_has_command_to_run(struct tgdb *tgdb)
 {
     if (a2_is_client_ready(tgdb->tcc) &&
-            ((queue_size(tgdb->gdb_input_queue) > 0) ||
-                    (queue_size(tgdb->oob_input_queue) > 0)))
+        ((queue_size(tgdb->gdb_input_queue) > 0) ||
+            (queue_size(tgdb->oob_input_queue) > 0)))
         return 1;
 
     return 0;
@@ -645,53 +677,58 @@ void tgdb_request_destroy(tgdb_request_ptr request_ptr)
     if (!request_ptr)
         return;
 
-    switch (request_ptr->header) {
-        case TGDB_REQUEST_CONSOLE_COMMAND:
-            free((char *) request_ptr->choice.console_command.command);
-            request_ptr->choice.console_command.command = NULL;
-            break;
-        case TGDB_REQUEST_INFO_SOURCES:
-            break;
-        case TGDB_REQUEST_DEBUGGER_COMMAND:
-            break;
-        case TGDB_REQUEST_MODIFY_BREAKPOINT:
-            free((char *) request_ptr->choice.modify_breakpoint.file);
-            request_ptr->choice.modify_breakpoint.file = NULL;
-            break;
-        case TGDB_REQUEST_COMPLETE:
-            free((char *) request_ptr->choice.complete.line);
-            request_ptr->choice.complete.line = NULL;
-            break;
-        case TGDB_REQUEST_DISASSEMBLE_FUNC: {
-            struct tgdb_file_position *tfp =
-                    request_ptr->choice.disassemble_func.tfp;
+    switch (request_ptr->header)
+    {
+    case TGDB_REQUEST_CONSOLE_COMMAND:
+        free((char *)request_ptr->choice.console_command.command);
+        request_ptr->choice.console_command.command = NULL;
+        break;
+    case TGDB_REQUEST_INFO_SOURCES:
+        break;
+    case TGDB_REQUEST_DEBUGGER_COMMAND:
+        break;
+    case TGDB_REQUEST_MODIFY_BREAKPOINT:
+        free((char *)request_ptr->choice.modify_breakpoint.file);
+        request_ptr->choice.modify_breakpoint.file = NULL;
+        break;
+    case TGDB_REQUEST_COMPLETE:
+        free((char *)request_ptr->choice.complete.line);
+        request_ptr->choice.complete.line = NULL;
+        break;
+    case TGDB_REQUEST_DISASSEMBLE_FUNC:
+    {
+        struct tgdb_file_position *tfp =
+            request_ptr->choice.disassemble_func.tfp;
 
-            if (tfp) {
-                free(tfp->absolute_path);
-                free(tfp->from);
-                free(tfp->func);
-                free(tfp);
+        if (tfp)
+        {
+            free(tfp->absolute_path);
+            free(tfp->from);
+            free(tfp->func);
+            free(tfp);
 
-                request_ptr->choice.disassemble_func.tfp = NULL;
-            }
-            break;
+            request_ptr->choice.disassemble_func.tfp = NULL;
         }
-        case TGDB_REQUEST_DISASSEMBLE: {
-            struct tgdb_file_position *tfp =
-                    request_ptr->choice.disassemble.tfp;
+        break;
+    }
+    case TGDB_REQUEST_DISASSEMBLE:
+    {
+        struct tgdb_file_position *tfp =
+            request_ptr->choice.disassemble.tfp;
 
-            if (tfp) {
-                free(tfp->absolute_path);
-                free(tfp->from);
-                free(tfp->func);
-                free(tfp);
+        if (tfp)
+        {
+            free(tfp->absolute_path);
+            free(tfp->from);
+            free(tfp->func);
+            free(tfp);
 
-                request_ptr->choice.disassemble.tfp = NULL;
-            }
-            break;
+            request_ptr->choice.disassemble.tfp = NULL;
         }
-        default:
-            break;
+        break;
+    }
+    default:
+        break;
     }
 
     free(request_ptr);
@@ -700,14 +737,15 @@ void tgdb_request_destroy(tgdb_request_ptr request_ptr)
 
 static void tgdb_request_destroy_func(void *item)
 {
-    tgdb_request_destroy((tgdb_request_ptr) item);
+    tgdb_request_destroy((tgdb_request_ptr)item);
 }
 
 /* tgdb_handle_signals
  */
 static int tgdb_handle_signals(struct tgdb *tgdb)
 {
-    if (tgdb->control_c) {
+    if (tgdb->control_c)
+    {
         queue_free_list(tgdb->gdb_input_queue, tgdb_command_destroy);
         queue_free_list(tgdb->gdb_client_request_queue, tgdb_request_destroy_func);
         tgdb->control_c = 0;
@@ -738,7 +776,7 @@ static int tgdb_handle_signals(struct tgdb *tgdb)
  */
 static int
 tgdb_send(struct tgdb *tgdb, const char *command,
-        enum tgdb_command_choice command_choice)
+    enum tgdb_command_choice command_choice)
 {
     struct tgdb_command *tc;
     char *command_data = NULL;
@@ -751,14 +789,15 @@ tgdb_send(struct tgdb *tgdb, const char *command,
         command_data = strdup(command);
 
     /* Create the client command */
-    tc = (struct tgdb_command *) cgdb_malloc(sizeof (struct tgdb_command));
+    tc = (struct tgdb_command *)cgdb_malloc(sizeof(struct tgdb_command));
     tc->command_choice = command_choice;
     tc->tgdb_client_private_data = ANNOTATE_USER_COMMAND;
     tc->tgdb_command_data = command_data;
 
-    if (tgdb_run_or_queue_command(tgdb, tc) == -1) {
+    if (tgdb_run_or_queue_command(tgdb, tc) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "tgdb_run_or_queue_command failed");
+            "tgdb_run_or_queue_command failed");
         return -1;
     }
 
@@ -782,31 +821,35 @@ tgdb_send(struct tgdb *tgdb, const char *command,
 static int
 tgdb_run_or_queue_command(struct tgdb *tgdb, struct tgdb_command *command)
 {
-    int  can_issue = tgdb_can_issue_command(tgdb);
+    int can_issue = tgdb_can_issue_command(tgdb);
 
-    if (can_issue) {
+    if (can_issue)
+    {
         if (tgdb_deliver_command(tgdb, command) == -1)
             return -1;
 
         tgdb_command_destroy(command);
-    } else {
+    }
+    else
+    {
         /* Make sure to put the command into the correct queue. */
-        switch (command->command_choice) {
-            case TGDB_COMMAND_FRONT_END:
-            case TGDB_COMMAND_TGDB_CLIENT:
-                queue_append(tgdb->gdb_input_queue, command);
-                break;
-            case TGDB_COMMAND_TGDB_CLIENT_PRIORITY:
-                queue_append(tgdb->oob_input_queue, command);
-                break;
-            case TGDB_COMMAND_CONSOLE:
-                logger_write_pos(logger, __FILE__, __LINE__,
-                        "unimplemented command");
-                return -1;
-            default:
-                logger_write_pos(logger, __FILE__, __LINE__,
-                        "unimplemented command");
-                return -1;
+        switch (command->command_choice)
+        {
+        case TGDB_COMMAND_FRONT_END:
+        case TGDB_COMMAND_TGDB_CLIENT:
+            queue_append(tgdb->gdb_input_queue, command);
+            break;
+        case TGDB_COMMAND_TGDB_CLIENT_PRIORITY:
+            queue_append(tgdb->oob_input_queue, command);
+            break;
+        case TGDB_COMMAND_CONSOLE:
+            logger_write_pos(logger, __FILE__, __LINE__,
+                "unimplemented command");
+            return -1;
+        default:
+            logger_write_pos(logger, __FILE__, __LINE__,
+                "unimplemented command");
+            return -1;
         }
     }
 
@@ -847,9 +890,9 @@ static int tgdb_deliver_command(struct tgdb *tgdb, struct tgdb_command *command)
     io_debug_write_fmt(" tgdb_deliver_command: <%s>", command->tgdb_command_data);
 
     io_writen(tgdb->debugger_stdin, command->tgdb_command_data,
-            strlen(command->tgdb_command_data));
+        strlen(command->tgdb_command_data));
 
-    /* Uncomment this if you wish to see all of the commands, that are 
+/* Uncomment this if you wish to see all of the commands, that are 
      * passed to GDB. */
 #if 1
     {
@@ -875,13 +918,14 @@ static int tgdb_deliver_command(struct tgdb *tgdb, struct tgdb_command *command)
  */
 static int tgdb_unqueue_and_deliver_command(struct tgdb *tgdb)
 {
-  tgdb_unqueue_and_deliver_command_tag:
+tgdb_unqueue_and_deliver_command_tag:
 
     /* This will redisplay the prompt when a command is run
      * through the gui with data on the console.
      */
     /* The out of band commands should always be run first */
-    if (queue_size(tgdb->oob_input_queue) > 0) {
+    if (queue_size(tgdb->oob_input_queue) > 0)
+    {
         /* These commands are always run. 
          * However, if an assumption is made that a misc
          * prompt can never be set while in this spot.
@@ -893,7 +937,8 @@ static int tgdb_unqueue_and_deliver_command(struct tgdb *tgdb)
         tgdb_command_destroy(item);
     }
     /* If the queue is not empty, run a command */
-    else if (queue_size(tgdb->gdb_input_queue) > 0) {
+    else if (queue_size(tgdb->gdb_input_queue) > 0)
+    {
         struct tgdb_command *item;
 
         item = (struct tgdb_command *)queue_pop(tgdb->gdb_input_queue);
@@ -904,8 +949,10 @@ static int tgdb_unqueue_and_deliver_command(struct tgdb *tgdb)
         /* If at the misc prompt, don't run the internal tgdb commands,
          * In fact throw them out for now, since they are only 
          * 'info breakpoints' */
-        if (a2_is_misc_prompt(tgdb->tcc) == 1) {
-            if (item->command_choice != TGDB_COMMAND_CONSOLE) {
+        if (a2_is_misc_prompt(tgdb->tcc) == 1)
+        {
+            if (item->command_choice != TGDB_COMMAND_CONSOLE)
+            {
                 tgdb_command_destroy(item);
                 goto tgdb_unqueue_and_deliver_command_tag;
             }
@@ -925,7 +972,8 @@ static int tgdb_unqueue_and_deliver_command(struct tgdb *tgdb)
 /* These functions are used to communicate with the inferior */
 int tgdb_send_inferior_char(struct tgdb *tgdb, char c)
 {
-    if (io_write_byte(tgdb->inferior_stdout, c) == -1) {
+    if (io_write_byte(tgdb->inferior_stdout, c) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "io_write_byte failed");
         return -1;
     }
@@ -949,13 +997,14 @@ int tgdb_send_inferior_char(struct tgdb *tgdb, char c)
  * @return
  * 0 on EOR, -1 on error, or the number of bytes written to buf.
  */
-ssize_t tgdb_recv_inferior_data(struct tgdb * tgdb, char *buf, size_t n)
+ssize_t tgdb_recv_inferior_data(struct tgdb *tgdb, char *buf, size_t n)
 {
     char local_buf[n + 1];
     ssize_t size;
 
     /* read all the data possible from the child that is ready. */
-    if ((size = io_read(tgdb->inferior_stdin, local_buf, n)) < 0) {
+    if ((size = io_read(tgdb->inferior_stdin, local_buf, n)) < 0)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "inferior_fd read failed");
         return -1;
     }
@@ -981,13 +1030,13 @@ static int tgdb_add_quit_command(struct tgdb *tgdb)
     struct tgdb_response *response;
 
     tstatus = (struct tgdb_debugger_exit_status *)
-            cgdb_malloc(sizeof (struct tgdb_debugger_exit_status));
+        cgdb_malloc(sizeof(struct tgdb_debugger_exit_status));
 
     /* Child did not exit normally */
     tstatus->exit_status = -1;
     tstatus->return_value = 0;
 
-    response = (struct tgdb_response *)cgdb_malloc(sizeof (struct tgdb_response));
+    response = (struct tgdb_response *)cgdb_malloc(sizeof(struct tgdb_response));
     response->result_id = -1;
     response->request = NULL;
     response->header = TGDB_QUIT;
@@ -1018,7 +1067,7 @@ static int tgdb_get_quit_command(struct tgdb *tgdb, int *tgdb_will_quit)
     pid_t ret;
     struct tgdb_debugger_exit_status *tstatus;
     struct tgdb_response *response = (struct tgdb_response *)
-            cgdb_malloc(sizeof (struct tgdb_response));
+        cgdb_malloc(sizeof(struct tgdb_response));
 
     if (!tgdb_will_quit)
         return -1;
@@ -1026,23 +1075,29 @@ static int tgdb_get_quit_command(struct tgdb *tgdb, int *tgdb_will_quit)
     *tgdb_will_quit = 0;
 
     tstatus = (struct tgdb_debugger_exit_status *)
-            cgdb_malloc(sizeof (struct tgdb_debugger_exit_status));
+        cgdb_malloc(sizeof(struct tgdb_debugger_exit_status));
 
     ret = waitpid(pid, &status, WNOHANG);
 
-    if (ret == -1) {
+    if (ret == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "waitpid error");
         return -1;
-    } else if (ret == 0) {
+    }
+    else if (ret == 0)
+    {
         /* This SIGCHLD wasn't for GDB */
         return 0;
     }
 
-    if ((WIFEXITED(status)) == 0) {
+    if ((WIFEXITED(status)) == 0)
+    {
         /* Child did not exit normally */
         tstatus->exit_status = -1;
         tstatus->return_value = 0;
-    } else {
+    }
+    else
+    {
         tstatus->exit_status = 0;
         tstatus->return_value = WEXITSTATUS(status);
     }
@@ -1057,7 +1112,7 @@ static int tgdb_get_quit_command(struct tgdb *tgdb, int *tgdb_will_quit)
     return 0;
 }
 
-size_t tgdb_process(struct tgdb * tgdb, char *buf, size_t n, int *is_finished)
+size_t tgdb_process(struct tgdb *tgdb, char *buf, size_t n, int *is_finished)
 {
     char local_buf[10 * n];
     ssize_t size;
@@ -1075,15 +1130,19 @@ size_t tgdb_process(struct tgdb * tgdb, char *buf, size_t n, int *is_finished)
      * Currently, I see it as a bigger hack to try to just append this to the
      * beginning of buf.
      */
-    if (tgdb->last_gui_command) {
+    if (tgdb->last_gui_command)
+    {
         int ret;
 
         *is_finished = !tgdb_is_busy(tgdb);
 
-        if (tgdb->show_gui_commands) {
+        if (tgdb->show_gui_commands)
+        {
             strncpy(buf, tgdb->last_gui_command, n);
             ret = strlen(tgdb->last_gui_command);
-        } else {
+        }
+        else
+        {
             buf[0] = '\n';
             ret = 1;
         }
@@ -1093,7 +1152,8 @@ size_t tgdb_process(struct tgdb * tgdb, char *buf, size_t n, int *is_finished)
         return ret;
     }
 
-    if (tgdb->has_sigchld_recv) {
+    if (tgdb->has_sigchld_recv)
+    {
         int tgdb_will_quit;
 
         /* tgdb_get_quit_command will return right away, it's asynchrounous.
@@ -1105,9 +1165,10 @@ size_t tgdb_process(struct tgdb * tgdb, char *buf, size_t n, int *is_finished)
          */
         int val = tgdb_get_quit_command(tgdb, &tgdb_will_quit);
 
-        if (val == -1) {
+        if (val == -1)
+        {
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "tgdb_get_quit_command error");
+                "tgdb_get_quit_command error");
             return -1;
         }
         tgdb->has_sigchld_recv = 0;
@@ -1119,13 +1180,16 @@ size_t tgdb_process(struct tgdb * tgdb, char *buf, size_t n, int *is_finished)
     memset(buf, '\0', n);
 
     /* 1. read all the data possible from gdb that is ready. */
-    if ((size = io_read(tgdb->debugger_stdout, local_buf, n)) < 0) {
+    if ((size = io_read(tgdb->debugger_stdout, local_buf, n)) < 0)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "could not read from masterfd");
+            "could not read from masterfd");
         buf_size = -1;
         tgdb_add_quit_command(tgdb);
         goto tgdb_finish;
-    } else if (size == 0) {     /* EOF */
+    }
+    else if (size == 0)
+    { /* EOF */
         tgdb_add_quit_command(tgdb);
         goto tgdb_finish;
     }
@@ -1145,28 +1209,34 @@ size_t tgdb_process(struct tgdb * tgdb, char *buf, size_t n, int *is_finished)
         int result;
 
         result = a2_parse_io(tgdb->tcc,
-                local_buf, size,
-                buf, &buf_size, infbuf, &infbuf_size, tgdb->command_list);
+            local_buf, size,
+            buf, &buf_size, infbuf, &infbuf_size, tgdb->command_list);
 
         tgdb_process_client_commands(tgdb);
 
-        if (result == 0) {
+        if (result == 0)
+        {
             /* success, and more to parse, ss isn't done */
-        } else if (result == 1) {
+        }
+        else if (result == 1)
+        {
             /* success, and finished command */
             tgdb->IS_SUBSYSTEM_READY_FOR_NEXT_COMMAND = 1;
-        } else if (result == -1) {
+        }
+        else if (result == -1)
+        {
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "a2_parse_io failed");
+                "a2_parse_io failed");
         }
     }
 
     /* 3. if ^c has been sent, clear the buffers.
      *        If a signal has been received, clear the queue and return
      */
-    if (tgdb_handle_signals(tgdb) == -1) {
+    if (tgdb_handle_signals(tgdb) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "tgdb_handle_signals failed");
+            "tgdb_handle_signals failed");
         return -1;
     }
 
@@ -1174,7 +1244,7 @@ size_t tgdb_process(struct tgdb * tgdb, char *buf, size_t n, int *is_finished)
     if (tgdb_has_command_to_run(tgdb))
         tgdb_unqueue_and_deliver_command(tgdb);
 
-  tgdb_finish:
+tgdb_finish:
 
     /* Set the iterator to the beginning. So when the user
      * calls tgdb_get_command it, it will be in the right spot.
@@ -1195,8 +1265,8 @@ struct tgdb_response *tgdb_get_response(struct tgdb *tgdb)
     if (tgdb->command_list_iterator == NULL)
         return NULL;
 
-    command = (struct tgdb_response *) tgdb_list_get_item(
-                tgdb->command_list_iterator);
+    command = (struct tgdb_response *)tgdb_list_get_item(
+        tgdb->command_list_iterator);
 
     tgdb->command_list_iterator = tgdb_list_next(tgdb->command_list_iterator);
 
@@ -1222,8 +1292,8 @@ void tgdb_delete_responses(struct tgdb *tgdb)
 int tgdb_tty_new(struct tgdb *tgdb)
 {
     int ret = a2_open_new_tty(tgdb->tcc,
-            &tgdb->inferior_stdin,
-            &tgdb->inferior_stdout);
+        &tgdb->inferior_stdin,
+        &tgdb->inferior_stdout);
 
     tgdb_process_client_commands(tgdb);
 
@@ -1251,22 +1321,22 @@ tgdb_request_run_console_command(struct tgdb *tgdb, const char *command)
 {
     tgdb_request_ptr request_ptr;
 
-    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
+    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof(struct tgdb_request));
 
     request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_CONSOLE_COMMAND;
     request_ptr->choice.console_command.command = (const char *)
-            cgdb_strdup(command);
+        cgdb_strdup(command);
 
     handle_request(tgdb, request_ptr);
     return request_ptr;
 }
 
-tgdb_request_ptr tgdb_request_inferiors_source_files(struct tgdb * tgdb)
+tgdb_request_ptr tgdb_request_inferiors_source_files(struct tgdb *tgdb)
 {
     tgdb_request_ptr request_ptr;
 
-    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
+    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof(struct tgdb_request));
 
     request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_INFO_SOURCES;
@@ -1276,11 +1346,11 @@ tgdb_request_ptr tgdb_request_inferiors_source_files(struct tgdb * tgdb)
 }
 
 tgdb_request_ptr
-tgdb_request_run_debugger_command(struct tgdb * tgdb, enum tgdb_command_type c)
+tgdb_request_run_debugger_command(struct tgdb *tgdb, enum tgdb_command_type c)
 {
     tgdb_request_ptr request_ptr;
 
-    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
+    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof(struct tgdb_request));
 
     request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_DEBUGGER_COMMAND;
@@ -1291,12 +1361,12 @@ tgdb_request_run_debugger_command(struct tgdb * tgdb, enum tgdb_command_type c)
 }
 
 tgdb_request_ptr
-tgdb_request_modify_breakpoint(struct tgdb * tgdb, const char *file, int line,
-        enum tgdb_breakpoint_action b)
+tgdb_request_modify_breakpoint(struct tgdb *tgdb, const char *file, int line,
+    enum tgdb_breakpoint_action b)
 {
     tgdb_request_ptr request_ptr;
 
-    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
+    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof(struct tgdb_request));
 
     request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_MODIFY_BREAKPOINT;
@@ -1308,11 +1378,11 @@ tgdb_request_modify_breakpoint(struct tgdb * tgdb, const char *file, int line,
     return request_ptr;
 }
 
-tgdb_request_ptr tgdb_request_complete(struct tgdb * tgdb, const char *line)
+tgdb_request_ptr tgdb_request_complete(struct tgdb *tgdb, const char *line)
 {
     tgdb_request_ptr request_ptr;
 
-    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
+    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof(struct tgdb_request));
 
     request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_COMPLETE;
@@ -1323,11 +1393,11 @@ tgdb_request_ptr tgdb_request_complete(struct tgdb * tgdb, const char *line)
 }
 
 tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb, const char *func, int lines,
-        struct tgdb_file_position *tfp)
+    struct tgdb_file_position *tfp)
 {
     tgdb_request_ptr request_ptr;
 
-    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
+    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof(struct tgdb_request));
 
     request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_DISASSEMBLE;
@@ -1340,12 +1410,12 @@ tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb, const char *func, i
 }
 
 tgdb_request_ptr tgdb_request_disassemble_func(struct tgdb *tgdb,
-        enum disassemble_func_type type, const char *file, const char *function,
-        struct tgdb_file_position *tfp)
+    enum disassemble_func_type type, const char *file, const char *function,
+    struct tgdb_file_position *tfp)
 {
     tgdb_request_ptr request_ptr;
 
-    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof (struct tgdb_request));
+    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof(struct tgdb_request));
 
     request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_DISASSEMBLE_FUNC;
@@ -1373,52 +1443,65 @@ int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request)
     if (!tgdb_can_issue_command(tgdb))
         return -1;
 
-    if (request->header == TGDB_REQUEST_CONSOLE_COMMAND) {
+    if (request->header == TGDB_REQUEST_CONSOLE_COMMAND)
+    {
         ret = tgdb_send(tgdb, request->choice.console_command.command,
             TGDB_COMMAND_CONSOLE);
     }
-    else if (request->header == TGDB_REQUEST_DEBUGGER_COMMAND) {
+    else if (request->header == TGDB_REQUEST_DEBUGGER_COMMAND)
+    {
         ret = tgdb_send(tgdb, tgdb_get_client_command(tgdb,
-                request->choice.debugger_command.c), TGDB_COMMAND_FRONT_END);
+                                  request->choice.debugger_command.c),
+            TGDB_COMMAND_FRONT_END);
     }
-    else if (request->header == TGDB_REQUEST_MODIFY_BREAKPOINT) {
+    else if (request->header == TGDB_REQUEST_MODIFY_BREAKPOINT)
+    {
         char *val = tgdb_client_modify_breakpoint_call(tgdb,
-                request->choice.modify_breakpoint.file,
-                request->choice.modify_breakpoint.line,
-                request->choice.modify_breakpoint.b);
-        if (val) {
+            request->choice.modify_breakpoint.file,
+            request->choice.modify_breakpoint.line,
+            request->choice.modify_breakpoint.b);
+        if (val)
+        {
             ret = tgdb_send(tgdb, val, TGDB_COMMAND_FRONT_END);
             free(val);
         }
-    } else {
-        if (request->header == TGDB_REQUEST_INFO_SOURCES) {
+    }
+    else
+    {
+        if (request->header == TGDB_REQUEST_INFO_SOURCES)
+        {
             ret = commands_issue_command(tgdb->tcc->client_command_list,
-                    ANNOTATE_INFO_SOURCES, NULL, 0, &request->id);
+                ANNOTATE_INFO_SOURCES, NULL, 0, &request->id);
         }
-        else if (request->header == TGDB_REQUEST_CURRENT_LOCATION) {
+        else if (request->header == TGDB_REQUEST_CURRENT_LOCATION)
+        {
             ret = commands_issue_command(tgdb->tcc->client_command_list,
-                                         ANNOTATE_INFO_FRAME, NULL, 1, &request->id);
+                ANNOTATE_INFO_FRAME, NULL, 1, &request->id);
         }
-        else if (request->header == TGDB_REQUEST_COMPLETE) {
+        else if (request->header == TGDB_REQUEST_COMPLETE)
+        {
             ret = commands_issue_command(tgdb->tcc->client_command_list,
-                    ANNOTATE_COMPLETE, request->choice.complete.line, 1,
-                    &request->id);
+                ANNOTATE_COMPLETE, request->choice.complete.line, 1,
+                &request->id);
         }
-        else if (request->header == TGDB_REQUEST_DISASSEMBLE) {
+        else if (request->header == TGDB_REQUEST_DISASSEMBLE)
+        {
             ret = tgdb_disassemble(tgdb->tcc, request->choice.disassemble.func,
-                                 request->choice.disassemble.lines,
-                                 &request->id);
+                request->choice.disassemble.lines,
+                &request->id);
         }
-        else if (request->header == TGDB_REQUEST_DISASSEMBLE_FUNC) {
+        else if (request->header == TGDB_REQUEST_DISASSEMBLE_FUNC)
+        {
             ret = tgdb_disassemble_func(tgdb->tcc,
-                                      request->choice.disassemble_func.raw,
-                                      request->choice.disassemble_func.source,
-                                      request->choice.disassemble_func.file,
-                                      request->choice.disassemble_func.function,
-                                      &request->id);
+                request->choice.disassemble_func.raw,
+                request->choice.disassemble_func.source,
+                request->choice.disassemble_func.file,
+                request->choice.disassemble_func.function,
+                &request->id);
         }
 
-        if (!ret) {
+        if (!ret)
+        {
             tgdb_process_client_commands(tgdb);
         }
     }
@@ -1443,7 +1526,7 @@ int tgdb_queue_append(struct tgdb *tgdb, tgdb_request_ptr request)
     return 0;
 }
 
-tgdb_request_ptr tgdb_queue_pop(struct tgdb * tgdb)
+tgdb_request_ptr tgdb_queue_pop(struct tgdb *tgdb)
 {
     tgdb_request_ptr item;
 
@@ -1471,16 +1554,21 @@ int tgdb_signal_notification(struct tgdb *tgdb, int signum)
 
     tcgetattr(tgdb->debugger_stdin, &t);
 
-    if (signum == SIGINT) {     /* ^c */
+    if (signum == SIGINT)
+    { /* ^c */
         tgdb->control_c = 1;
         sig_char = &t.c_cc[VINTR];
         if (write(tgdb->debugger_stdin, sig_char, 1) < 1)
             return -1;
-    } else if (signum == SIGQUIT) { /* ^\ */
+    }
+    else if (signum == SIGQUIT)
+    { /* ^\ */
         sig_char = &t.c_cc[VQUIT];
         if (write(tgdb->debugger_stdin, sig_char, 1) < 1)
             return -1;
-    } else if (signum == SIGCHLD) {
+    }
+    else if (signum == SIGCHLD)
+    {
         tgdb->has_sigchld_recv = 1;
     }
 

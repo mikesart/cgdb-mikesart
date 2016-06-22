@@ -15,22 +15,22 @@
 #endif /* HAVE_CURSES_H */
 
 /* Colors */
-#define CGDB_COLOR_GREEN            1
-#define CGDB_COLOR_RED              2
-#define CGDB_COLOR_CYAN             3
-#define CGDB_COLOR_WHITE            4
-#define CGDB_COLOR_MAGENTA          5
-#define CGDB_COLOR_BLUE             6
-#define CGDB_COLOR_YELLOW           7
+#define CGDB_COLOR_GREEN 1
+#define CGDB_COLOR_RED 2
+#define CGDB_COLOR_CYAN 3
+#define CGDB_COLOR_WHITE 4
+#define CGDB_COLOR_MAGENTA 5
+#define CGDB_COLOR_BLUE 6
+#define CGDB_COLOR_YELLOW 7
 
-#define CGDB_COLOR_INVERSE_GREEN    8
-#define CGDB_COLOR_INVERSE_RED      9
-#define CGDB_COLOR_INVERSE_CYAN     10
-#define CGDB_COLOR_INVERSE_WHITE    11
-#define CGDB_COLOR_INVERSE_MAGENTA  12
-#define CGDB_COLOR_INVERSE_BLUE     13
-#define CGDB_COLOR_INVERSE_YELLOW   14
-#define CGDB_COLOR_STATUS_BAR       15
+#define CGDB_COLOR_INVERSE_GREEN 8
+#define CGDB_COLOR_INVERSE_RED 9
+#define CGDB_COLOR_INVERSE_CYAN 10
+#define CGDB_COLOR_INVERSE_WHITE 11
+#define CGDB_COLOR_INVERSE_MAGENTA 12
+#define CGDB_COLOR_INVERSE_BLUE 13
+#define CGDB_COLOR_INVERSE_YELLOW 14
+#define CGDB_COLOR_STATUS_BAR 15
 
 /* Local Includes */
 #include "sources.h"
@@ -40,9 +40,9 @@
 /* Local Variables */
 /* --------------- */
 
-static int curses_initialized = 0;  /* Set when curses has been started */
-static int curses_colors = 0;   /* Set if terminal supports color */
-static char *my_name = NULL;    /* Name of this application (argv[0]) */
+static int curses_initialized = 0; /* Set when curses has been started */
+static int curses_colors = 0;      /* Set if terminal supports color */
+static char *my_name = NULL;       /* Name of this application (argv[0]) */
 
 /* --------- */
 /* Functions */
@@ -50,12 +50,13 @@ static char *my_name = NULL;    /* Name of this application (argv[0]) */
 
 int init_curses()
 {
-    initscr();                  /* Start curses mode */
-    cbreak();                   /* Line buffering disabled */
-    noecho();                   /* Do not echo characters typed by user */
-    keypad(stdscr, TRUE);       /* Translate arrow keys, Fn keys, etc. */
+    initscr();            /* Start curses mode */
+    cbreak();             /* Line buffering disabled */
+    noecho();             /* Do not echo characters typed by user */
+    keypad(stdscr, TRUE); /* Translate arrow keys, Fn keys, etc. */
 
-    if ((curses_colors = has_colors())) {
+    if ((curses_colors = has_colors()))
+    {
         start_color();
         init_pair(CGDB_COLOR_BLACK, COLOR_BLACK, COLOR_BLACK);
         init_pair(CGDB_COLOR_GREEN, COLOR_GREEN, COLOR_BLACK);
@@ -76,7 +77,8 @@ int init_curses()
 void cleanup()
 {
     /* Shut down curses cleanly */
-    if (curses_initialized) {
+    if (curses_initialized)
+    {
         endwin();
     }
 }
@@ -91,7 +93,7 @@ int main(int argc, char *argv[])
     int num = 12;
     int line1 = 7, line2 = 7, *line = &line1;
     char *bar = "________________________________________"
-            "________________________________________";
+                "________________________________________";
 
     /* Set up some data */
     my_name = argv[0];
@@ -115,39 +117,44 @@ int main(int argc, char *argv[])
     attroff(A_BOLD);
     mvwprintw(stdscr, 19, 0, bar);
     mvwprintw(stdscr, 32, 0, bar);
-    do {
-        switch (c) {
-            case 9:
-                if (line == &line1) {
-                    mvwprintw(stdscr, 4, 0, bar);
-                    mvwprintw(stdscr, 17, 0, bar);
-                    attron(A_BOLD);
-                    mvwprintw(stdscr, 19, 0, bar);
-                    mvwprintw(stdscr, 32, 0, bar);
-                    attroff(A_BOLD);
-                    line = &line2;
-                } else {
-                    attron(A_BOLD);
-                    mvwprintw(stdscr, 4, 0, bar);
-                    mvwprintw(stdscr, 17, 0, bar);
-                    attroff(A_BOLD);
-                    mvwprintw(stdscr, 19, 0, bar);
-                    mvwprintw(stdscr, 32, 0, bar);
-                    line = &line1;
-                }
-                break;
-            case KEY_DOWN:
-                (*line)++;
-                break;
-            case KEY_UP:
-                (*line)--;
-                break;
-            case KEY_PPAGE:
-                (*line) -= 10;
-                break;
-            case KEY_NPAGE:
-                (*line) += 10;
-                break;
+    do
+    {
+        switch (c)
+        {
+        case 9:
+            if (line == &line1)
+            {
+                mvwprintw(stdscr, 4, 0, bar);
+                mvwprintw(stdscr, 17, 0, bar);
+                attron(A_BOLD);
+                mvwprintw(stdscr, 19, 0, bar);
+                mvwprintw(stdscr, 32, 0, bar);
+                attroff(A_BOLD);
+                line = &line2;
+            }
+            else
+            {
+                attron(A_BOLD);
+                mvwprintw(stdscr, 4, 0, bar);
+                mvwprintw(stdscr, 17, 0, bar);
+                attroff(A_BOLD);
+                mvwprintw(stdscr, 19, 0, bar);
+                mvwprintw(stdscr, 32, 0, bar);
+                line = &line1;
+            }
+            break;
+        case KEY_DOWN:
+            (*line)++;
+            break;
+        case KEY_UP:
+            (*line)--;
+            break;
+        case KEY_PPAGE:
+            (*line) -= 10;
+            break;
+        case KEY_NPAGE:
+            (*line) += 10;
+            break;
         }
         if (*line > source_length(argv[line == &line1 ? 1 : 2]) - 5)
             *line = source_length(argv[line == &line1 ? 1 : 2]) - 5;

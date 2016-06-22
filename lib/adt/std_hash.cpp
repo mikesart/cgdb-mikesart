@@ -22,13 +22,15 @@
 #define HASH_TABLE_MIN_SIZE 11
 #define HASH_TABLE_MAX_SIZE 13845163
 
-struct ghashnode {
+struct ghashnode
+{
     void *key;
     void *value;
     struct ghashnode *next;
 };
 
-struct std_hashtable {
+struct std_hashtable
+{
     int size;
     int nnodes;
     struct ghashnode **nodes;
@@ -76,7 +78,7 @@ static const unsigned int std_primes[] = {
 };
 
 static const unsigned int std_nprimes =
-        sizeof (std_primes) / sizeof (std_primes[0]);
+    sizeof(std_primes) / sizeof(std_primes[0]);
 
 unsigned int std_spaced_primes_closest(unsigned int num)
 {
@@ -89,29 +91,31 @@ unsigned int std_spaced_primes_closest(unsigned int num)
     return std_primes[std_nprimes - 1];
 }
 
-#define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
+#define CLAMP(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 static void std_hash_table_resize(struct std_hashtable *hash_table);
 
 void G_HASH_TABLE_RESIZE(struct std_hashtable *hash_table)
 {
     if ((hash_table->size >= 3 * hash_table->nnodes &&
-                    hash_table->size > HASH_TABLE_MIN_SIZE) ||
-            (3 * hash_table->size <= hash_table->nnodes &&
-                    hash_table->size < HASH_TABLE_MAX_SIZE))
+            hash_table->size > HASH_TABLE_MIN_SIZE) ||
+        (3 * hash_table->size <= hash_table->nnodes &&
+            hash_table->size < HASH_TABLE_MAX_SIZE))
         std_hash_table_resize(hash_table);
 }
 
 static struct ghashnode **std_hash_table_lookup_node(struct std_hashtable
-        *hash_table, const void *key);
+                                                         *hash_table,
+    const void *key);
 static struct ghashnode *std_hash_node_new(void *key, void *value);
 static void std_hash_node_destroy(struct ghashnode *hash_node,
-        STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func);
+    STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func);
 static int
 std_hash_nodes_destroy(struct ghashnode *hash_node,
-        STDFreeFunc key_destroy_func, STDFreeFunc value_destroy_func);
+    STDFreeFunc key_destroy_func, STDFreeFunc value_destroy_func);
 static unsigned int std_hash_table_foreach_remove_or_steal(struct std_hashtable
-        *hash_table, STDHRFunc func, void *user_data, int notify);
+                                                               *hash_table,
+    STDHRFunc func, void *user_data, int notify);
 
 /**
  * std_hash_table_new:
@@ -132,7 +136,7 @@ static unsigned int std_hash_table_foreach_remove_or_steal(struct std_hashtable
  * Return value: a new #struct std_hashtable.
  **/
 struct std_hashtable *std_hash_table_new(STDHashFunc hash_func,
-        STDEqualFunc key_equal_func)
+    STDEqualFunc key_equal_func)
 {
     return std_hash_table_new_full(hash_func, key_equal_func, NULL, NULL);
 }
@@ -155,20 +159,20 @@ struct std_hashtable *std_hash_table_new(STDHashFunc hash_func,
  * Return value: a new #struct std_hashtable.
  **/
 struct std_hashtable *std_hash_table_new_full(STDHashFunc hash_func,
-        STDEqualFunc key_equal_func,
-        STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func)
+    STDEqualFunc key_equal_func,
+    STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func)
 {
     struct std_hashtable *hash_table;
     unsigned int i;
 
-    hash_table = (struct std_hashtable *)malloc(sizeof (struct std_hashtable));
+    hash_table = (struct std_hashtable *)malloc(sizeof(struct std_hashtable));
     hash_table->size = HASH_TABLE_MIN_SIZE;
     hash_table->nnodes = 0;
     hash_table->hash_func = hash_func ? hash_func : std_direct_hash;
     hash_table->key_equal_func = key_equal_func;
     hash_table->key_destroy_func = key_destroy_func;
     hash_table->value_destroy_func = value_destroy_func;
-    hash_table->nodes = (struct ghashnode **)malloc(sizeof (struct ghashnode *) * hash_table->size);
+    hash_table->nodes = (struct ghashnode **)malloc(sizeof(struct ghashnode *) * hash_table->size);
 
     for (i = 0; i < hash_table->size; i++)
         hash_table->nodes[i] = NULL;
@@ -195,19 +199,20 @@ void std_hash_table_destroy(struct std_hashtable *hash_table)
 
     for (i = 0; i < hash_table->size; i++)
         std_hash_nodes_destroy(hash_table->nodes[i],
-                hash_table->key_destroy_func, hash_table->value_destroy_func);
+            hash_table->key_destroy_func, hash_table->value_destroy_func);
 
     free(hash_table->nodes);
     free(hash_table);
 }
 
 static struct ghashnode **std_hash_table_lookup_node(struct std_hashtable
-        *hash_table, const void *key)
+                                                         *hash_table,
+    const void *key)
 {
     struct ghashnode **node;
 
     node = &hash_table->nodes
-            [(*hash_table->hash_func) (key) % hash_table->size];
+                [(*hash_table->hash_func)(key) % hash_table->size];
 
     /* Hash table lookup needs to be fast.
      *  We therefore remove the extra conditional of testing
@@ -215,7 +220,7 @@ static struct ghashnode **std_hash_table_lookup_node(struct std_hashtable
      *  the inner loop.
      */
     if (hash_table->key_equal_func)
-        while (*node && !(*hash_table->key_equal_func) ((*node)->key, key))
+        while (*node && !(*hash_table->key_equal_func)((*node)->key, key))
             node = &(*node)->next;
     else
         while (*node && (*node)->key != key)
@@ -259,9 +264,8 @@ void *std_hash_table_lookup(struct std_hashtable *hash_table, const void *key)
  * 
  * Return value: %TRUE if the key was found in the #struct std_hashtable.
  **/
-int
-std_hash_table_lookup_extended(struct std_hashtable *hash_table,
-        const void *lookup_key, void * *oristd_key, void * *value)
+int std_hash_table_lookup_extended(struct std_hashtable *hash_table,
+    const void *lookup_key, void **oristd_key, void **value)
 {
     struct ghashnode *node;
 
@@ -270,13 +274,15 @@ std_hash_table_lookup_extended(struct std_hashtable *hash_table,
 
     node = *std_hash_table_lookup_node(hash_table, lookup_key);
 
-    if (node) {
+    if (node)
+    {
         if (oristd_key)
             *oristd_key = node->key;
         if (value)
             *value = node->value;
         return 1;
-    } else
+    }
+    else
         return 0;
 }
 
@@ -294,8 +300,7 @@ std_hash_table_lookup_extended(struct std_hashtable *hash_table,
  * a @key_destroy_func when creating the #struct std_hashtable, the passed key is freed 
  * using that function.
  **/
-void
-std_hash_table_insert(struct std_hashtable *hash_table, void *key, void *value)
+void std_hash_table_insert(struct std_hashtable *hash_table, void *key, void *value)
 {
     struct ghashnode **node;
 
@@ -304,7 +309,8 @@ std_hash_table_insert(struct std_hashtable *hash_table, void *key, void *value)
 
     node = std_hash_table_lookup_node(hash_table, key);
 
-    if (*node) {
+    if (*node)
+    {
         /* do not reset node->key in this place, keeping
          * the old key is the intended behaviour. 
          * std_hash_table_replace() can be used instead.
@@ -318,7 +324,9 @@ std_hash_table_insert(struct std_hashtable *hash_table, void *key, void *value)
             hash_table->value_destroy_func((*node)->value);
 
         (*node)->value = value;
-    } else {
+    }
+    else
+    {
         *node = std_hash_node_new(key, value);
         hash_table->nnodes++;
         G_HASH_TABLE_RESIZE(hash_table);
@@ -338,8 +346,7 @@ std_hash_table_insert(struct std_hashtable *hash_table, void *key, void *value)
  * using that function. If you supplied a @key_destroy_func when creating the 
  * #struct std_hashtable, the old key is freed using that function. 
  **/
-void
-std_hash_table_replace(struct std_hashtable *hash_table, void *key, void *value)
+void std_hash_table_replace(struct std_hashtable *hash_table, void *key, void *value)
 {
     struct ghashnode **node;
 
@@ -348,7 +355,8 @@ std_hash_table_replace(struct std_hashtable *hash_table, void *key, void *value)
 
     node = std_hash_table_lookup_node(hash_table, key);
 
-    if (*node) {
+    if (*node)
+    {
         if (hash_table->key_destroy_func)
             hash_table->key_destroy_func((*node)->key);
 
@@ -357,7 +365,9 @@ std_hash_table_replace(struct std_hashtable *hash_table, void *key, void *value)
 
         (*node)->key = key;
         (*node)->value = value;
-    } else {
+    }
+    else
+    {
         *node = std_hash_node_new(key, value);
         hash_table->nnodes++;
         G_HASH_TABLE_RESIZE(hash_table);
@@ -386,11 +396,12 @@ int std_hash_table_remove(struct std_hashtable *hash_table, const void *key)
         return 0;
 
     node = std_hash_table_lookup_node(hash_table, key);
-    if (*node) {
+    if (*node)
+    {
         dest = *node;
         (*node) = dest->next;
         std_hash_node_destroy(dest,
-                hash_table->key_destroy_func, hash_table->value_destroy_func);
+            hash_table->key_destroy_func, hash_table->value_destroy_func);
         hash_table->nnodes--;
 
         G_HASH_TABLE_RESIZE(hash_table);
@@ -419,7 +430,8 @@ int std_hash_table_steal(struct std_hashtable *hash_table, const void *key)
         return 0;
 
     node = std_hash_table_lookup_node(hash_table, key);
-    if (*node) {
+    if (*node)
+    {
         dest = *node;
         (*node) = dest->next;
         std_hash_node_destroy(dest, NULL, NULL);
@@ -449,7 +461,7 @@ int std_hash_table_steal(struct std_hashtable *hash_table, const void *key)
  **/
 unsigned int
 std_hash_table_foreach_remove(struct std_hashtable *hash_table,
-        STDHRFunc func, void *user_data)
+    STDHRFunc func, void *user_data)
 {
     if (!hash_table)
         return 0;
@@ -458,7 +470,7 @@ std_hash_table_foreach_remove(struct std_hashtable *hash_table,
         return 0;
 
     return std_hash_table_foreach_remove_or_steal(hash_table, func, user_data,
-            1);
+        1);
 }
 
 /**
@@ -475,7 +487,7 @@ std_hash_table_foreach_remove(struct std_hashtable *hash_table,
  **/
 unsigned int
 std_hash_table_foreach_steal(struct std_hashtable *hash_table,
-        STDHRFunc func, void *user_data)
+    STDHRFunc func, void *user_data)
 {
     if (!hash_table)
         return 0;
@@ -483,39 +495,45 @@ std_hash_table_foreach_steal(struct std_hashtable *hash_table,
         return 0;
 
     return std_hash_table_foreach_remove_or_steal(hash_table, func, user_data,
-            0);
+        0);
 }
 
 static unsigned int
 std_hash_table_foreach_remove_or_steal(struct std_hashtable *hash_table,
-        STDHRFunc func, void *user_data, int notify)
+    STDHRFunc func, void *user_data, int notify)
 {
     struct ghashnode *node, *prev;
     unsigned int i;
     unsigned int deleted = 0;
 
-    for (i = 0; i < hash_table->size; i++) {
-      restart:
+    for (i = 0; i < hash_table->size; i++)
+    {
+    restart:
 
         prev = NULL;
 
-        for (node = hash_table->nodes[i]; node; prev = node, node = node->next) {
-            if ((*func) (node->key, node->value, user_data)) {
+        for (node = hash_table->nodes[i]; node; prev = node, node = node->next)
+        {
+            if ((*func)(node->key, node->value, user_data))
+            {
                 deleted += 1;
 
                 hash_table->nnodes -= 1;
 
-                if (prev) {
+                if (prev)
+                {
                     prev->next = node->next;
                     std_hash_node_destroy(node,
-                            notify ? hash_table->key_destroy_func : NULL,
-                            notify ? hash_table->value_destroy_func : NULL);
+                        notify ? hash_table->key_destroy_func : NULL,
+                        notify ? hash_table->value_destroy_func : NULL);
                     node = prev;
-                } else {
+                }
+                else
+                {
                     hash_table->nodes[i] = node->next;
                     std_hash_node_destroy(node,
-                            notify ? hash_table->key_destroy_func : NULL,
-                            notify ? hash_table->value_destroy_func : NULL);
+                        notify ? hash_table->key_destroy_func : NULL,
+                        notify ? hash_table->value_destroy_func : NULL);
                     goto restart;
                 }
             }
@@ -540,9 +558,8 @@ std_hash_table_foreach_remove_or_steal(struct std_hashtable *hash_table,
  * items). To remove all items matching a predicate, use
  * std_hash_table_remove().
  **/
-void
-std_hash_table_foreach(struct std_hashtable *hash_table,
-        STDHFunc func, void *user_data)
+void std_hash_table_foreach(struct std_hashtable *hash_table,
+    STDHFunc func, void *user_data)
 {
     struct ghashnode *node;
     int i;
@@ -555,7 +572,7 @@ std_hash_table_foreach(struct std_hashtable *hash_table,
 
     for (i = 0; i < hash_table->size; i++)
         for (node = hash_table->nodes[i]; node; node = node->next)
-            (*func) (node->key, node->value, user_data);
+            (*func)(node->key, node->value, user_data);
 }
 
 /**
@@ -576,7 +593,7 @@ std_hash_table_foreach(struct std_hashtable *hash_table,
  * Since: 2.4
  **/
 void *std_hash_table_find(struct std_hashtable *hash_table,
-        STDHRFunc predicate, void *user_data)
+    STDHRFunc predicate, void *user_data)
 {
     struct ghashnode *node;
     int i;
@@ -622,13 +639,14 @@ static void std_hash_table_resize(struct std_hashtable *hash_table)
     new_size = std_spaced_primes_closest(hash_table->nnodes);
     new_size = CLAMP(new_size, HASH_TABLE_MIN_SIZE, HASH_TABLE_MAX_SIZE);
 
-    new_nodes = (struct ghashnode **)malloc(sizeof (struct ghashnode *) * new_size);
+    new_nodes = (struct ghashnode **)malloc(sizeof(struct ghashnode *) * new_size);
 
     for (i = 0; i < hash_table->size; i++)
-        for (node = hash_table->nodes[i]; node; node = next) {
+        for (node = hash_table->nodes[i]; node; node = next)
+        {
             next = node->next;
 
-            hash_val = (*hash_table->hash_func) (node->key) % new_size;
+            hash_val = (*hash_table->hash_func)(node->key) % new_size;
 
             node->next = new_nodes[hash_val];
             new_nodes[hash_val] = node;
@@ -643,7 +661,7 @@ static struct ghashnode *std_hash_node_new(void *key, void *value)
 {
     struct ghashnode *hash_node;
 
-    hash_node = (struct ghashnode *)malloc(sizeof (struct ghashnode));
+    hash_node = (struct ghashnode *)malloc(sizeof(struct ghashnode));
 
     hash_node->key = key;
     hash_node->value = value;
@@ -654,7 +672,7 @@ static struct ghashnode *std_hash_node_new(void *key, void *value)
 
 static void
 std_hash_node_destroy(struct ghashnode *hash_node,
-        STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func)
+    STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func)
 {
     if (key_destroy_func)
         key_destroy_func(hash_node->key);
@@ -669,9 +687,10 @@ std_hash_node_destroy(struct ghashnode *hash_node,
 
 static int
 std_hash_nodes_destroy(struct ghashnode *hash_node,
-        STDFreeFunc key_destroy_func, STDFreeFunc value_destroy_func)
+    STDFreeFunc key_destroy_func, STDFreeFunc value_destroy_func)
 {
-    while (hash_node) {
+    while (hash_node)
+    {
         struct ghashnode *next = hash_node->next;
 
         if (key_destroy_func)
@@ -688,5 +707,5 @@ std_hash_nodes_destroy(struct ghashnode *hash_node,
 
 unsigned int std_direct_hash(const void *v)
 {
-    return (size_t) v;
+    return (size_t)v;
 }

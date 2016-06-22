@@ -3,7 +3,7 @@
 
 int printType(void *data, void *user_data)
 {
-    int i = *(int *) data;
+    int i = *(int *)data;
 
     printf("FUNCTION:%d\n", i);
     return 1;
@@ -11,7 +11,7 @@ int printType(void *data, void *user_data)
 
 int destroy(void *data)
 {
-    int *a = (int *) data;
+    int *a = (int *)data;
 
     free(a);
     a = NULL;
@@ -31,17 +31,20 @@ int main(int argc, char **argv)
 
     l = std_list_create(destroy);
 
-    if (!l) {
+    if (!l)
+    {
         printf("creation failed\n");
         return -1;
     }
 
     /* Add 1000 items */
-    for (i = 0; i < 1000; ++i) {
-        int *data = (int *)malloc(sizeof (int));
+    for (i = 0; i < 1000; ++i)
+    {
+        int *data = (int *)malloc(sizeof(int));
 
         *data = i;
-        if (std_list_append(l, data) == -1) {
+        if (std_list_append(l, data) == -1)
+        {
             printf("append failed\n");
             return -1;
         }
@@ -49,11 +52,13 @@ int main(int argc, char **argv)
 
     /* traverse them */
     for (iter = std_list_begin(l);
-            iter != std_list_end(l); iter = std_list_next(iter)) {
+         iter != std_list_end(l); iter = std_list_next(iter))
+    {
 
         int *data;
 
-        if (std_list_get_data(iter, (void *) &data) == -1) {
+        if (std_list_get_data(iter, (void *)&data) == -1)
+        {
             printf("get data failed\n");
             return -1;
         }
@@ -61,13 +66,15 @@ int main(int argc, char **argv)
         printf("ITEM(%d)\n", *data);
     }
 
-    if (std_list_foreach(l, printType, NULL) == -1) {
+    if (std_list_foreach(l, printType, NULL) == -1)
+    {
         printf("foreach failed\n");
         return -1;
     }
 
     /* destroy list */
-    if (std_list_destroy(l) == -1) {
+    if (std_list_destroy(l) == -1)
+    {
         printf("deletion failed\n");
         return -1;
     }
@@ -87,7 +94,8 @@ int sorted_test()
     /* Insert the data from the array into the 'sorted' list */
     printf("-- Sorted list test starting...\n");
     printf("    Inserting: ");
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < 10; i++)
+    {
         printf("%d ", data_array[i]);
         std_list_insert_sorted(l, &data_array[i], compare_ints);
     }
@@ -96,15 +104,18 @@ int sorted_test()
     /* Read it back and verify it's sorted */
     printf("    Reading:   ");
     for (iter = std_list_begin(l);
-            iter != std_list_end(l); iter = std_list_next(iter)) {
-        if (std_list_get_data(iter, &current)) {
+         iter != std_list_end(l); iter = std_list_next(iter))
+    {
+        if (std_list_get_data(iter, &current))
+        {
             printf("\nFailed to read data");
             return -1;
         }
         printf("%d ", *current);
 
         /* Compare to previous item if this is not the first */
-        if (iter != std_list_begin(l) && *current < *previous) {
+        if (iter != std_list_begin(l) && *current < *previous)
+        {
             sorted = 0;
         }
 
@@ -116,9 +127,12 @@ int sorted_test()
     std_list_destroy(l);
 
     /* Display result */
-    if (sorted) {
+    if (sorted)
+    {
         printf("    Status: List sorted successfully!\n");
-    } else {
+    }
+    else
+    {
         printf("    Status: List is not sorted.\n");
     }
     printf("-- Sorted list test end\n");
@@ -128,12 +142,15 @@ int sorted_test()
 
 int compare_ints(const void *a, const void *b)
 {
-    int int_a = *(int *) a;
-    int int_b = *(int *) b;
+    int int_a = *(int *)a;
+    int int_b = *(int *)b;
 
-    if (int_a < int_b) {
+    if (int_a < int_b)
+    {
         return -1;
-    } else if (int_a == int_b) {
+    }
+    else if (int_a == int_b)
+    {
         return 0;
     }
 

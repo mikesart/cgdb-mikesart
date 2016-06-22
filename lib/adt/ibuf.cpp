@@ -5,7 +5,8 @@
 #include <string.h>
 #endif /* HAVE_STRING_H */
 
-struct ibuf {
+struct ibuf
+{
     char *buf;
     unsigned long pos;
     unsigned long size;
@@ -13,10 +14,10 @@ struct ibuf {
 
 struct ibuf *ibuf_init(void)
 {
-    struct ibuf *s = (struct ibuf *) cgdb_malloc(sizeof (struct ibuf));
+    struct ibuf *s = (struct ibuf *)cgdb_malloc(sizeof(struct ibuf));
 
     s->size = 8192;
-    s->buf = (char *) cgdb_malloc(s->size);
+    s->buf = (char *)cgdb_malloc(s->size);
 
     s->pos = 0;
     s->buf[0] = 0;
@@ -25,7 +26,8 @@ struct ibuf *ibuf_init(void)
 
 void ibuf_free(struct ibuf *s)
 {
-    if (s) {
+    if (s)
+    {
         free(s->buf);
         free(s);
     }
@@ -33,7 +35,8 @@ void ibuf_free(struct ibuf *s)
 
 void ibuf_clear(struct ibuf *s)
 {
-    if (s) {
+    if (s)
+    {
         s->pos = 0;
         s->buf[0] = '\0';
     }
@@ -41,17 +44,19 @@ void ibuf_clear(struct ibuf *s)
 
 static void ibuf_ensuresize(struct ibuf *s, unsigned long size)
 {
-    if (size > s->size) {
+    if (size > s->size)
+    {
         while (s->size < size)
             s->size *= 2;
 
-        s->buf = (char *) cgdb_realloc(s->buf, s->size);
+        s->buf = (char *)cgdb_realloc(s->buf, s->size);
     }
 }
 
 void ibuf_addchar(struct ibuf *s, char c)
 {
-    if (s) {
+    if (s)
+    {
         ibuf_ensuresize(s, s->pos + 2);
 
         s->buf[s->pos++] = c;

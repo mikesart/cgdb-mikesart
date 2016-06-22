@@ -78,6 +78,6 @@ const char *pty_pair_get_slavename(pty_pair_ptr pty_pair);
  *      Return: -1 on error, pid of child on success
  */
 int invoke_debugger(const char *path,
-        int argc, char *argv[], int *in, int *out, int choice, char *filename);
+    int argc, char *argv[], int *in, int *out, int choice, char *filename);
 
 #endif

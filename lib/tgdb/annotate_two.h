@@ -10,10 +10,11 @@
 #endif /* HAVE_SYS_TYPES_H */
 
 #include "fs_util.h"
-#include "fork_util.h"          /* For pty_pair_ptr */
+#include "fork_util.h" /* For pty_pair_ptr */
 
 /** This is the main context for the annotate two subsytem. */
-struct annotate_two {
+struct annotate_two
+{
 
     /**  This is set when this context has initialized itself */
     int tgdb_initialized;

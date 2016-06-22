@@ -189,7 +189,7 @@ int kui_ms_destroy(struct kui_map_set *kui_ms);
  * 0 on success, or -1 on error
  */
 int kui_ms_register_map(struct kui_map_set *kui_ms,
-        const char *key, const char *value);
+    const char *key, const char *value);
 
 /**
  * Remove a map from the map set.
@@ -263,8 +263,8 @@ struct kuictx;
  * 0 if no more input, 
  * or -1 on error.
  */
-typedef int (*kui_getkey_callback) (const int fd,
-        const unsigned int ms, const void *obj, int *key);
+typedef int (*kui_getkey_callback)(const int fd,
+    const unsigned int ms, const void *obj, int *key);
 
 /**
  * Initializes the Key User Interface unit
@@ -288,7 +288,7 @@ typedef int (*kui_getkey_callback) (const int fd,
  * A new instance on success, or NULL on error. 
  */
 struct kuictx *kui_create(int stdinfd,
-        kui_getkey_callback callback, int ms, void *state_data);
+    kui_getkey_callback callback, int ms, void *state_data);
 
 /**
  * Destroys a kui context
@@ -445,7 +445,7 @@ struct kui_manager;
  * A new instance on success, or NULL on error. 
  */
 struct kui_manager *kui_manager_create(int stdinfd,
-        unsigned int keycode_timeout, unsigned int mapping_timeout);
+    unsigned int keycode_timeout, unsigned int mapping_timeout);
 
 /**
  * Destroys a kui context
@@ -506,7 +506,7 @@ int kui_manager_clear_map_sets(struct kui_manager *kuim);
  * 0 on success, or -1 on error.
  */
 int kui_manager_add_map_set(struct kui_manager *kuim,
-        struct kui_map_set *kui_ms);
+    struct kui_map_set *kui_ms);
 
 /**
  * Determine's if libkui has data ready to read. It has already been
@@ -570,7 +570,7 @@ int kui_manager_getkey_blocking(struct kui_manager *kuim);
  * 0 on success, or -1 on error.
  */
 int kui_manager_set_terminal_escape_sequence_timeout(struct kui_manager *kuim,
-        unsigned int msec);
+    unsigned int msec);
 
 /**
  * Set's the timeout that will be used when matching a mapping.
@@ -586,7 +586,7 @@ int kui_manager_set_terminal_escape_sequence_timeout(struct kui_manager *kuim,
  * 0 on success, or -1 on error.
  */
 int kui_manager_set_key_mapping_timeout(struct kui_manager *kuim,
-        unsigned int msec);
+    unsigned int msec);
 
 /**
  * Allow the user to make terminal key bindings.
@@ -616,7 +616,7 @@ int kui_manager_set_key_mapping_timeout(struct kui_manager *kuim,
  * 0 on success or -1 on error
  */
 int kui_manager_get_terminal_keys_kui_map(struct kui_manager *kuim,
-        enum cgdb_key key, std_list_ptr kui_map_set);
+    enum cgdb_key key, std_list_ptr kui_map_set);
 /*@}*/
 
 /* }}} */

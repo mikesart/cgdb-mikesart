@@ -61,8 +61,8 @@ typedef int completion_cb(int, int);
  * @return
  * NULL on error, a valid context on success.
  */
-struct rline *rline_initialize(int slavefd, command_cb * command,
-        completion_cb * completion, const char *TERM);
+struct rline *rline_initialize(int slavefd, command_cb *command,
+    completion_cb *completion, const char *TERM);
 
 /**
  * This will terminate a librline session. No functions should be called on
@@ -229,7 +229,7 @@ int rline_rl_forced_update_display(struct rline *rline);
  */
 int rline_rl_callback_read_char(struct rline *rline);
 
-typedef void (*display_callback) (char **, int, int);
+typedef void (*display_callback)(char **, int, int);
 
 /**
  * This function will complete the current line that readline has. It will 
@@ -250,7 +250,7 @@ typedef void (*display_callback) (char **, int, int);
  * 0 on success or -1 on error.
  */
 int rline_rl_complete(struct rline *rline, struct tgdb_list *list,
-        display_callback display_cb);
+    display_callback display_cb);
 
 /**
  * This will adjust the size of the PTY that readline is working on, then 
@@ -269,7 +269,7 @@ int rline_rl_complete(struct rline *rline, struct tgdb_list *list,
  * 0 on success or -1 on error.
  */
 int rline_resize_terminal_and_redisplay(struct rline *rline, int rows,
-        int cols);
+    int cols);
 
 /**
  * Get's the value of rl_completion_query_items.
@@ -308,7 +308,7 @@ int rline_get_rl_completion_query_items(struct rline *rline);
  * 0 on success or -1 on error
  */
 int rline_get_keyseq(struct rline *rline, const char *named_function,
-        std_list_ptr keyseq_list);
+    std_list_ptr keyseq_list);
 
 /*@}*/
 /* }}}*/

@@ -41,7 +41,8 @@
 #include "logger.h"
 #include "terminal.h"
 
-struct pty_pair {
+struct pty_pair
+{
     int masterfd;
     int slavefd;
     char slavename[SLAVE_SIZE];
@@ -51,7 +52,7 @@ pty_pair_ptr pty_pair_create(void)
 {
     int val;
     static char local_slavename[SLAVE_SIZE];
-    pty_pair_ptr ptr = (pty_pair_ptr) cgdb_malloc(sizeof (struct pty_pair));
+    pty_pair_ptr ptr = (pty_pair_ptr)cgdb_malloc(sizeof(struct pty_pair));
 
     if (!ptr)
         return NULL;
@@ -61,8 +62,9 @@ pty_pair_ptr pty_pair_create(void)
     ptr->slavename[0] = 0;
 
     val = pty_open(&(ptr->masterfd), &(ptr->slavefd), local_slavename,
-            SLAVE_SIZE, NULL, NULL);
-    if (val == -1) {
+        SLAVE_SIZE, NULL, NULL);
+    if (val == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "PTY open");
         return NULL;
     }
@@ -80,7 +82,8 @@ int pty_pair_destroy(pty_pair_ptr pty_pair)
     cgdb_close(pty_pair->masterfd);
     cgdb_close(pty_pair->slavefd);
 
-    if (pty_release(pty_pair->slavename) == -1) {
+    if (pty_release(pty_pair->slavename) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "pty_release error");
         return -1;
     }
@@ -119,7 +122,8 @@ int pty_free_process(int *masterfd, char *sname)
 
     cgdb_close(*masterfd);
 
-    if (pty_release(sname) == -1) {
+    if (pty_release(sname) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "pty_release error");
         return -1;
     }
@@ -160,12 +164,14 @@ static int pty_free_memory(char *s, int fd, int argc, char *argv[])
 {
     int error = 0, i;
 
-    if (s && pty_release(s) == -1) {
+    if (s && pty_release(s) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "pty_release failed");
         error = -1;
     }
 
-    if (fd != -1 && close(fd) == -1) {
+    if (fd != -1 && close(fd) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "close failed");
         error = -1;
     }
@@ -180,7 +186,7 @@ static int pty_free_memory(char *s, int fd, int argc, char *argv[])
 }
 
 int invoke_debugger(const char *path,
-        int argc, char *argv[], int *in, int *out, int choice, char *filename)
+    int argc, char *argv[], int *in, int *out, int choice, char *filename)
 {
     pid_t pid;
     const char *const GDB = "gdb";
@@ -197,7 +203,7 @@ int invoke_debugger(const char *path,
 
     /* Copy the argv into the local_argv, and NULL terminate it.
      * sneak in the path name, the user did not type that */
-    local_argv = (char **) cgdb_malloc((malloc_size) * sizeof (char *));
+    local_argv = (char **)cgdb_malloc((malloc_size) * sizeof(char *));
     if (path)
         local_argv[j++] = cgdb_strdup(path);
     else
@@ -224,20 +230,24 @@ int invoke_debugger(const char *path,
 
     local_argv[j] = NULL;
 
-    if (fs_util_file_exists_in_path(local_argv[0]) == -1) {
+    if (fs_util_file_exists_in_path(local_argv[0]) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                         "Debugger \"%s\" not found", local_argv[0]);
+            "Debugger \"%s\" not found", local_argv[0]);
         pty_free_memory(slavename, masterfd, argc, local_argv);
         return -1;
     }
     /* Fork into two processes with a shared pty pipe */
     pid = pty_fork(&masterfd, slavename, SLAVE_SIZE, NULL, NULL);
 
-    if (pid == -1) {            /* error, free memory and return  */
+    if (pid == -1)
+    { /* error, free memory and return  */
         pty_free_memory(slavename, masterfd, argc, local_argv);
         logger_write_pos(logger, __FILE__, __LINE__, "fork failed");
         return -1;
-    } else if (pid == 0) {      /* child */
+    }
+    else if (pid == 0)
+    { /* child */
         FILE *fd = fopen(slavename, "r");
 
         if (fd)

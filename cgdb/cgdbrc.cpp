@@ -36,9 +36,10 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
  *
  */
 
-enum ConfigType {
-    CONFIG_TYPE_BOOL,           /* set ic / set noic */
-    CONFIG_TYPE_INT,            /* set tabstop=8 */
+enum ConfigType
+{
+    CONFIG_TYPE_BOOL, /* set ic / set noic */
+    CONFIG_TYPE_INT,  /* set tabstop=8 */
     CONFIG_TYPE_STRING,
     CONFIG_TYPE_FUNC_VOID,
     CONFIG_TYPE_FUNC_BOOL,
@@ -64,36 +65,38 @@ static int cgdbrc_set_val(struct cgdbrc_config_option config_option);
  * It is initialized with the default values.
  */
 static struct cgdbrc_config_option cgdbrc_config_options[CGDBRC_WRAPSCAN + 1] = {
-    {CGDBRC_ANSIESCAPEPARSING, {1}},
-    {CGDBRC_ARROWSELECTEDLINE, {1}},
-    {CGDBRC_ARROWSTYLE, {ARROWSTYLE_LONG}},
-    {CGDBRC_AUTOSOURCERELOAD, {1}},
-    {CGDBRC_CGDB_MODE_KEY, {CGDB_KEY_ESC}},
-    {CGDBRC_COLOR, {1}},
-    {CGDBRC_IGNORECASE, {0}},
-    {CGDBRC_SHOWMARKS, {1}},
-    {CGDBRC_SHOWTGDBCOMMANDS, {0}},
-    {CGDBRC_SYNTAX, {TOKENIZER_LANGUAGE_UNKNOWN}},
-    {CGDBRC_TABSTOP, {8}},
-    {CGDBRC_TIMEOUT, {1}},
-    {CGDBRC_TIMEOUT_LEN, {1000}},
-    {CGDBRC_TTIMEOUT, {1}},
-    {CGDBRC_TTIMEOUT_LEN, {100}},
-    {CGDBRC_WINMINHEIGHT, {0}},
-    {CGDBRC_WINSPLIT, {WIN_SPLIT_EVEN}},
-    {CGDBRC_SPLITORIENTATION, {SPLIT_HORIZONTAL}},
-    {CGDBRC_WRAPSCAN, {1}}
+    { CGDBRC_ANSIESCAPEPARSING, { 1 } },
+    { CGDBRC_ARROWSELECTEDLINE, { 1 } },
+    { CGDBRC_ARROWSTYLE, { ARROWSTYLE_LONG } },
+    { CGDBRC_AUTOSOURCERELOAD, { 1 } },
+    { CGDBRC_CGDB_MODE_KEY, { CGDB_KEY_ESC } },
+    { CGDBRC_COLOR, { 1 } },
+    { CGDBRC_IGNORECASE, { 0 } },
+    { CGDBRC_SHOWMARKS, { 1 } },
+    { CGDBRC_SHOWTGDBCOMMANDS, { 0 } },
+    { CGDBRC_SYNTAX, { TOKENIZER_LANGUAGE_UNKNOWN } },
+    { CGDBRC_TABSTOP, { 8 } },
+    { CGDBRC_TIMEOUT, { 1 } },
+    { CGDBRC_TIMEOUT_LEN, { 1000 } },
+    { CGDBRC_TTIMEOUT, { 1 } },
+    { CGDBRC_TTIMEOUT_LEN, { 100 } },
+    { CGDBRC_WINMINHEIGHT, { 0 } },
+    { CGDBRC_WINSPLIT, { WIN_SPLIT_EVEN } },
+    { CGDBRC_SPLITORIENTATION, { SPLIT_HORIZONTAL } },
+    { CGDBRC_WRAPSCAN, { 1 } }
 };
 
 static struct std_list *cgdbrc_attach_list;
 static unsigned long cgdbrc_attach_handle = 1;
-struct cgdbrc_attach_item {
+struct cgdbrc_attach_item
+{
     enum cgdbrc_option_kind option;
     int handle;
     cgdbrc_notify notify_hook;
 };
 
-static struct ConfigVariable {
+static struct ConfigVariable
+{
     const char *name, *s_name;
     enum ConfigType type;
     void *data;
@@ -101,75 +104,74 @@ static struct ConfigVariable {
 
     /* keep this stuff sorted! !sort */
 
-            /* ansiescapeparsing */
+    /* ansiescapeparsing */
     {
-    "ansiescapeparsing", "ansi", CONFIG_TYPE_INT,
-                (void *)&cgdbrc_config_options[CGDBRC_ANSIESCAPEPARSING].variant.int_val},
-            /* arrowselectedlines */
+        "ansiescapeparsing", "ansi", CONFIG_TYPE_INT,
+        (void *)&cgdbrc_config_options[CGDBRC_ANSIESCAPEPARSING].variant.int_val },
+    /* arrowselectedlines */
     {
-    "arrowselectedline", "asl", CONFIG_TYPE_BOOL,
-                (void *)&cgdbrc_config_options[CGDBRC_ARROWSELECTEDLINE].variant.
-                int_val},
-            /* arrowstyle */
+        "arrowselectedline", "asl", CONFIG_TYPE_BOOL,
+        (void *)&cgdbrc_config_options[CGDBRC_ARROWSELECTEDLINE].variant.int_val },
+    /* arrowstyle */
     {
-    "arrowstyle", "as", CONFIG_TYPE_FUNC_STRING, (void *)command_set_arrowstyle},
-            /* autosourcereload */
+        "arrowstyle", "as", CONFIG_TYPE_FUNC_STRING, (void *)command_set_arrowstyle },
+    /* autosourcereload */
     {
-    "autosourcereload", "asr", CONFIG_TYPE_BOOL,
-                (void *)&cgdbrc_config_options[CGDBRC_AUTOSOURCERELOAD].variant.
-                int_val},
-            /* cgdbmodekey */
+        "autosourcereload", "asr", CONFIG_TYPE_BOOL,
+        (void *)&cgdbrc_config_options[CGDBRC_AUTOSOURCERELOAD].variant.int_val },
+    /* cgdbmodekey */
     {
-    "cgdbmodekey", "cgdbmodekey", CONFIG_TYPE_FUNC_STRING,
-                (void *)command_set_cgdb_mode_key},
-            /* color */
+        "cgdbmodekey", "cgdbmodekey", CONFIG_TYPE_FUNC_STRING,
+        (void *)command_set_cgdb_mode_key },
+    /* color */
     {
-    "color", "col", CONFIG_TYPE_INT,
-                (void *)&cgdbrc_config_options[CGDBRC_COLOR].variant.int_val},
-            /* ignorecase */
+        "color", "col", CONFIG_TYPE_INT,
+        (void *)&cgdbrc_config_options[CGDBRC_COLOR].variant.int_val },
+    /* ignorecase */
     {
-    "ignorecase", "ic", CONFIG_TYPE_BOOL,
-                (void *)&cgdbrc_config_options[CGDBRC_IGNORECASE].variant.int_val},
-            /* showmarks */
+        "ignorecase", "ic", CONFIG_TYPE_BOOL,
+        (void *)&cgdbrc_config_options[CGDBRC_IGNORECASE].variant.int_val },
+    /* showmarks */
     {
-    "showmarks", "marks", CONFIG_TYPE_INT,
-                (void *)&cgdbrc_config_options[CGDBRC_SHOWMARKS].variant.int_val},
-            /* showtgdbcommands */
+        "showmarks", "marks", CONFIG_TYPE_INT,
+        (void *)&cgdbrc_config_options[CGDBRC_SHOWMARKS].variant.int_val },
+    /* showtgdbcommands */
     {
-    "showtgdbcommands", "stc", CONFIG_TYPE_FUNC_BOOL, (void *)&command_set_stc},
-            /* syntax */
+        "showtgdbcommands", "stc", CONFIG_TYPE_FUNC_BOOL, (void *)&command_set_stc },
+    /* syntax */
     {
-    "syntax", "syn", CONFIG_TYPE_FUNC_STRING, (void *)command_set_syntax_type},
-            /* tabstop   */
+        "syntax", "syn", CONFIG_TYPE_FUNC_STRING, (void *)command_set_syntax_type },
+    /* tabstop   */
     {
-    "tabstop", "ts", CONFIG_TYPE_INT,
-                (void *)&cgdbrc_config_options[CGDBRC_TABSTOP].variant.int_val},
-            /* timeout   */
+        "tabstop", "ts", CONFIG_TYPE_INT,
+        (void *)&cgdbrc_config_options[CGDBRC_TABSTOP].variant.int_val },
+    /* timeout   */
     {
-    "timeout", "to", CONFIG_TYPE_FUNC_BOOL, (void *)&command_set_timeout},
-            /* timeoutlen   */
+        "timeout", "to", CONFIG_TYPE_FUNC_BOOL, (void *)&command_set_timeout },
+    /* timeoutlen   */
     {
-    "timeoutlen", "tm", CONFIG_TYPE_FUNC_INT, (void *)&command_set_timeoutlen},
-            /* ttimeout   */
+        "timeoutlen", "tm", CONFIG_TYPE_FUNC_INT, (void *)&command_set_timeoutlen },
+    /* ttimeout   */
     {
-    "ttimeout", "ttimeout", CONFIG_TYPE_FUNC_BOOL, (void *)&command_set_ttimeout},
-            /* ttimeoutlen   */
+        "ttimeout", "ttimeout", CONFIG_TYPE_FUNC_BOOL, (void *)&command_set_ttimeout },
+    /* ttimeoutlen   */
     {
-    "ttimeoutlen", "ttm", CONFIG_TYPE_FUNC_INT, (void *)&command_set_ttimeoutlen},
-            /* winminheight */
+        "ttimeoutlen", "ttm", CONFIG_TYPE_FUNC_INT, (void *)&command_set_ttimeoutlen },
+    /* winminheight */
     {
-    "winminheight", "wmh", CONFIG_TYPE_FUNC_INT, (void *)&command_set_winminheight},
-            /* winsplit */
+        "winminheight", "wmh", CONFIG_TYPE_FUNC_INT, (void *)&command_set_winminheight },
+    /* winsplit */
     {
-    "winsplit", "winsplit", CONFIG_TYPE_FUNC_STRING, (void *)command_set_winsplit},
-            /* splitorientation */
+        "winsplit", "winsplit", CONFIG_TYPE_FUNC_STRING, (void *)command_set_winsplit },
+    /* splitorientation */
     {
-    "splitorientation", "so", CONFIG_TYPE_FUNC_STRING,
-                (void *)command_set_splitorientation},
-            /* wrapscan */
+        "splitorientation", "so", CONFIG_TYPE_FUNC_STRING,
+        (void *)command_set_splitorientation },
+    /* wrapscan */
     {
-    "wrapscan", "ws", CONFIG_TYPE_BOOL,
-                (void *)&cgdbrc_config_options[CGDBRC_WRAPSCAN].variant.int_val},};
+        "wrapscan", "ws", CONFIG_TYPE_BOOL,
+        (void *)&cgdbrc_config_options[CGDBRC_WRAPSCAN].variant.int_val },
+};
 
 static int command_do_tgdbcommand(enum tgdb_command_type param);
 
@@ -192,8 +194,9 @@ static int command_parse_unmap(int param);
 
 static int command_do_disassemble(int param);
 
-typedef int (*action_t) (int param);
-typedef struct COMMANDS {
+typedef int (*action_t)(int param);
+typedef struct COMMANDS
+{
     const char *name;
     /* these functions will return 0 on success and 1 on error. */
     /* Should the configuration file processing continue after an error? */
@@ -202,70 +205,70 @@ typedef struct COMMANDS {
 } COMMANDS;
 
 COMMANDS commands[] = {
-    /* bang         */ {"bang", (action_t)command_do_bang, 0},
-    /* edit         */ {"edit", (action_t)command_source_reload, 0},
-    /* edit         */ {"e", (action_t)command_source_reload, 0},
-    /* focus        */ {"focus", (action_t)command_do_focus, 0},
-    /* help         */ {"help", (action_t)command_do_help, 0},
-    /* logo         */ {"logo", (action_t)command_do_logo, 0},
-    /* highlight    */ {"highlight", (action_t)command_parse_highlight, 0},
-    /* highlight    */ {"hi", (action_t)command_parse_highlight, 0},
-    /* imap         */ {"imap", (action_t)command_parse_map, 0},
-    /* imap         */ {"im", (action_t)command_parse_map, 0},
-    /* iunmap       */ {"iunmap", (action_t)command_parse_unmap, 0},
-    /* iunmap       */ {"iu", (action_t)command_parse_unmap, 0},
-    /* insert       */ {"insert", (action_t)command_focus_gdb, 0},
-    /* map          */ {"map", (action_t)command_parse_map, 0},
-    /* quit         */ {"quit", (action_t)command_do_quit, 0},
-    /* quit         */ {"q", (action_t)command_do_quit, 0},
-    /* shell        */ {"shell", (action_t)command_do_shell, 0},
-    /* shell        */ {"sh", (action_t)command_do_shell, 0},
-    /* syntax       */ {"syntax", (action_t)command_parse_syntax, 0},
-    /* unmap        */ {"unmap", (action_t)command_parse_unmap, 0},
-    /* unmap        */ {"unm", (action_t)command_parse_unmap, 0},
-    /* disassemble  */ {"disassemble", (action_t)command_do_disassemble, 0},
-    /* disassemble  */ {"dis", (action_t)command_do_disassemble, 0},
-    /* continue     */ {"continue", (action_t)command_do_tgdbcommand, TGDB_CONTINUE},
-    /* continue     */ {"c", (action_t)command_do_tgdbcommand, TGDB_CONTINUE},
-    /* down         */ {"down", (action_t)command_do_tgdbcommand, TGDB_DOWN},
-    /* finish       */ {"finish", (action_t)command_do_tgdbcommand, TGDB_FINISH},
-    /* finish       */ {"f", (action_t)command_do_tgdbcommand, TGDB_FINISH},
-    /* next         */ {"next", (action_t)command_do_tgdbcommand, TGDB_NEXT},
-    /* next         */ {"n", (action_t)command_do_tgdbcommand, TGDB_NEXT},
-    /* run          */ {"run", (action_t)command_do_tgdbcommand, TGDB_RUN},
-    /* run          */ {"r", (action_t)command_do_tgdbcommand, TGDB_RUN},
-    /* kill         */ {"kill", (action_t)command_do_tgdbcommand, TGDB_KILL},
-    /* kill         */ {"k", (action_t)command_do_tgdbcommand, TGDB_KILL},
-    /* step         */ {"step", (action_t)command_do_tgdbcommand, TGDB_STEP},
-    /* step         */ {"s", (action_t)command_do_tgdbcommand, TGDB_STEP},
-    /* start        */ {"start", (action_t)command_do_tgdbcommand, TGDB_START},
-    /* until        */ {"until", (action_t)command_do_tgdbcommand, TGDB_UNTIL},
-    /* until        */ {"u", (action_t)command_do_tgdbcommand, TGDB_UNTIL},
-    /* up           */ {"up", (action_t)command_do_tgdbcommand, TGDB_UP},
+    /* bang         */ { "bang", (action_t)command_do_bang, 0 },
+    /* edit         */ { "edit", (action_t)command_source_reload, 0 },
+    /* edit         */ { "e", (action_t)command_source_reload, 0 },
+    /* focus        */ { "focus", (action_t)command_do_focus, 0 },
+    /* help         */ { "help", (action_t)command_do_help, 0 },
+    /* logo         */ { "logo", (action_t)command_do_logo, 0 },
+    /* highlight    */ { "highlight", (action_t)command_parse_highlight, 0 },
+    /* highlight    */ { "hi", (action_t)command_parse_highlight, 0 },
+    /* imap         */ { "imap", (action_t)command_parse_map, 0 },
+    /* imap         */ { "im", (action_t)command_parse_map, 0 },
+    /* iunmap       */ { "iunmap", (action_t)command_parse_unmap, 0 },
+    /* iunmap       */ { "iu", (action_t)command_parse_unmap, 0 },
+    /* insert       */ { "insert", (action_t)command_focus_gdb, 0 },
+    /* map          */ { "map", (action_t)command_parse_map, 0 },
+    /* quit         */ { "quit", (action_t)command_do_quit, 0 },
+    /* quit         */ { "q", (action_t)command_do_quit, 0 },
+    /* shell        */ { "shell", (action_t)command_do_shell, 0 },
+    /* shell        */ { "sh", (action_t)command_do_shell, 0 },
+    /* syntax       */ { "syntax", (action_t)command_parse_syntax, 0 },
+    /* unmap        */ { "unmap", (action_t)command_parse_unmap, 0 },
+    /* unmap        */ { "unm", (action_t)command_parse_unmap, 0 },
+    /* disassemble  */ { "disassemble", (action_t)command_do_disassemble, 0 },
+    /* disassemble  */ { "dis", (action_t)command_do_disassemble, 0 },
+    /* continue     */ { "continue", (action_t)command_do_tgdbcommand, TGDB_CONTINUE },
+    /* continue     */ { "c", (action_t)command_do_tgdbcommand, TGDB_CONTINUE },
+    /* down         */ { "down", (action_t)command_do_tgdbcommand, TGDB_DOWN },
+    /* finish       */ { "finish", (action_t)command_do_tgdbcommand, TGDB_FINISH },
+    /* finish       */ { "f", (action_t)command_do_tgdbcommand, TGDB_FINISH },
+    /* next         */ { "next", (action_t)command_do_tgdbcommand, TGDB_NEXT },
+    /* next         */ { "n", (action_t)command_do_tgdbcommand, TGDB_NEXT },
+    /* run          */ { "run", (action_t)command_do_tgdbcommand, TGDB_RUN },
+    /* run          */ { "r", (action_t)command_do_tgdbcommand, TGDB_RUN },
+    /* kill         */ { "kill", (action_t)command_do_tgdbcommand, TGDB_KILL },
+    /* kill         */ { "k", (action_t)command_do_tgdbcommand, TGDB_KILL },
+    /* step         */ { "step", (action_t)command_do_tgdbcommand, TGDB_STEP },
+    /* step         */ { "s", (action_t)command_do_tgdbcommand, TGDB_STEP },
+    /* start        */ { "start", (action_t)command_do_tgdbcommand, TGDB_START },
+    /* until        */ { "until", (action_t)command_do_tgdbcommand, TGDB_UNTIL },
+    /* until        */ { "u", (action_t)command_do_tgdbcommand, TGDB_UNTIL },
+    /* up           */ { "up", (action_t)command_do_tgdbcommand, TGDB_UP },
 };
 
 int command_sort_find(const void *_left_cmd, const void *_right_cmd)
 {
-    COMMANDS *right_cmd = (COMMANDS *) _right_cmd;
-    COMMANDS *left_cmd = (COMMANDS *) _left_cmd;
+    COMMANDS *right_cmd = (COMMANDS *)_right_cmd;
+    COMMANDS *left_cmd = (COMMANDS *)_left_cmd;
 
     return strcmp(left_cmd->name, right_cmd->name);
 }
 
-#define COMMANDS_SIZE		(sizeof(COMMANDS))
-#define COMMANDS_COUNT		(sizeof(commands) / sizeof(COMMANDS))
+#define COMMANDS_SIZE (sizeof(COMMANDS))
+#define COMMANDS_COUNT (sizeof(commands) / sizeof(COMMANDS))
 
 void cgdbrc_init(void)
 {
-    qsort((void *) commands, COMMANDS_COUNT, COMMANDS_SIZE, command_sort_find);
+    qsort((void *)commands, COMMANDS_COUNT, COMMANDS_SIZE, command_sort_find);
 }
 
 COMMANDS *get_command(const char *cmd)
 {
     COMMANDS command = { cmd, NULL, 0 };
 
-    return (COMMANDS *)bsearch((void *) &command, (void *) commands,
-            COMMANDS_COUNT, COMMANDS_SIZE, command_sort_find);
+    return (COMMANDS *)bsearch((void *)&command, (void *)commands,
+        COMMANDS_COUNT, COMMANDS_SIZE, command_sort_find);
 }
 
 struct ConfigVariable *get_variable(const char *variable)
@@ -273,9 +276,11 @@ struct ConfigVariable *get_variable(const char *variable)
     /* FIXME: replace with binary search */
     int i;
 
-    for (i = 0; i < (sizeof (VARIABLES) / sizeof (VARIABLES[0])); ++i) {
+    for (i = 0; i < (sizeof(VARIABLES) / sizeof(VARIABLES[0])); ++i)
+    {
         if (strcmp(variable, VARIABLES[i].name) == 0 ||
-                strcmp(variable, VARIABLES[i].s_name) == 0) {
+            strcmp(variable, VARIABLES[i].s_name) == 0)
+        {
             return &VARIABLES[i];
         }
     }
@@ -307,11 +312,15 @@ int command_set_cgdb_mode_key(const char *value)
 
     option.option_kind = CGDBRC_CGDB_MODE_KEY;
 
-    if (value) {
+    if (value)
+    {
         /* If the user typed in a single key, use it. */
-        if (strlen(value) == 1) {
+        if (strlen(value) == 1)
+        {
             option.variant.int_val = value[0];
-        } else {
+        }
+        else
+        {
             /* The user may have typed in a keycode. (e.g. <Esc>)
              * attempt to translate it. */
             int key = kui_term_get_cgdb_key_from_keycode(value);
@@ -320,7 +329,9 @@ int command_set_cgdb_mode_key(const char *value)
                 return -1;
             option.variant.int_val = key;
         }
-    } else {
+    }
+    else
+    {
         return -1;
     }
 
@@ -329,7 +340,8 @@ int command_set_cgdb_mode_key(const char *value)
 
 static int command_set_stc(int value)
 {
-    if ((value == 0) || (value == 1)) {
+    if ((value == 0) || (value == 1))
+    {
         struct cgdbrc_config_option option;
 
         option.option_kind = CGDBRC_SHOWTGDBCOMMANDS;
@@ -340,7 +352,8 @@ static int command_set_stc(int value)
 
         /* TODO: Make this not a member function. */
         tgdb_set_verbose_gui_command_output(tgdb, value);
-    } else
+    }
+    else
         return 1;
 
     return 0;
@@ -420,7 +433,8 @@ static int command_set_timeout(int value)
 
 static int command_set_timeoutlen(int value)
 {
-    if (value >= 0 && value <= 10000) {
+    if (value >= 0 && value <= 10000)
+    {
         struct cgdbrc_config_option option;
 
         option.option_kind = CGDBRC_TIMEOUT_LEN;
@@ -448,7 +462,8 @@ static int command_set_ttimeout(int value)
 
 static int command_set_ttimeoutlen(int value)
 {
-    if (value >= 0 && value <= 10000) {
+    if (value >= 0 && value <= 10000)
+    {
         struct cgdbrc_config_option option;
 
         option.option_kind = CGDBRC_TTIMEOUT_LEN;
@@ -596,22 +611,25 @@ int command_parse_syntax(int param)
 
     int rv = 1;
 
-    switch ((rv = yylex())) {
-        case EOL:{
-            /* TODO: Print out syntax info (like vim?) */
-        }
-            break;
-        case BOOLEAN:
-        case IDENTIFIER:{
-            const char *value = get_token();
+    switch ((rv = yylex()))
+    {
+    case EOL:
+    {
+        /* TODO: Print out syntax info (like vim?) */
+    }
+    break;
+    case BOOLEAN:
+    case IDENTIFIER:
+    {
+        const char *value = get_token();
 
-            command_set_syntax_type(value);
+        command_set_syntax_type(value);
 
-            if_draw();
-        }
-            break;
-        default:
-            break;
+        if_draw();
+    }
+    break;
+    default:
+        break;
     }
 
     return 0;
@@ -639,21 +657,24 @@ static int command_parse_map(int param)
         kui_map_choice = kui_imap;
 
     key = yylex();
-    if (key != IDENTIFIER) {
+    if (key != IDENTIFIER)
+    {
         enter_map_id = 0;
         return -1;
     }
     key_token = cgdb_strdup(get_token());
 
     value = yylex();
-    if (value != IDENTIFIER) {
+    if (value != IDENTIFIER)
+    {
         free(key_token);
         enter_map_id = 0;
         return -1;
     }
 
     val = kui_ms_register_map(kui_map_choice, key_token, get_token());
-    if (val == -1) {
+    if (val == -1)
+    {
         free(key_token);
         enter_map_id = 0;
         return -1;
@@ -674,20 +695,22 @@ static int command_parse_unmap(int param)
     enter_map_id = 1;
 
     if ((strcmp(get_token(), "unmap") == 0) ||
-            (strcmp(get_token(), "unm") == 0))
+        (strcmp(get_token(), "unm") == 0))
         kui_map_choice = kui_map;
     else
         kui_map_choice = kui_imap;
 
     key = yylex();
-    if (key != IDENTIFIER) {
+    if (key != IDENTIFIER)
+    {
         enter_map_id = 0;
         return -1;
     }
     key_token = cgdb_strdup(get_token());
 
     val = kui_ms_deregister_map(kui_map_choice, key_token);
-    if (val == -1) {
+    if (val == -1)
+    {
         free(key_token);
         enter_map_id = 0;
         return -1;
@@ -705,12 +728,15 @@ int command_do_disassemble(int param)
 
     ret = source_set_exec_addr(sview, NULL, 0);
 
-    if (!ret) {
+    if (!ret)
+    {
         if_draw();
-    } else if (sview->addr_frame) {
+    }
+    else if (sview->addr_frame)
+    {
         /* No disasm found - request it */
         tgdb_request_disassemble_func(tgdb,
-                DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL, NULL);
+            DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL, NULL);
     }
 
     return 0;
@@ -729,135 +755,175 @@ int command_parse_set(void)
     int boolean = 1;
     const char *value = NULL;
 
-    switch ((rv = yylex())) {
-        case EOL:{
-            /* TODO: Print out all the variables that have been set. */
+    switch ((rv = yylex()))
+    {
+    case EOL:
+    {
+        /* TODO: Print out all the variables that have been set. */
+    }
+    break;
+    case IDENTIFIER:
+    {
+        const char *token = get_token();
+        int length = strlen(token);
+        struct ConfigVariable *variable = NULL;
+
+        if (length > 2 && token[0] == 'n' && token[1] == 'o')
+        {
+            value = token + 2;
+            boolean = 0;
         }
-            break;
-        case IDENTIFIER:{
-            const char *token = get_token();
-            int length = strlen(token);
-            struct ConfigVariable *variable = NULL;
+        else
+        {
+            value = token;
+        }
 
-            if (length > 2 && token[0] == 'n' && token[1] == 'o') {
-                value = token + 2;
-                boolean = 0;
-            } else {
-                value = token;
-            }
-
-            if ((variable = get_variable(value)) != NULL) {
-                rv = 0;
-                if (boolean == 0 && variable->type != CONFIG_TYPE_BOOL) {
-                    /* this is an error, you cant' do:
+        if ((variable = get_variable(value)) != NULL)
+        {
+            rv = 0;
+            if (boolean == 0 && variable->type != CONFIG_TYPE_BOOL)
+            {
+                /* this is an error, you cant' do:
                      * set notabstop 
                      */
+                rv = 1;
+            }
+
+            switch (variable->type)
+            {
+            case CONFIG_TYPE_BOOL:
+                *(int *)(variable->data) = boolean;
+                break;
+            case CONFIG_TYPE_INT:
+            {
+                if (yylex() == '=' && yylex() == NUMBER)
+                {
+                    int data = strtol(get_token(), NULL, 10);
+
+                    *(int *)(variable->data) = data;
+                }
+                else
+                {
                     rv = 1;
                 }
+            }
+            break;
+            case CONFIG_TYPE_STRING:
+            {
+                if (yylex() == '=' &&
+                    (rv = yylex(), rv == STRING || rv == IDENTIFIER))
+                {
+                    /* BAM! comma operator */
+                    char *data = (char *)get_token();
 
-                switch (variable->type) {
-                    case CONFIG_TYPE_BOOL:
-                        *(int *) (variable->data) = boolean;
-                        break;
-                    case CONFIG_TYPE_INT:{
-                        if (yylex() == '=' && yylex() == NUMBER) {
-                            int data = strtol(get_token(), NULL, 10);
-
-                            *(int *) (variable->data) = data;
-                        } else {
-                            rv = 1;
-                        }
+                    if (rv == STRING)
+                    {
+                        /* get rid of quotes */
+                        data = data + 1;
+                        data[strlen(data) - 1] = '\0';
                     }
-                        break;
-                    case CONFIG_TYPE_STRING:{
-                        if (yylex() == '=' &&
-                                (rv = yylex(), rv == STRING
-                                        || rv == IDENTIFIER)) {
-                            /* BAM! comma operator */
-                            char *data = (char *) get_token();
-
-                            if (rv == STRING) {
-                                /* get rid of quotes */
-                                data = data + 1;
-                                data[strlen(data) - 1] = '\0';
-                            }
-                            if (variable->data) {
-                                free(variable->data);
-                            }
-                            variable->data = strdup(data);
-                        } else {
-                            rv = 1;
-                        }
+                    if (variable->data)
+                    {
+                        free(variable->data);
                     }
-                        break;
-                    case CONFIG_TYPE_FUNC_VOID:{
-                        int (*functor) (void) = (int (*)(void)) variable->data;
-
-                        if (functor) {
-                            rv = functor();
-                        } else {
-                            rv = 1;
-                        }
-                    }
-                        break;
-                    case CONFIG_TYPE_FUNC_BOOL:{
-                        int (*functor) (int) = (int (*)(int)) variable->data;
-
-                        if (functor) {
-                            rv = functor(boolean);
-                        } else {
-                            rv = 1;
-                        }
-                    }
-                        break;
-                    case CONFIG_TYPE_FUNC_INT:{
-                        int (*functor) (int) = (int (*)(int)) variable->data;
-
-                        if (yylex() == '=' && yylex() == NUMBER) {
-                            int data = strtol(get_token(), NULL, 10);
-
-                            if (functor) {
-                                rv = functor(data);
-                            } else {
-                                rv = 1;
-                            }
-                        } else {
-                            rv = 1;
-                        }
-                    }
-                        break;
-                    case CONFIG_TYPE_FUNC_STRING:{
-                        int (*functor) (const char *) =
-                                (int (*)(const char *)) variable->data;
-                        if (yylex() == '=' && (rv = yylex(), rv == STRING
-                                        || rv == IDENTIFIER)) {
-                            /* BAM! comma operator */
-                            char *data = (char *) get_token();
-
-                            if (rv == STRING) {
-                                /* get rid of quotes */
-                                data = data + 1;
-                                data[strlen(data) - 1] = '\0';
-                            }
-                            if (functor) {
-                                rv = functor(data);
-                            } else {
-                                rv = 1;
-                            }
-                        } else {
-                            rv = 1;
-                        }
-                    }
-                        break;
-                    default:
-                        rv = 1;
-                        break;
+                    variable->data = strdup(data);
+                }
+                else
+                {
+                    rv = 1;
                 }
             }
+            break;
+            case CONFIG_TYPE_FUNC_VOID:
+            {
+                int (*functor)(void) = (int (*)(void))variable->data;
+
+                if (functor)
+                {
+                    rv = functor();
+                }
+                else
+                {
+                    rv = 1;
+                }
+            }
+            break;
+            case CONFIG_TYPE_FUNC_BOOL:
+            {
+                int (*functor)(int) = (int (*)(int))variable->data;
+
+                if (functor)
+                {
+                    rv = functor(boolean);
+                }
+                else
+                {
+                    rv = 1;
+                }
+            }
+            break;
+            case CONFIG_TYPE_FUNC_INT:
+            {
+                int (*functor)(int) = (int (*)(int))variable->data;
+
+                if (yylex() == '=' && yylex() == NUMBER)
+                {
+                    int data = strtol(get_token(), NULL, 10);
+
+                    if (functor)
+                    {
+                        rv = functor(data);
+                    }
+                    else
+                    {
+                        rv = 1;
+                    }
+                }
+                else
+                {
+                    rv = 1;
+                }
+            }
+            break;
+            case CONFIG_TYPE_FUNC_STRING:
+            {
+                int (*functor)(const char *) =
+                    (int (*)(const char *))variable->data;
+                if (yylex() == '=' && (rv = yylex(), rv == STRING || rv == IDENTIFIER))
+                {
+                    /* BAM! comma operator */
+                    char *data = (char *)get_token();
+
+                    if (rv == STRING)
+                    {
+                        /* get rid of quotes */
+                        data = data + 1;
+                        data[strlen(data) - 1] = '\0';
+                    }
+                    if (functor)
+                    {
+                        rv = functor(data);
+                    }
+                    else
+                    {
+                        rv = 1;
+                    }
+                }
+                else
+                {
+                    rv = 1;
+                }
+            }
+            break;
+            default:
+                rv = 1;
+                break;
+            }
         }
-            break;
-        default:
-            break;
+    }
+    break;
+    default:
+        break;
     }
 
     return rv;
@@ -868,58 +934,69 @@ int command_parse_string(const char *buffer)
     extern YY_BUFFER_STATE yy_scan_string(const char *yy_str);
     extern void yy_delete_buffer(YY_BUFFER_STATE state);
     int rv = 1;
-    YY_BUFFER_STATE state = yy_scan_string((char *) buffer);
+    YY_BUFFER_STATE state = yy_scan_string((char *)buffer);
 
-    switch (yylex()) {
-        case SET:
-            /* get the next token */
-            rv = command_parse_set();
-            break;
+    switch (yylex())
+    {
+    case SET:
+        /* get the next token */
+        rv = command_parse_set();
+        break;
 
-        case UNSET:
-        case BIND:
-        case MACRO:
-            /* ignore this stuff for now. */
-            rv = 1;
-            break;
+    case UNSET:
+    case BIND:
+    case MACRO:
+        /* ignore this stuff for now. */
+        rv = 1;
+        break;
 
-        case NUMBER:{
-            const char *number = get_token();
+    case NUMBER:
+    {
+        const char *number = get_token();
 
-            if (number[0] == '+') {
-                source_vscroll(if_get_sview(), atoi(number + 1));
-                rv = 0;
-            } else if (number[0] == '-') {
-                source_vscroll(if_get_sview(), -atoi(number + 1));
-                rv = 0;
-            } else {
-                source_set_sel_line(if_get_sview(), atoi(number));
-                rv = 0;
-            }
-            if_draw();
-        }
-            break;
-
-        case IDENTIFIER:{
-            COMMANDS *command = get_command(get_token());
-
-            if (command) {
-                command->action(command->param);
-                rv = 0;
-            } else {
-                rv = 1;
-            }
-        }
-            break;
-
-        case EOL:
-            /* basically just an empty line, don't do nothin. */
+        if (number[0] == '+')
+        {
+            source_vscroll(if_get_sview(), atoi(number + 1));
             rv = 0;
-            break;
+        }
+        else if (number[0] == '-')
+        {
+            source_vscroll(if_get_sview(), -atoi(number + 1));
+            rv = 0;
+        }
+        else
+        {
+            source_set_sel_line(if_get_sview(), atoi(number));
+            rv = 0;
+        }
+        if_draw();
+    }
+    break;
 
-        default:
+    case IDENTIFIER:
+    {
+        COMMANDS *command = get_command(get_token());
+
+        if (command)
+        {
+            command->action(command->param);
+            rv = 0;
+        }
+        else
+        {
             rv = 1;
-            break;
+        }
+    }
+    break;
+
+    case EOL:
+        /* basically just an empty line, don't do nothin. */
+        rv = 0;
+        break;
+
+    default:
+        rv = 1;
+        break;
     }
 
     yy_delete_buffer(state);
@@ -931,22 +1008,26 @@ int command_parse_file(const char *config_file)
     FILE *fp;
 
     fp = fopen(config_file, "r");
-    if (fp) {
+    if (fp)
+    {
         char buffer[4096];
         char *p = buffer;
         int linenumber = 0;
 
-        while (linenumber++, fgets(p, sizeof (buffer) - (p - buffer), fp)) {
+        while (linenumber++, fgets(p, sizeof(buffer) - (p - buffer), fp))
+        {
             int bufferlen = strlen(buffer);
 
-            if ((bufferlen - 2 >= 0) && buffer[bufferlen - 2] == '\\') {
+            if ((bufferlen - 2 >= 0) && buffer[bufferlen - 2] == '\\')
+            {
                 /* line continuation character, read another line into the buffer */
                 linenumber--;
                 p = buffer + bufferlen - 2;
                 continue;
             }
 
-            if (command_parse_string(buffer)) {
+            if (command_parse_string(buffer))
+            {
                 /* buffer already has an \n */
                 if_print_message("Error parsing line %d: %s", linenumber, buffer);
                 /* return -1; don't return, lets keep parsing the file. */
@@ -982,13 +1063,15 @@ static int cgdbrc_set_val(struct cgdbrc_config_option config_option)
 
     /* Alert anyone that wants to be notified that an option has changed. */
     for (iter = std_list_begin(cgdbrc_attach_list);
-            iter != std_list_end(cgdbrc_attach_list);
-            iter = std_list_next(iter)) {
+         iter != std_list_end(cgdbrc_attach_list);
+         iter = std_list_next(iter))
+    {
         if (std_list_get_data(iter, &data) == -1)
             return 1;
 
-        item = (struct cgdbrc_attach_item *) data;
-        if (item->option == config_option.option_kind) {
+        item = (struct cgdbrc_attach_item *)data;
+        if (item->option == config_option.option_kind)
+        {
             if (item->notify_hook(&config_option))
                 return 1;
         }
@@ -1005,11 +1088,10 @@ static int destroy_notify(void *data)
     return 0;
 }
 
-int
-cgdbrc_attach(enum cgdbrc_option_kind option, cgdbrc_notify notify, int *handle)
+int cgdbrc_attach(enum cgdbrc_option_kind option, cgdbrc_notify notify, int *handle)
 {
     struct cgdbrc_attach_item *item = (struct cgdbrc_attach_item *)
-            cgdb_malloc(sizeof (struct cgdbrc_attach_item));
+        cgdb_malloc(sizeof(struct cgdbrc_attach_item));
 
     item->option = option;
     item->handle = cgdbrc_attach_handle++;
@@ -1033,13 +1115,15 @@ int cgdbrc_detach(int handle)
     struct cgdbrc_attach_item *item;
 
     for (iter = std_list_begin(cgdbrc_attach_list);
-            iter != std_list_end(cgdbrc_attach_list);
-            iter = std_list_next(iter)) {
+         iter != std_list_end(cgdbrc_attach_list);
+         iter = std_list_next(iter))
+    {
         if (std_list_get_data(iter, &data) == -1)
             return -1;
 
-        item = (struct cgdbrc_attach_item *) data;
-        if (item->handle == handle) {
+        item = (struct cgdbrc_attach_item *)data;
+        if (item->handle == handle)
+        {
             std_list_remove(cgdbrc_attach_list, iter);
             break;
         }

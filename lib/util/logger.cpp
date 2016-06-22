@@ -11,8 +11,8 @@
 #endif /* HAVE_STDIO_H */
 
 #if HAVE_STDARG_H
-#include <stdarg.h>             /* ANSI C header file */
-#endif /* HAVE_STDARG_H */
+#include <stdarg.h> /* ANSI C header file */
+#endif              /* HAVE_STDARG_H */
 
 #if HAVE_STDLIB_H
 #include <stdlib.h>
@@ -28,7 +28,8 @@
 
 struct logger *logger = NULL;
 
-struct logger {
+struct logger
+{
     /** The name of the file that is being logged to. */
     char *log_file;
 
@@ -57,7 +58,7 @@ struct logger *logger_create(void)
 {
     struct logger *log;
 
-    log = (struct logger *) malloc(sizeof (struct logger));
+    log = (struct logger *)malloc(sizeof(struct logger));
 
     if (!log)
         return NULL;
@@ -76,12 +77,14 @@ int logger_destroy(struct logger *log)
     if (!log)
         return 0;
 
-    if (log->log_file) {
+    if (log->log_file)
+    {
         free(log->log_file);
         log->log_file = NULL;
     }
 
-    if (log->fd) {
+    if (log->fd)
+    {
         fclose(log->fd);
         log->fd = NULL;
     }
@@ -110,14 +113,17 @@ static int logger_close_writer(struct logger *log)
         return -1;
 
     /* A file is being written to */
-    if (log->log_file) {
+    if (log->log_file)
+    {
         free(log->log_file);
         log->log_file = NULL;
 
         fclose(log->fd);
         log->fd = NULL;
         /* A descriptor was passed in, discard it */
-    } else if (log->fd) {
+    }
+    else if (log->fd)
+    {
         log->fd = NULL;
     }
 
@@ -142,7 +148,8 @@ int logger_set_file(struct logger *log, const char *file)
     log->fd = fopen(file, "w");
 
     /* If the open failed, just return */
-    if (!log->fd) {
+    if (!log->fd)
+    {
         printf("Error: Could not open file %s for writing\n", file);
         return -1;
     }
@@ -152,7 +159,7 @@ int logger_set_file(struct logger *log, const char *file)
     return 0;
 }
 
-int logger_set_fd(struct logger *log, FILE * fd)
+int logger_set_fd(struct logger *log, FILE *fd)
 {
     if (!log)
         return -1;
@@ -185,7 +192,7 @@ int logger_get_file(struct logger *log, char **file)
 }
 
 int logger_write_pos(struct logger *log,
-        const char *file, int line, const char *fmt, ...)
+    const char *file, int line, const char *fmt, ...)
 {
     va_list ap;
     char va_buf[MAXLINE];
@@ -202,10 +209,10 @@ int logger_write_pos(struct logger *log,
 
     /* Get the buffer with format */
     va_start(ap, fmt);
-#ifdef   HAVE_VSNPRINTF
-    vsnprintf(va_buf, sizeof (va_buf), fmt, ap);    /* this is safe */
+#ifdef HAVE_VSNPRINTF
+    vsnprintf(va_buf, sizeof(va_buf), fmt, ap); /* this is safe */
 #else
-    vsprintf(va_buf, fmt, ap);  /* this is not safe */
+    vsprintf(va_buf, fmt, ap); /* this is not safe */
 #endif
     va_end(ap);
 

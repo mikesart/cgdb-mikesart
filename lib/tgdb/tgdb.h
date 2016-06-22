@@ -13,11 +13,11 @@
 /* includes {{{*/
 #if HAVE_CONFIG_H
 #include "config.h"
-#endif                          /* HAVE_CONFIG_H */
+#endif /* HAVE_CONFIG_H */
 
 #if HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif                          /* HAVE_SYS_TYPES_H */
+#endif /* HAVE_SYS_TYPES_H */
 
 #include "tgdb_types.h"
 /* }}}*/
@@ -32,12 +32,12 @@
 
 /*@{*/
 
-  /**
+/**
    *  This struct is a reference to a libtgdb instance.
    */
-    struct tgdb;
+struct tgdb;
 
-  /**
+/**
    * This initializes a tgdb library instance. It starts up the debugger and 
    * returns all file descriptors the client must select on.
    *
@@ -60,10 +60,10 @@
    * @return
    * NULL on error, a valid context on success.
    */
-    struct tgdb *tgdb_initialize(const char *debugger,
-            int argc, char **argv, int *debugger_fd);
+struct tgdb *tgdb_initialize(const char *debugger,
+    int argc, char **argv, int *debugger_fd);
 
-  /**
+/**
    * This will terminate a libtgdb session. No functions should be called on
    * the tgdb context passed into this function after this call.
    *
@@ -73,7 +73,7 @@
    * @return
    * 0 on success or -1 on error
    */
-    int tgdb_shutdown(struct tgdb *tgdb);
+int tgdb_shutdown(struct tgdb *tgdb);
 
 /*@}*/
 /* }}}*/
@@ -88,7 +88,7 @@
 
 /*@{*/
 
-  /**
+/**
    * This will check to see if TGDB is currently capable of receiving another command.
    * 
    * \param tgdb
@@ -97,7 +97,7 @@
    * \return
    * Will return as 1 if tgdb is busy, otherwise 0.
    */
-    int tgdb_is_busy(struct tgdb *tgdb);
+int tgdb_is_busy(struct tgdb *tgdb);
 
 /*@}*/
 /* }}}*/
@@ -112,7 +112,7 @@
 
 /*@{*/
 
-  /**
+/**
    * Have TGDB process a command.
    * 
    * \param tgdb
@@ -124,9 +124,9 @@
    * \return
    * 0 on success or -1 on error
    */
-    int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request);
+int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request);
 
-  /**
+/**
    * This function does most of the dirty work in TGDB. It is capable of 
    * processing the output of the debugger, to either satisfy a previously 
    * made request, or to simply get console output for the caller to have.
@@ -154,10 +154,10 @@
    * @return
    * The number of valid bytes in BUF on success, or -1 on error.
    */
-    size_t tgdb_process(struct tgdb *tgdb, char *buf, size_t n,
-            int *is_finished);
+size_t tgdb_process(struct tgdb *tgdb, char *buf, size_t n,
+    int *is_finished);
 
-  /**
+/**
    * This sends a byte of data to the program being debugged.
    *
    * \param tgdb
@@ -169,9 +169,9 @@
    * @return
    * 0 on success or -1 on error
    */
-    int tgdb_send_inferior_char(struct tgdb *tgdb, char c);
+int tgdb_send_inferior_char(struct tgdb *tgdb, char c);
 
-  /**
+/**
    * Gets the output from the program being debugged.
    * 
    * \param tgdb
@@ -186,7 +186,7 @@
    * @return
    * The number of valid bytes in BUF on success, or 0 on error.
    */
-    ssize_t tgdb_recv_inferior_data(struct tgdb *tgdb, char *buf, size_t n);
+ssize_t tgdb_recv_inferior_data(struct tgdb *tgdb, char *buf, size_t n);
 
 /*@}*/
 /* }}}*/
@@ -201,7 +201,7 @@
 
 /*@{*/
 
-  /**
+/**
    * Gets a response from TGDB.
    * This should be called after tgdb_recv_debugger_data
    *
@@ -212,24 +212,24 @@
    * A valid response if responses still exist.
    * Null if no more responses exist.
    */
-    struct tgdb_response *tgdb_get_response(struct tgdb *tgdb);
+struct tgdb_response *tgdb_get_response(struct tgdb *tgdb);
 
-  /**
+/**
    * This will traverse all of the responses that the context tgdb currently
    * has and will print them. It is currently used for debugging purposes.
    *
    * \param tgdb
    * An instance of the tgdb library to operate on.
    */
-    void tgdb_traverse_responses(struct tgdb *tgdb);
+void tgdb_traverse_responses(struct tgdb *tgdb);
 
-  /**
+/**
    * This will free all of the memory used by the responses that tgdb returns.
    *
    * \param tgdb
    * An instance of the tgdb library to operate on.
    */
-    void tgdb_delete_responses(struct tgdb *tgdb);
+void tgdb_delete_responses(struct tgdb *tgdb);
 
 /*@}*/
 /* }}}*/
@@ -246,7 +246,7 @@
 
 /*@{*/
 
-  /**
+/**
    * This allocates a new tty and tells the debugger to use it for I/O
    * with the program being debugged.
    *
@@ -264,9 +264,9 @@
    * @return
    * 0 on success or -1 on error
    */
-    int tgdb_tty_new(struct tgdb *tgdb);
+int tgdb_tty_new(struct tgdb *tgdb);
 
-  /**
+/**
    * Get the file descriptor the debugger is using for the inferior.
    *
    * You can see the associated terminal name for the file descriptor
@@ -280,9 +280,9 @@
    * @return
    * The descriptor to the I/O of the program being debugged (-1 on error).
    */
-   int tgdb_get_inferior_fd(struct tgdb *tgdb);
+int tgdb_get_inferior_fd(struct tgdb *tgdb);
 
-  /**
+/**
    * Gets the name of file that debugger is using for I/O with the program
    * being debugged.
    * 
@@ -292,7 +292,7 @@
    * @return
    * Name of tty or NULL on error.
    */
-    const char *tgdb_tty_name(struct tgdb *tgdb);
+const char *tgdb_tty_name(struct tgdb *tgdb);
 
 /*@}*/
 /* }}}*/
@@ -307,7 +307,7 @@
 
 /*@{*/
 
-  /**
+/**
    * This sends a console command to the debugger (GDB).
    *
    * \param tgdb
@@ -319,10 +319,10 @@
    * \return
    * Will return as a tgdb request command on success, otherwise NULL.
    */
-    tgdb_request_ptr tgdb_request_run_console_command(struct tgdb *tgdb,
-            const char *command);
+tgdb_request_ptr tgdb_request_run_console_command(struct tgdb *tgdb,
+    const char *command);
 
-  /**
+/**
    * Gets a list of source files that make up the program being debugged.
    *
    * \param tgdb
@@ -331,9 +331,9 @@
    * \return
    * Will return as a tgdb request command on success, otherwise NULL.
    */
-    tgdb_request_ptr tgdb_request_inferiors_source_files(struct tgdb *tgdb);
+tgdb_request_ptr tgdb_request_inferiors_source_files(struct tgdb *tgdb);
 
-  /**
+/**
    * This tells libtgdb to run a command through the debugger.
    *
    * \param tgdb
@@ -345,10 +345,10 @@
    * @return
    * Will return as a tgdb request command on success, otherwise NULL.
    */
-    tgdb_request_ptr tgdb_request_run_debugger_command(struct tgdb *tgdb,
-            enum tgdb_command_type c);
+tgdb_request_ptr tgdb_request_run_debugger_command(struct tgdb *tgdb,
+    enum tgdb_command_type c);
 
-  /**
+/**
    * Modify's a breakpoint.
    *
    * \param tgdb
@@ -366,10 +366,10 @@
    * @return
    * Will return as a tgdb request command on success, otherwise NULL.
    */
-    tgdb_request_ptr tgdb_request_modify_breakpoint(struct tgdb *tgdb,
-            const char *file, int line, enum tgdb_breakpoint_action b);
+tgdb_request_ptr tgdb_request_modify_breakpoint(struct tgdb *tgdb,
+    const char *file, int line, enum tgdb_breakpoint_action b);
 
-  /**
+/**
    * Used to get all of the possible tab completion options for LINE.
    *
    * \param tgdb
@@ -381,13 +381,13 @@
    * \return
    * Will return as a tgdb request command on success, otherwise NULL.
    */
-    tgdb_request_ptr tgdb_request_complete(struct tgdb *tgdb, const char *line);
+tgdb_request_ptr tgdb_request_complete(struct tgdb *tgdb, const char *line);
 
-    tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb,
-            const char *func, int lines,
-            struct tgdb_file_position *tfp);
+tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb,
+    const char *func, int lines,
+    struct tgdb_file_position *tfp);
 
-  /**
+/**
    * Used to get disassembly for function.
    *
    * \param tgdb
@@ -396,27 +396,28 @@
    * \return
    * Will return as a tgdb request command on success, otherwise NULL.
    */
-    enum disassemble_func_type {
-        DISASSEMBLE_FUNC_DISASSEMBLY,
-        DISASSEMBLE_FUNC_SOURCE_LINES,
-        DISASSEMBLE_FUNC_RAW_INSTRUCTIONS,
-    };
-    tgdb_request_ptr tgdb_request_disassemble_func(struct tgdb *tgdb,
-            enum disassemble_func_type type, const char *file, const char *function,
-            struct tgdb_file_position *tfp);
+enum disassemble_func_type
+{
+    DISASSEMBLE_FUNC_DISASSEMBLY,
+    DISASSEMBLE_FUNC_SOURCE_LINES,
+    DISASSEMBLE_FUNC_RAW_INSTRUCTIONS,
+};
+tgdb_request_ptr tgdb_request_disassemble_func(struct tgdb *tgdb,
+    enum disassemble_func_type type, const char *file, const char *function,
+    struct tgdb_file_position *tfp);
 
-  /**
+/**
    * Free the tgdb request pointer data.
    *
    * \param request_ptr
    * Request pointer from tgdb_request_* function to destroy.
    */
-    void tgdb_request_destroy(tgdb_request_ptr request_ptr);
+void tgdb_request_destroy(tgdb_request_ptr request_ptr);
 
-    void tgdb_set_last_request(struct tgdb_request *request);
-    int tgdb_last_request_requires_update();
+void tgdb_set_last_request(struct tgdb_request *request);
+int tgdb_last_request_requires_update();
 
-    tgdb_request_ptr tgdb_pop_request_id(int id);
+tgdb_request_ptr tgdb_pop_request_id(int id);
 
 /*@}*/
 /* }}}*/
@@ -430,7 +431,7 @@
  */
 /******************************************************************************/
 
-  /**
+/**
    * Have TGDB append a command to it's list of commands it needs to run.
    * 
    * \param tgdb
@@ -442,9 +443,9 @@
    * \return
    * 0 on success or -1 on error
    */
-    int tgdb_queue_append(struct tgdb *tgdb, tgdb_request_ptr request);
+int tgdb_queue_append(struct tgdb *tgdb, tgdb_request_ptr request);
 
-  /**
+/**
    * Get a tgdb_request command back from TGDB.
    *
    * \param tgdb
@@ -455,9 +456,9 @@
    * Popping a command when the queue is empty is also considered an error,
    * and NULL will be returned.
    */
-    tgdb_request_ptr tgdb_queue_pop(struct tgdb *tgdb);
+tgdb_request_ptr tgdb_queue_pop(struct tgdb *tgdb);
 
-  /**
+/**
    * Get's the number of items that are in the queue for TGDB to run.
    *
    * \param tgdb
@@ -466,7 +467,7 @@
    * \return
    * The number of items in the list.
    */
-    int tgdb_queue_size(struct tgdb *tgdb);
+int tgdb_queue_size(struct tgdb *tgdb);
 
 /* }}}*/
 
@@ -480,7 +481,7 @@
 
 /*@{*/
 
-  /**
+/**
    * The front end can use this function to notify libtgdb that an
    * asynchronous event has occurred. If signal SIGNUM is relavant
    * to libtgdb, the appropriate processing will be done.
@@ -498,7 +499,7 @@
    * @return
    * 0 on success or -1 on error
    */
-    int tgdb_signal_notification(struct tgdb *tgdb, int signum);
+int tgdb_signal_notification(struct tgdb *tgdb, int signum);
 
 /*@}*/
 /* }}}*/
@@ -514,7 +515,7 @@
 
 /*@{*/
 
-  /**
+/**
    * This sets the verbosity of the GUI's commands.
    * If the value is set to 0, the GUI's commands will not be shown.
    * If the value is set to 1, the GUI's commands will be shown.
@@ -530,9 +531,9 @@
    * @return
    * 1 if option is set, otherwise 0
    */
-    int tgdb_set_verbose_gui_command_output(struct tgdb *tgdb, int value);
+int tgdb_set_verbose_gui_command_output(struct tgdb *tgdb, int value);
 
-  /**
+/**
    * This will make TGDB handle error's in a verbose mode.
    * The basically mean's that when TGDB find's an error, the message is
    * printed to stdout/stderr. Normally this is not acceptable because TGDB can
@@ -550,10 +551,10 @@
    * @return
    * 1 if option is set, otherwise 0
    */
-    int tgdb_set_verbose_error_handling(struct tgdb *tgdb, int value,
-            void (*print_message)(const char *fmt, ...));
+int tgdb_set_verbose_error_handling(struct tgdb *tgdb, int value,
+    void (*print_message)(const char *fmt, ...));
 
 /*@}*/
 /* }}}*/
 
-#endif                          /* __TGDB_H__ */
+#endif /* __TGDB_H__ */

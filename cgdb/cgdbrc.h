@@ -83,7 +83,8 @@ int command_parse_file(const char *config_file);
  * This enum name is incorrect, it should be renamed to something like,
  * 'enum HighlightStyle'.
  */
-enum ArrowStyle {
+enum ArrowStyle
+{
     ARROWSTYLE_SHORT,
     ARROWSTYLE_LONG,
     ARROWSTYLE_HIGHLIGHT
@@ -105,12 +106,13 @@ typedef enum { WIN_SPLIT_FREE = -3, /* split point not on quarter mark */
  *  of the split between the source and GDB windows.
  */
 typedef enum {
-    SPLIT_HORIZONTAL = 0,       /* source above and GDB below (default) */
-    SPLIT_VERTICAL = 1          /* source left and GDB right            */
+    SPLIT_HORIZONTAL = 0, /* source above and GDB below (default) */
+    SPLIT_VERTICAL = 1    /* source left and GDB right            */
 } SPLIT_ORIENTATION_TYPE;
 
 /** All of the different configuration options */
-enum cgdbrc_option_kind {
+enum cgdbrc_option_kind
+{
     CGDBRC_ANSIESCAPEPARSING,
     CGDBRC_ARROWSELECTEDLINE,
     CGDBRC_ARROWSTYLE,
@@ -133,7 +135,8 @@ enum cgdbrc_option_kind {
 };
 
 /** This represents a single configuration option. */
-struct cgdbrc_config_option {
+struct cgdbrc_config_option
+{
     enum cgdbrc_option_kind option_kind;
     union {
         /* option_kind == CGDBRC_ANSIESCAPEPARSING */
@@ -177,7 +180,7 @@ typedef struct cgdbrc_config_option *cgdbrc_config_option_ptr;
  * new values, but want to validate the values, in order to not tightly
  * couple the config reader with the other parts of CGDB.
  */
-typedef int (*cgdbrc_notify) (cgdbrc_config_option_ptr option);
+typedef int (*cgdbrc_notify)(cgdbrc_config_option_ptr option);
 
 /**
  * This will attach a new callback function for a particular option.
@@ -201,7 +204,7 @@ typedef int (*cgdbrc_notify) (cgdbrc_config_option_ptr option);
  * 0 on success or -1 on error
  */
 int cgdbrc_attach(enum cgdbrc_option_kind option, cgdbrc_notify notify,
-        int *handle);
+    int *handle);
 
 /**
  * This will detach a notify function so that it will no longer be called

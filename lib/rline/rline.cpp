@@ -45,7 +45,8 @@
 
 /* }}}*/
 
-struct rline {
+struct rline
+{
     /* The input to readline. Writing to this, writes to readline. */
     FILE *input;
 
@@ -73,10 +74,10 @@ static void custom_deprep_term_function()
 }
 
 /* Createing and Destroying a librline context. {{{*/
-struct rline *rline_initialize(int slavefd, command_cb * command,
-        completion_cb * completion, const char *TERM)
+struct rline *rline_initialize(int slavefd, command_cb *command,
+    completion_cb *completion, const char *TERM)
 {
-    struct rline *rline = (struct rline *) malloc(sizeof (struct rline));
+    struct rline *rline = (struct rline *)malloc(sizeof(struct rline));
     static char word_break_chars[] = " \t\n!@#$%^&*()+=|~`}{[]\"';:?/>.<,-";
 
     if (!rline)
@@ -87,13 +88,15 @@ struct rline *rline_initialize(int slavefd, command_cb * command,
     rline->output = NULL;
 
     rline->input = fdopen(slavefd, "r");
-    if (!rline->input) {
+    if (!rline->input)
+    {
         rline_shutdown(rline);
         return NULL;
     }
 
     rline->output = fdopen(slavefd, "w");
-    if (!rline->output) {
+    if (!rline->output)
+    {
         rline_shutdown(rline);
         return NULL;
     }
@@ -119,7 +122,8 @@ struct rline *rline_initialize(int slavefd, command_cb * command,
 
     /* Set the terminal type to dumb so the output of readline can be
      * understood by tgdb */
-    if (rl_reset_terminal(TERM) == -1) {
+    if (rl_reset_terminal(TERM) == -1)
+    {
         rline_shutdown(rline);
         return NULL;
     }
@@ -143,7 +147,7 @@ struct rline *rline_initialize(int slavefd, command_cb * command,
 int rline_shutdown(struct rline *rline)
 {
     if (!rline)
-        return -1;              /* Should this be OK? */
+        return -1; /* Should this be OK? */
 
     if (rline->input)
         fclose(rline->input);
@@ -289,8 +293,9 @@ int rline_rl_callback_read_char(struct rline *rline)
  */
 char *rline_rl_completion_entry_function(const char *text, int matches)
 {
-    if (rline_local_iter) {
-    /**
+    if (rline_local_iter)
+    {
+        /**
      * 'local' is a possible completion. 'text' is the data to be completed.
      * 'word' is the current possible match started off at the same point 
      * in local, that text is started in rl_line_buffer.
@@ -320,9 +325,8 @@ static char *rline_rl_cpvfunc_t(void)
     return buf;
 }
 
-int
-rline_rl_complete(struct rline *rline, struct tgdb_list *list,
-        display_callback display_cb)
+int rline_rl_complete(struct rline *rline, struct tgdb_list *list,
+    display_callback display_cb)
 {
     int size;
     int key;
@@ -338,10 +342,13 @@ rline_rl_complete(struct rline *rline, struct tgdb_list *list,
 
     size = tgdb_list_size(list);
 
-    if (size == 0) {
+    if (size == 0)
+    {
         rl_completion_word_break_hook = NULL;
         rl_completion_entry_function = NULL;
-    } else {
+    }
+    else
+    {
         rl_completion_word_break_hook = rline_rl_cpvfunc_t;
         rl_completion_entry_function = rline_rl_completion_entry_function;
     }
@@ -378,7 +385,7 @@ rline_rl_complete(struct rline *rline, struct tgdb_list *list,
      * because this checks to see what kind of completion should be done.
      */
     if (rline->rline_rl_last_func == rline->tab_completion &&
-            rline->rline_rl_last_func == rl_last_func)
+        rline->rline_rl_last_func == rl_last_func)
         compare_func = rline->tab_completion;
 
     key = rl_completion_mode(compare_func);
@@ -420,9 +427,8 @@ int rline_get_rl_completion_query_items(struct rline *rline)
     return rline->rline_rl_completion_query_items;
 }
 
-int
-rline_get_keyseq(struct rline *rline, const char *named_function,
-        std_list_ptr keyseq_list)
+int rline_get_keyseq(struct rline *rline, const char *named_function,
+    std_list_ptr keyseq_list)
 {
     rl_command_func_t *func;
     char **invoking_keyseqs = NULL;
@@ -440,11 +446,13 @@ rline_get_keyseq(struct rline *rline, const char *named_function,
     invoking_keyseqs = rl_invoking_keyseqs(func);
     invoking_keyseqs_cur = invoking_keyseqs;
 
-    while (invoking_keyseqs_cur && (*invoking_keyseqs_cur)) {
+    while (invoking_keyseqs_cur && (*invoking_keyseqs_cur))
+    {
 
         new_keyseq =
-                (char *) cgdb_malloc((2 * strlen(*invoking_keyseqs_cur)) + 1);
-        if (rl_translate_keyseq(*invoking_keyseqs_cur, new_keyseq, &len)) {
+            (char *)cgdb_malloc((2 * strlen(*invoking_keyseqs_cur)) + 1);
+        if (rl_translate_keyseq(*invoking_keyseqs_cur, new_keyseq, &len))
+        {
             free(new_keyseq);
             free(*invoking_keyseqs_cur);
             /* Can't do much about readline failing, just continue on. */

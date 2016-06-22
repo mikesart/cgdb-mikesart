@@ -7,7 +7,8 @@
 /**
  * A node in the linked list.
  */
-struct std_list_node {
+struct std_list_node
+{
     /**
 	 * The data stored in the node.
 	 */
@@ -30,7 +31,8 @@ struct std_list_node {
  * This stores the begin and end (one past last node) of the list,
  * and can store any state data associated with a list context.
  */
-struct std_list {
+struct std_list
+{
     /**
 	 * A pointer to the first node in the list.
 	 *
@@ -69,7 +71,7 @@ static struct std_list_node *std_list_node_create(void)
 {
     struct std_list_node *list_node;
 
-    list_node = (struct std_list_node *)malloc(sizeof (struct std_list_node));
+    list_node = (struct std_list_node *)malloc(sizeof(struct std_list_node));
 
     if (!list_node)
         return NULL;
@@ -88,7 +90,7 @@ static struct std_list_node *std_list_node_create(void)
  * 0 on success, or -1 on error.
  */
 static int std_list_node_destroy(struct std_list_node *list_node,
-        STDDestroyNotify destroy_func)
+    STDDestroyNotify destroy_func)
 {
 
     if (!list_node)
@@ -116,7 +118,7 @@ struct std_list *std_list_create(STDDestroyNotify destroy_func)
 {
     struct std_list *list;
 
-    list = (struct std_list *)malloc(sizeof (struct std_list));
+    list = (struct std_list *)malloc(sizeof(struct std_list));
 
     if (!list)
         return NULL;
@@ -138,7 +140,8 @@ int std_list_remove_all(struct std_list *list)
     std_list_iterator iter;
 
     /* Traverse the list and free the data members */
-    for (iter = std_list_begin(list); iter != std_list_end(list);) {
+    for (iter = std_list_begin(list); iter != std_list_end(list);)
+    {
         iter = std_list_remove(list, iter);
 
         if (!iter)
@@ -191,7 +194,7 @@ int std_list_prepend(struct std_list *list, void *data)
 }
 
 int std_list_insert(struct std_list *list,
-        const std_list_iterator iter, void *data)
+    const std_list_iterator iter, void *data)
 {
 
     std_list_iterator new_node;
@@ -209,11 +212,14 @@ int std_list_insert(struct std_list *list,
 
     new_node->data = data;
 
-    if (iter == list->begin) {
+    if (iter == list->begin)
+    {
         new_node->next = iter;
         iter->prev = new_node;
         list->begin = new_node;
-    } else {
+    }
+    else
+    {
         std_list_iterator before;
 
         before = iter->prev;
@@ -231,7 +237,7 @@ int std_list_insert(struct std_list *list,
 }
 
 int std_list_insert_sorted(struct std_list *list,
-        void *data, const STDCompareFunc func)
+    void *data, const STDCompareFunc func)
 {
 
     std_list_iterator current;
@@ -245,14 +251,17 @@ int std_list_insert_sorted(struct std_list *list,
 
     /* Seek to the corrent position to insert new item */
     for (current = std_list_begin(list);
-            current != std_list_end(list); current = std_list_next(current)) {
-        if (std_list_get_data(current, &current_data) != 0) {
+         current != std_list_end(list); current = std_list_next(current))
+    {
+        if (std_list_get_data(current, &current_data) != 0)
+        {
             return -2;
         }
 
         /* If the new data is <= data at this node, stop looping and
          * insert the data into the list before the current. */
-        if (func(data, current_data) <= 0) {
+        if (func(data, current_data) <= 0)
+        {
             break;
         }
     }
@@ -261,8 +270,8 @@ int std_list_insert_sorted(struct std_list *list,
     return std_list_insert(list, current, data);
 }
 
-std_list_iterator std_list_remove(struct std_list * list,
-        std_list_iterator iter)
+std_list_iterator std_list_remove(struct std_list *list,
+    std_list_iterator iter)
 {
 
     std_list_iterator after;
@@ -277,11 +286,14 @@ std_list_iterator std_list_remove(struct std_list * list,
     if (iter == list->end)
         return NULL;
 
-    if (iter == list->begin) {
+    if (iter == list->begin)
+    {
         after = iter->next;
         list->begin = after;
         list->begin->prev = NULL;
-    } else {
+    }
+    else
+    {
         std_list_iterator before;
 
         before = iter->prev;
@@ -299,8 +311,8 @@ std_list_iterator std_list_remove(struct std_list * list,
     return after;
 }
 
-std_list_iterator std_list_find(const struct std_list * list,
-        const void *data, const STDCompareFunc func)
+std_list_iterator std_list_find(const struct std_list *list,
+    const void *data, const STDCompareFunc func)
 {
     std_list_iterator iter;
     std_list_iterator found;
@@ -315,13 +327,15 @@ std_list_iterator std_list_find(const struct std_list * list,
 
     /* Find the item */
     for (iter = std_list_begin(list);
-            iter != std_list_end(list); iter = std_list_next(iter)) {
+         iter != std_list_end(list); iter = std_list_next(iter))
+    {
         void *iter_data;
 
         if (std_list_get_data(iter, &iter_data) == -1)
             return NULL;
 
-        if (func(iter_data, data) == 0) {
+        if (func(iter_data, data) == 0)
+        {
             found = iter;
             break;
         }
@@ -330,7 +344,7 @@ std_list_iterator std_list_find(const struct std_list * list,
     return iter;
 }
 
-std_list_iterator std_list_begin(const struct std_list * list)
+std_list_iterator std_list_begin(const struct std_list *list)
 {
 
     if (!list)
@@ -339,7 +353,7 @@ std_list_iterator std_list_begin(const struct std_list * list)
     return list->begin;
 }
 
-std_list_iterator std_list_end(const struct std_list * list)
+std_list_iterator std_list_end(const struct std_list *list)
 {
 
     if (!list)
@@ -374,7 +388,7 @@ int std_list_length(struct std_list *list)
 }
 
 int std_list_foreach(const struct std_list *list,
-        const STDFunc func, void *user_data)
+    const STDFunc func, void *user_data)
 {
     std_list_iterator iter;
 
@@ -386,7 +400,8 @@ int std_list_foreach(const struct std_list *list,
 
     /* do the foreach */
     for (iter = std_list_begin(list);
-            iter != std_list_end(list); iter = std_list_next(iter)) {
+         iter != std_list_end(list); iter = std_list_next(iter))
+    {
         void *data;
 
         if (std_list_get_data(iter, &data) == -1)
@@ -414,7 +429,7 @@ int std_list_sort(struct std_list *list, STDCompareFunc compare_func)
 }
 
 int std_list_sort_with_data(struct std_list *list,
-        STDCompareDataFunc compare_func, void *user_data)
+    STDCompareDataFunc compare_func, void *user_data)
 {
     if (!list)
         return -1;
@@ -434,7 +449,7 @@ int std_list_get_data(std_list_iterator iter, void *data)
         return -1;
 
     /* Copy the pointer */
-    memcpy(data, &iter->data, sizeof (void *));
+    memcpy(data, &iter->data, sizeof(void *));
 
     return 0;
 }

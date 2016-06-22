@@ -28,12 +28,13 @@ struct state_machine;
 struct state_machine *state_machine_initialize(void);
 void state_machine_shutdown(struct state_machine *sm);
 
-enum internal_state {
-    VOID,                   /* not interesting */
-    AT_PROMPT,              /* the prompt is being displayed */
-    USER_AT_PROMPT,         /* the user is typing at prompt */
-    POST_PROMPT,            /* the user is done at the prompt */
-    USER_COMMAND            /* this is a command issued by the user */
+enum internal_state
+{
+    VOID,           /* not interesting */
+    AT_PROMPT,      /* the prompt is being displayed */
+    USER_AT_PROMPT, /* the user is typing at prompt */
+    POST_PROMPT,    /* the user is done at the prompt */
+    USER_COMMAND    /* this is a command issued by the user */
 };
 
 /* data_set_state:   Sets the state of the data package. This should usually be called
@@ -63,9 +64,9 @@ enum internal_state data_get_state(struct state_machine *d);
  * If a command was generated from an annotation, its put in here.
  */
 int a2_handle_data(struct annotate_two *a2,
-        struct state_machine *sm,
-        const char *data, const size_t size,
-        char *gui_data, size_t * gui_size, struct tgdb_list *command_list);
+    struct state_machine *sm,
+    const char *data, const size_t size,
+    char *gui_data, size_t *gui_size, struct tgdb_list *command_list);
 
 /* This unit holds global data to tgdb. It helps keep track of obscure states */
 

@@ -15,11 +15,11 @@ const char *asm_extensions[] = { ".s" };
 
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 
-#define DECLARE_LEX_FUNCTIONS(_LANG) \
-    extern int _LANG ## _lex(void); \
-    extern char *_LANG ## _text; \
-    extern YY_BUFFER_STATE _LANG ## __scan_string(const char *base); \
-    void _LANG ## __delete_buffer (YY_BUFFER_STATE b);
+#define DECLARE_LEX_FUNCTIONS(_LANG)                               \
+    extern int _LANG##_lex(void);                                  \
+    extern char *_LANG##_text;                                     \
+    extern YY_BUFFER_STATE _LANG##__scan_string(const char *base); \
+    void _LANG##__delete_buffer(YY_BUFFER_STATE b);
 
 DECLARE_LEX_FUNCTIONS(c);
 DECLARE_LEX_FUNCTIONS(asm);
@@ -31,11 +31,12 @@ DECLARE_LEX_FUNCTIONS(cgdbhelp);
 
 #undef DECLARE_LEX_FUNCTIONS
 
-struct tokenizer {
+struct tokenizer
+{
     enum tokenizer_language_support lang;
 
     char **yy_tokenizer_text;
-    int (*yy_lex_func) (void);
+    int (*yy_lex_func)(void);
     void (*yy_delete_buffer_func)(YY_BUFFER_STATE b);
 
     YY_BUFFER_STATE str_buffer;
@@ -44,7 +45,7 @@ struct tokenizer {
 struct tokenizer *tokenizer_init(void)
 {
     struct tokenizer *t =
-            (struct tokenizer *) cgdb_malloc(sizeof (struct tokenizer));
+        (struct tokenizer *)cgdb_malloc(sizeof(struct tokenizer));
 
     t->lang = TOKENIZER_LANGUAGE_UNKNOWN;
 
@@ -58,7 +59,8 @@ struct tokenizer *tokenizer_init(void)
 
 void tokenizer_destroy(struct tokenizer *t)
 {
-    if (t) {
+    if (t)
+    {
         (*t->yy_delete_buffer_func)(t->str_buffer);
         t->str_buffer = NULL;
 
@@ -68,7 +70,8 @@ void tokenizer_destroy(struct tokenizer *t)
 
 int tokenizer_set_buffer(struct tokenizer *t, const char *buffer, enum tokenizer_language_support l)
 {
-    if (t->str_buffer) {
+    if (t->str_buffer)
+    {
         (*t->yy_delete_buffer_func)(t->str_buffer);
         t->str_buffer = NULL;
     }
@@ -78,25 +81,38 @@ int tokenizer_set_buffer(struct tokenizer *t, const char *buffer, enum tokenizer
 
     t->lang = l;
 
-#define INIT_LEX(_LANG) \
-    t->yy_lex_func = _LANG ## _lex; \
-    t->yy_delete_buffer_func = _LANG ## __delete_buffer; \
-    t->yy_tokenizer_text = &(_LANG ## _text); \
-    t->str_buffer = _LANG ## __scan_string(buffer);
+#define INIT_LEX(_LANG)                                \
+    t->yy_lex_func = _LANG##_lex;                      \
+    t->yy_delete_buffer_func = _LANG##__delete_buffer; \
+    t->yy_tokenizer_text = &(_LANG##_text);            \
+    t->str_buffer = _LANG##__scan_string(buffer);
 
-    if (l == TOKENIZER_LANGUAGE_C) {
+    if (l == TOKENIZER_LANGUAGE_C)
+    {
         INIT_LEX(c);
-    } else if (l == TOKENIZER_LANGUAGE_ASM) {
+    }
+    else if (l == TOKENIZER_LANGUAGE_ASM)
+    {
         INIT_LEX(asm);
-    } else if (l == TOKENIZER_LANGUAGE_D) {
+    }
+    else if (l == TOKENIZER_LANGUAGE_D)
+    {
         INIT_LEX(d);
-    } else if (l == TOKENIZER_LANGUAGE_GO) {
+    }
+    else if (l == TOKENIZER_LANGUAGE_GO)
+    {
         INIT_LEX(go);
-    } else if (l == TOKENIZER_LANGUAGE_CGDBHELP) {
+    }
+    else if (l == TOKENIZER_LANGUAGE_CGDBHELP)
+    {
         INIT_LEX(cgdbhelp);
-    } else if (l == TOKENIZER_LANGUAGE_RUST) {
+    }
+    else if (l == TOKENIZER_LANGUAGE_RUST)
+    {
         INIT_LEX(rust);
-    } else {
+    }
+    else
+    {
         INIT_LEX(ada);
     }
 
@@ -147,27 +163,27 @@ enum tokenizer_language_support tokenizer_get_default_file_type(const char
     if (!file_extension)
         return TOKENIZER_LANGUAGE_UNKNOWN;
 
-    for (i = 0; i < sizeof (c_extensions) / sizeof (char *); i++)
+    for (i = 0; i < sizeof(c_extensions) / sizeof(char *); i++)
         if (strcasecmp(file_extension, c_extensions[i]) == 0)
             return TOKENIZER_LANGUAGE_C;
 
-    for (i = 0; i < sizeof (asm_extensions) / sizeof (char *); i++)
+    for (i = 0; i < sizeof(asm_extensions) / sizeof(char *); i++)
         if (strcasecmp(file_extension, asm_extensions[i]) == 0)
             return TOKENIZER_LANGUAGE_C;
 
-    for (i = 0; i < sizeof (d_extensions) / sizeof (char *); i++)
+    for (i = 0; i < sizeof(d_extensions) / sizeof(char *); i++)
         if (strcasecmp(file_extension, d_extensions[i]) == 0)
             return TOKENIZER_LANGUAGE_D;
 
-    for (i = 0; i < sizeof (go_extensions) / sizeof (char *); i++)
+    for (i = 0; i < sizeof(go_extensions) / sizeof(char *); i++)
         if (strcasecmp(file_extension, go_extensions[i]) == 0)
             return TOKENIZER_LANGUAGE_GO;
 
-    for (i = 0; i < sizeof (rust_extensions) / sizeof (char *); i++)
+    for (i = 0; i < sizeof(rust_extensions) / sizeof(char *); i++)
         if (strcasecmp(file_extension, rust_extensions[i]) == 0)
             l = TOKENIZER_LANGUAGE_RUST;
 
-    for (i = 0; i < sizeof (ada_extensions) / sizeof (char *); i++)
+    for (i = 0; i < sizeof(ada_extensions) / sizeof(char *); i++)
         if (strcasecmp(file_extension, ada_extensions[i]) == 0)
             return TOKENIZER_LANGUAGE_ADA;
 

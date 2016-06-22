@@ -54,7 +54,8 @@ static int count(const char *s, int slen, char c)
     int i;
     int rv = 0;
 
-    for (i = 0; i < slen; i++) {
+    for (i = 0; i < slen; i++)
+    {
         rv += (s[i] == c);
     }
 
@@ -77,7 +78,7 @@ static char *parse(struct scroller *scr, struct hl_line_attr **attrs,
     int tabcount = count(buf, buflen, '\t');
     int orig_len = strlen(orig);
     int length = MAX(orig_len, scr->current.pos) + buflen + (tab_size - 1) * tabcount;
-    char *rv = (char *) cgdb_calloc(length + 1, 1);
+    char *rv = (char *)cgdb_calloc(length + 1, 1);
     int i, j;
 
     /* Copy over original buffer */
@@ -86,13 +87,16 @@ static char *parse(struct scroller *scr, struct hl_line_attr **attrs,
     i = scr->current.pos;
 
     /* Expand special characters */
-    for (j = 0; j < buflen; j++) {
+    for (j = 0; j < buflen; j++)
+    {
         int attr;
 
         /* Handle ansi escape characters */
-        if (buf[j] == '\033') {
+        if (buf[j] == '\033')
+        {
             int ansi_count = hl_ansi_get_color_attrs(hl_groups_instance, buf + j, &attr, 0);
-            if (ansi_count) {
+            if (ansi_count)
+            {
                 struct hl_line_attr line_attr;
                 j += ansi_count - 1;
 
@@ -103,42 +107,49 @@ static char *parse(struct scroller *scr, struct hl_line_attr **attrs,
             }
         }
 
-        switch (buf[j]) {
-                /* Backspace/Delete -> Erase last character */
-            case 8:
-            case 127:
-                if (i > 0)
-                    i--;
-                break;
-                /* Tab -> Translating to spaces */
-            case '\t':
-                do {
-                    rv[i++] = ' ';
-                } while (i % tab_size != 0);
-                break;
-                /* Carriage return -> Move back to the beginning of the line */
-            case '\r':
-                i = 0;
-                if (buf[j + 1] != '\n') {
-                    sbfree(*attrs);
-                    *attrs = NULL;
-                }
-                break;
-                /* Default case -> Only keep printable characters */
-            default:
-                if (!iscntrl((int) buf[j])) {
-                    rv[i] = buf[j];
-                    i++;
-                }
-                break;
+        switch (buf[j])
+        {
+        /* Backspace/Delete -> Erase last character */
+        case 8:
+        case 127:
+            if (i > 0)
+                i--;
+            break;
+        /* Tab -> Translating to spaces */
+        case '\t':
+            do
+            {
+                rv[i++] = ' ';
+            } while (i % tab_size != 0);
+            break;
+        /* Carriage return -> Move back to the beginning of the line */
+        case '\r':
+            i = 0;
+            if (buf[j + 1] != '\n')
+            {
+                sbfree(*attrs);
+                *attrs = NULL;
+            }
+            break;
+        /* Default case -> Only keep printable characters */
+        default:
+            if (!iscntrl((int)buf[j]))
+            {
+                rv[i] = buf[j];
+                i++;
+            }
+            break;
         }
     }
 
     scr->current.pos = i;
 
-    if (*attrs) {
+    if (*attrs)
+    {
         j = strlen(rv);
-    } else {
+    }
+    else
+    {
         /* Remove trailing space from the line if we don't have color */
         for (j = strlen(rv) - 1; j > i && isspace(rv[j]); j--)
             ;
@@ -155,7 +166,8 @@ static void scroller_set_last_tty_attr(struct scroller *scr)
     struct scroller_line *sl = index >= 0 ? &scr->lines[index] : 0;
 
     /* If this is a tty line and we've got color attributes */
-    if (sl && sl->tty && sbcount(sl->attrs)) {
+    if (sl && sl->tty && sbcount(sl->attrs))
+    {
         /* Grab last attribute */
         int attr = sl->attrs[sbcount(sl->attrs) - 1].attr;
 
@@ -170,14 +182,16 @@ static void scroller_addline(struct scroller *scr, char *line,
     struct scroller_line sl;
 
     /* Add attribute from last tty line to start of this one */
-    if (tty && (scr->last_tty_attr != -1)) {
+    if (tty && (scr->last_tty_attr != -1))
+    {
         /* If there isn't already a color attribute for the first column */
-        if (!attrs || (attrs[0].col != 0)) {
+        if (!attrs || (attrs[0].col != 0))
+        {
             int count = sbcount(attrs);
 
             /* Bump the count up and scoot the attributes over one */
             sbsetcount(attrs, count + 1);
-            memmove(attrs+1, attrs, count * sizeof(struct hl_line_attr));
+            memmove(attrs + 1, attrs, count * sizeof(struct hl_line_attr));
 
             attrs[0].col = 0;
             attrs[0].attr = scr->last_tty_attr;
@@ -205,7 +219,7 @@ struct scroller *scr_new(int pos_r, int pos_c, int height, int width)
 {
     struct scroller *rv;
 
-    if ((rv = (struct scroller *)cgdb_malloc(sizeof (struct scroller))) == NULL)
+    if ((rv = (struct scroller *)cgdb_malloc(sizeof(struct scroller))) == NULL)
         return NULL;
 
     rv->current.r = 0;
@@ -228,7 +242,8 @@ void scr_free(struct scroller *scr)
     int i;
 
     /* Release the buffer */
-    for (i = 0; i < sbcount(scr->lines); i++) {
+    for (i = 0; i < sbcount(scr->lines); i++)
+    {
         free(scr->lines[i].line);
         sbfree(scr->lines[i].attrs);
     }
@@ -255,23 +270,29 @@ void scr_up(struct scroller *scr, int nlines)
 
     /* Sanity check */
     getmaxyx(scr->win, height, width);
-    if (scr->current.c > 0) {
+    if (scr->current.c > 0)
+    {
         if (scr->current.c % width != 0)
             scr->current.c = (scr->current.c / width) * width;
     }
 
-    for (i = 0; i < nlines; i++) {
+    for (i = 0; i < nlines; i++)
+    {
         /* If current column is positive, drop it by 'width' */
         if (scr->current.c > 0)
             scr->current.c -= width;
 
         /* Else, decrease the current row number, and set column accordingly */
-        else {
-            if (scr->current.r > 0) {
+        else
+        {
+            if (scr->current.r > 0)
+            {
                 scr->current.r--;
                 if ((length = strlen(scr->lines[scr->current.r].line)) > width)
                     scr->current.c = ((length - 1) / width) * width;
-            } else {
+            }
+            else
+            {
                 /* At top */
                 break;
             }
@@ -291,23 +312,29 @@ void scr_down(struct scroller *scr, int nlines)
 
     /* Sanity check */
     getmaxyx(scr->win, height, width);
-    if (scr->current.c > 0) {
+    if (scr->current.c > 0)
+    {
         if (scr->current.c % width != 0)
             scr->current.c = (scr->current.c / width) * width;
     }
 
-    for (i = 0; i < nlines; i++) {
+    for (i = 0; i < nlines; i++)
+    {
         /* If the current line wraps to the next, then advance column number */
         length = strlen(scr->lines[scr->current.r].line);
         if (scr->current.c < length - width)
             scr->current.c += width;
 
         /* Otherwise, advance row number, and set column number to 0. */
-        else {
-            if (scr->current.r < sbcount(scr->lines) - 1) {
+        else
+        {
+            if (scr->current.r < sbcount(scr->lines) - 1)
+            {
                 scr->current.r++;
                 scr->current.c = 0;
-            } else {
+            }
+            else
+            {
                 /* At bottom */
                 at_bottom = 1;
                 break;
@@ -346,21 +373,26 @@ static void scr_add_buf(struct scroller *scr, const char *buf, int tty)
     distance = x ? x - buf : strlen(buf);
 
     /* Append to the last line in the buffer */
-    if (distance > 0) {
+    if (distance > 0)
+    {
         int is_crlf = (distance == 1) && (buf[0] == '\r');
-        if (!is_crlf) {
+        if (!is_crlf)
+        {
             int index = sbcount(scr->lines) - 1;
             char *orig = scr->lines[index].line;
 
-            if ((scr->last_tty_attr != -1) && (tty != scr->lines[index].tty)) {
+            if ((scr->last_tty_attr != -1) && (tty != scr->lines[index].tty))
+            {
                 struct hl_line_attr attr;
 
                 attr.col = strlen(orig);
-                if (tty) {
+                if (tty)
+                {
                     attr.attr = scr->last_tty_attr;
                     scr->last_tty_attr = -1;
                 }
-                else {
+                else
+                {
                     /* Add that color attribute in */
                     attr.attr = 0;
                 }
@@ -379,7 +411,8 @@ static void scr_add_buf(struct scroller *scr, const char *buf, int tty)
     }
 
     /* Create additional lines if buf contains newlines */
-    while (x != NULL) {
+    while (x != NULL)
+    {
         char *line;
         struct hl_line_attr *attrs = NULL;
 
@@ -388,7 +421,8 @@ static void scr_add_buf(struct scroller *scr, const char *buf, int tty)
         distance = x ? x - buf : strlen(buf);
 
         /* tty input with no lf. */
-        if (!x && tty && distance && (distance < 4096)) {
+        if (!x && tty && distance && (distance < 4096))
+        {
             /* Store away and parse when the rest of the line shows up */
             scr->last_tty_line = strdup(buf);
             /* Add line since we did have a lf */
@@ -412,13 +446,16 @@ void scr_add(struct scroller *scr, const char *buf, int tty)
 {
     char *tempbuf = NULL;
 
-    if (scr->last_tty_line) {
-        if (!tty) {
+    if (scr->last_tty_line)
+    {
+        if (!tty)
+        {
             /* New line coming in isn't tty so spew out last tty line and carry on */
             scr_add_buf(scr, scr->last_tty_line, 1);
             free(scr->last_tty_line);
         }
-        else {
+        else
+        {
             /* Combine this tty line with previous tty line */
             tempbuf = (char *)cgdb_realloc(scr->last_tty_line, strlen(scr->last_tty_line) + strlen(buf) + 1);
             strcat(tempbuf, buf);
@@ -444,11 +481,11 @@ void scr_move(struct scroller *scr, int pos_r, int pos_c, int height, int width)
 
 void scr_refresh(struct scroller *scr, int focus, enum win_refresh dorefresh)
 {
-    int length;                 /* Length of current line */
-    int nlines;                 /* Number of lines written so far */
-    int r;                      /* Current row in scroller */
-    int c;                      /* Current column in row */
-    int width, height;          /* Width and height of window */
+    int length;        /* Length of current line */
+    int nlines;        /* Number of lines written so far */
+    int r;             /* Current row in scroller */
+    int c;             /* Current column in row */
+    int width, height; /* Width and height of window */
     int highlight_attr;
 
     /* Steal line highlight attribute for our scroll mode status */
@@ -457,7 +494,8 @@ void scr_refresh(struct scroller *scr, int focus, enum win_refresh dorefresh)
     /* Sanity check */
     getmaxyx(scr->win, height, width);
 
-    if (scr->current.c > 0) {
+    if (scr->current.c > 0)
+    {
         if (scr->current.c % width != 0)
             scr->current.c = (scr->current.c / width) * width;
     }
@@ -465,13 +503,15 @@ void scr_refresh(struct scroller *scr, int focus, enum win_refresh dorefresh)
     c = scr->current.c;
 
     /* Start drawing at the bottom of the viewable space, and work our way up */
-    for (nlines = 1; nlines <= height; nlines++) {
+    for (nlines = 1; nlines <= height; nlines++)
+    {
 
         if ((r <= scr->clear_row) && !scr->in_scroll_mode)
             r = -1;
 
         /* Print the current line [segment] */
-        if (r >= 0) {
+        if (r >= 0)
+        {
             struct scroller_line *sline = &scr->lines[r];
 
             hl_printline(scr->win, sline->line, sline->line_len, sline->attrs, 0, height - nlines, c, width);
@@ -479,28 +519,34 @@ void scr_refresh(struct scroller *scr, int focus, enum win_refresh dorefresh)
             /* Update our position */
             if (c >= width)
                 c -= width;
-            else {
+            else
+            {
                 r--;
-                if (r >= 0) {
+                if (r >= 0)
+                {
                     length = scr->lines[r].line_len;
                     if (length > width)
                         c = ((length - 1) / width) * width;
                 }
             }
-        } else {
+        }
+        else
+        {
             wmove(scr->win, height - nlines, 0);
             wclrtoeol(scr->win);
         }
 
         /* If we're in scroll mode and this is the top line, spew status on right */
-        if (scr->in_scroll_mode && (nlines == height)) {
-            char status[ 64 ];
+        if (scr->in_scroll_mode && (nlines == height))
+        {
+            char status[64];
             size_t status_len;
 
             snprintf(status, sizeof(status), "[%d/%d]", scr->current.r + 1, sbcount(scr->lines));
 
             status_len = strlen(status);
-            if ( status_len < width ) {
+            if (status_len < width)
+            {
                 wattron(scr->win, highlight_attr);
                 mvwprintw(scr->win, height - nlines, width - status_len, "%s", status);
                 wattroff(scr->win, highlight_attr);
@@ -509,11 +555,14 @@ void scr_refresh(struct scroller *scr, int focus, enum win_refresh dorefresh)
     }
 
     length = scr->lines[scr->current.r].line_len - scr->current.c;
-    if (focus && scr->current.r == sbcount(scr->lines) - 1 && length <= width) {
+    if (focus && scr->current.r == sbcount(scr->lines) - 1 && length <= width)
+    {
         /* We're on the last line, draw the cursor */
         curs_set(1);
         wmove(scr->win, height - 1, scr->current.pos % width);
-    } else {
+    }
+    else
+    {
         /* Hide the cursor */
         curs_set(0);
     }

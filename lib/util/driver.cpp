@@ -50,76 +50,76 @@
    Set the background color to index M: \033[48;5;${M}m
 */
 
-int main( int argc, char **argv )
+int main(int argc, char **argv)
 {
     int fg, bg, bold;
 
-	// This line has a tab
-		// Two tabs here
+    // This line has a tab
+    // Two tabs here
 
-    printf( "\n\033[1;33m --- Terminal Color Chart ---\033[0m\n\n" );
+    printf("\n\033[1;33m --- Terminal Color Chart ---\033[0m\n\n");
 
-    printf( "                 40m     41m     42m     43m     44m     45m     46m     47m\n" );
+    printf("                 40m     41m     42m     43m     44m     45m     46m     47m\n");
 
-    for ( fg = 29; fg <= 37; fg++ )
+    for (fg = 29; fg <= 37; fg++)
     {
-        for ( bold = 0; bold <= 1; bold++ )
+        for (bold = 0; bold <= 1; bold++)
         {
-            if ( fg == 29 )
-                printf( "    %sm ", bold ? "1" : " " );
+            if (fg == 29)
+                printf("    %sm ", bold ? "1" : " ");
             else
-                printf( " %s%2dm ", bold ? "1;" : "  ", fg );
+                printf(" %s%2dm ", bold ? "1;" : "  ", fg);
 
-            printf( "\033[%d;%dm  mLs  \033[0m ", bold, fg );
+            printf("\033[%d;%dm  mLs  \033[0m ", bold, fg);
 
-            for ( bg = 40; bg <= 47; bg++ )
+            for (bg = 40; bg <= 47; bg++)
             {
-                printf( "\033[%d;%d;%dm  mLs  \033[0m ", bold, bg, fg );
+                printf("\033[%d;%d;%dm  mLs  \033[0m ", bold, bg, fg);
             }
-            printf( "\n" );
+            printf("\n");
         }
     }
 
-    printf( "\n" );
+    printf("\n");
 
     int index, red, green, blue;
 
-    printf( "Standard colors:\n" );
-    for ( index = 0; index < 16; index++ )
+    printf("Standard colors:\n");
+    for (index = 0; index < 16; index++)
     {
-        printf( "\033[48;5;%dm %2d ", index, index );
-        if ( index == 7 )
-            printf( "\033[0m\n" );
+        printf("\033[48;5;%dm %2d ", index, index);
+        if (index == 7)
+            printf("\033[0m\n");
     }
-    printf( "\033[0m\n" );
+    printf("\033[0m\n");
 
-    printf( "\n6x6x6 Color cube:\n" );
-    for ( int pass = 0; pass < 2; pass++ )
+    printf("\n6x6x6 Color cube:\n");
+    for (int pass = 0; pass < 2; pass++)
     {
-        for ( green = 0; green < 6; green++ )
+        for (green = 0; green < 6; green++)
         {
-            for ( red = pass * 3; red < pass * 3 + 3; red++ )
+            for (red = pass * 3; red < pass * 3 + 3; red++)
             {
-                for ( blue = 0; blue < 6; blue++ )
+                for (blue = 0; blue < 6; blue++)
                 {
-                    index = 16 + ( red * 36 ) + ( green * 6 ) + blue;
-                    printf( "\033[48;5;%dm %2x ", index, index );
+                    index = 16 + (red * 36) + (green * 6) + blue;
+                    printf("\033[48;5;%dm %2x ", index, index);
                 }
-                printf( "\033[0m " );
+                printf("\033[0m ");
             }
-            printf( "\n" );
+            printf("\n");
         }
-        printf( "\n" );
+        printf("\n");
     }
 
-    printf( "\nGrayscale:\n" );
-    for ( index = 232; index < 256; index++ )
+    printf("\nGrayscale:\n");
+    for (index = 232; index < 256; index++)
     {
-        printf( "\033[48;5;%dm %2x ", index, index );
-        if ( index == 243 )
-            printf( "\033[0m\n" );
+        printf("\033[48;5;%dm %2x ", index, index);
+        if (index == 243)
+            printf("\033[0m\n");
     }
-    printf( "\033[0m\n\n" );
+    printf("\033[0m\n\n");
 
     return 0;
 }

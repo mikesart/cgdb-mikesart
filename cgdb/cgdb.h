@@ -41,7 +41,11 @@
  * So we use the win_refresh option to tell the routine whether to use
  * wrefresh() or wnoutrefresh(). This eliminates quite a bit of flashing as well.
  */
-enum win_refresh { WIN_NO_REFRESH, WIN_REFRESH };
+enum win_refresh
+{
+    WIN_NO_REFRESH,
+    WIN_REFRESH
+};
 
 /* TODO: Remove the below 3 lines. This is a reorganization effort to allow 
  * TGDB to understand the new request/response mechanism that TGDB supports.

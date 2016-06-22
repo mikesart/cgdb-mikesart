@@ -32,24 +32,31 @@
 int array[10000];
 int failed = 0;
 
-#define	TEST(m,cond)	G_STMT_START { failed = !(cond); \
-if (failed) \
-  { if (!m) \
-      g_print ("\n(%s:%d) failed for: %s\n", __FILE__, __LINE__, ( # cond )); \
-    else \
-      g_print ("\n(%s:%d) failed for: %s: (%s)\n", __FILE__, __LINE__, ( # cond ), (char*)m); \
-  } \
-else \
-  g_print ("."); fflush (stdout); \
-} G_STMT_END
+#define TEST(m, cond)                                                                                \
+    G_STMT_START                                                                                     \
+    {                                                                                                \
+        failed = !(cond);                                                                            \
+        if (failed)                                                                                  \
+        {                                                                                            \
+            if (!m)                                                                                  \
+                g_print("\n(%s:%d) failed for: %s\n", __FILE__, __LINE__, (#cond));                  \
+            else                                                                                     \
+                g_print("\n(%s:%d) failed for: %s: (%s)\n", __FILE__, __LINE__, (#cond), (char *)m); \
+        }                                                                                            \
+        else                                                                                         \
+            g_print(".");                                                                            \
+        fflush(stdout);                                                                              \
+    }                                                                                                \
+    G_STMT_END
 
-#define	C2P(c)		((void*) ((long) (c)))
-#define	P2C(p)		((char) ((long) (p)))
+#define C2P(c) ((void *)((long)(c)))
+#define P2C(p) ((char)((long)(p)))
 
 #define GLIB_TEST_STRING "el dorado "
 #define GLIB_TEST_STRING_5 "el do"
 
-typedef struct {
+typedef struct
+{
     unsigned int age;
     char name[40];
 } GlibTestInfo;
@@ -77,15 +84,18 @@ int runtreetest(struct std_bbtree *tree)
 
     tree = std_bbtree_new(my_compare);
     i = 0;
-    for (j = 0; j < 10; j++, i++) {
+    for (j = 0; j < 10; j++, i++)
+    {
         chars[i] = '0' + j;
         std_bbtree_insert(tree, &chars[i], &chars[i]);
     }
-    for (j = 0; j < 26; j++, i++) {
+    for (j = 0; j < 26; j++, i++)
+    {
         chars[i] = 'A' + j;
         std_bbtree_insert(tree, &chars[i], &chars[i]);
     }
-    for (j = 0; j < 26; j++, i++) {
+    for (j = 0; j < 26; j++, i++)
+    {
         chars[i] = 'a' + j;
         std_bbtree_insert(tree, &chars[i], &chars[i]);
     }

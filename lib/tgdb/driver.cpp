@@ -97,7 +97,7 @@ static int tab_completion(int a, int b)
     ret = rline_get_current_line(rline, &cur_line);
     if (ret == -1)
         logger_write_pos(logger, __FILE__, __LINE__,
-                "rline_get_current_line error\n");
+            "rline_get_current_line error\n");
 
     tgdb_request_complete(tgdb, cur_line);
     return 0;
@@ -109,12 +109,13 @@ static int tab_completion(int a, int b)
  */
 static void
 readline_completion_display_func(char **matches, int num_matches,
-        int max_length)
+    int max_length)
 {
     int i;
 
     printf("\n");
-    for (i = 1; i <= num_matches; ++i) {
+    for (i = 1; i <= num_matches; ++i)
+    {
         printf("%s", matches[i]);
         printf("\n");
     }
@@ -122,9 +123,10 @@ readline_completion_display_func(char **matches, int num_matches,
 
 int do_tab_completion(struct tgdb_list *list)
 {
-    if (rline_rl_complete(rline, list, &readline_completion_display_func) == -1) {
+    if (rline_rl_complete(rline, list, &readline_completion_display_func) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "rline_rl_complete error\n");
+            "rline_rl_complete error\n");
         return -1;
     }
     is_tab_completing = 0;
@@ -153,17 +155,20 @@ static int set_up_signal(void)
     sigemptyset(&action.sa_mask);
     action.sa_flags = 0;
 
-    if (sigaction(SIGINT, &action, NULL) < 0) {
+    if (sigaction(SIGINT, &action, NULL) < 0)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "sigaction failed ");
         return -1;
     }
 
-    if (sigaction(SIGTERM, &action, NULL) < 0) {
+    if (sigaction(SIGTERM, &action, NULL) < 0)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "sigaction failed ");
         return -1;
     }
 
-    if (sigaction(SIGQUIT, &action, NULL) < 0) {
+    if (sigaction(SIGQUIT, &action, NULL) < 0)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "sigaction failed ");
         return -1;
     }
@@ -173,7 +178,7 @@ static int set_up_signal(void)
 
 static void driver_prompt_change(const char *new_prompt)
 {
-    char *nprompt = (char *) new_prompt;
+    char *nprompt = (char *)new_prompt;
 
     change_prompt(nprompt);
 }
@@ -186,56 +191,65 @@ static int gdb_input(void)
     struct tgdb_response *item;
     int is_finished;
 
-    if ((size = tgdb_process(tgdb, buf, MAXLINE, &is_finished)) == -1) {
+    if ((size = tgdb_process(tgdb, buf, MAXLINE, &is_finished)) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "file descriptor closed");
         return -1;
     }
     /* end if */
-    for (i = 0; i < size; ++i) {
-        if (write(STDOUT_FILENO, &(buf[i]), 1) != 1) {
+    for (i = 0; i < size; ++i)
+    {
+        if (write(STDOUT_FILENO, &(buf[i]), 1) != 1)
+        {
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "could not write byte");
+                "could not write byte");
             return -1;
         }
     }
 
     /*tgdb_traverse_responses ( tgdb ); */
 
-    while ((item = tgdb_get_response(tgdb)) != NULL) {
-        if (item->header == TGDB_UPDATE_COMPLETIONS) {
+    while ((item = tgdb_get_response(tgdb)) != NULL)
+    {
+        if (item->header == TGDB_UPDATE_COMPLETIONS)
+        {
             struct tgdb_list *list =
-                    item->choice.update_completions.completion_list;
+                item->choice.update_completions.completion_list;
             do_tab_completion(list);
         }
 
         if (item->header == TGDB_UPDATE_CONSOLE_PROMPT_VALUE)
-            driver_prompt_change(item->choice.update_console_prompt_value.
-                    prompt_value);
+            driver_prompt_change(item->choice.update_console_prompt_value.prompt_value);
 
-        if (item->header == TGDB_QUIT) {
+        if (item->header == TGDB_QUIT)
+        {
             fprintf(stderr, "%s:%d TGDB_QUIT\n", __FILE__, __LINE__);
             return -1;
         }
     }
 
-    if (is_finished) {
+    if (is_finished)
+    {
         int qsize;
 
         qsize = tgdb_queue_size(tgdb);
-        if (qsize > 0) {
+        if (qsize > 0)
+        {
             struct tgdb_request *request = tgdb_queue_pop(tgdb);
             char *prompt;
 
             rline_get_prompt(rline, &prompt);
             printf("%s", prompt);
 
-            if (request->header == TGDB_REQUEST_CONSOLE_COMMAND) {
+            if (request->header == TGDB_REQUEST_CONSOLE_COMMAND)
+            {
                 printf("%s", request->choice.console_command.command);
                 printf("\n");
             }
 
             tgdb_process_command(tgdb, request);
-        } else
+        }
+        else
             rline_rl_forced_update_display(rline);
     }
 
@@ -248,15 +262,17 @@ static void tty_input(void)
     size_t size;
     size_t i;
 
-    if ((size = tgdb_recv_inferior_data(tgdb, buf, MAXLINE)) == -1) {
+    if ((size = tgdb_recv_inferior_data(tgdb, buf, MAXLINE)) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "file descriptor closed");
         return;
     }
     /* end if */
     for (i = 0; i < size; ++i)
-        if (write(STDOUT_FILENO, &(buf[i]), 1) != 1) {
+        if (write(STDOUT_FILENO, &(buf[i]), 1) != 1)
+        {
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "could not write byte");
+                "could not write byte");
             return;
         }
 }
@@ -269,14 +285,16 @@ static int readline_input()
 
     int masterfd = pty_pair_get_masterfd(pty_pair);
 
-    if (masterfd == -1) {
+    if (masterfd == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "pty_pair_get_masterfd error");
+            "pty_pair_get_masterfd error");
         return -1;
     }
 
     size = read(masterfd, buf, MAXLINE - 1);
-    if (size == -1) {
+    if (size == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "read error");
         return -1;
     }
@@ -289,9 +307,10 @@ static int readline_input()
      * gdb window gets displayed when the filedlg is up
      */
     for (i = 0; i < size; ++i)
-        if (write(STDOUT_FILENO, &(buf[i]), 1) != 1) {
+        if (write(STDOUT_FILENO, &(buf[i]), 1) != 1)
+        {
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "could not write byte");
+                "could not write byte");
             return -1;
         }
 
@@ -306,14 +325,16 @@ static int stdin_input()
 
     int masterfd = pty_pair_get_masterfd(pty_pair);
 
-    if (masterfd == -1) {
+    if (masterfd == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "pty_pair_get_masterfd error");
+            "pty_pair_get_masterfd error");
         return -1;
     }
 
     size = read(STDIN_FILENO, buf, MAXLINE - 1);
-    if (size == -1) {
+    if (size == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "read error");
         return -1;
     }
@@ -326,9 +347,10 @@ static int stdin_input()
      * gdb window gets displayed when the filedlg is up
      */
     for (i = 0; i < size; ++i)
-        if (write(masterfd, &(buf[i]), 1) != 1) {
+        if (write(masterfd, &(buf[i]), 1) != 1)
+        {
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "could not write byte");
+                "could not write byte");
             return -1;
         }
 
@@ -345,22 +367,25 @@ int main_loop(int gdbfd)
     int masterfd, slavefd, childfd;
 
     masterfd = pty_pair_get_masterfd(pty_pair);
-    if (masterfd == -1) {
+    if (masterfd == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "pty_pair_get_masterfd error");
+            "pty_pair_get_masterfd error");
         return -1;
     }
 
     slavefd = pty_pair_get_slavefd(pty_pair);
-    if (slavefd == -1) {
+    if (slavefd == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "pty_pair_get_slavefd error");
+            "pty_pair_get_slavefd error");
         return -1;
     }
 
     /* When TGDB is ready, we read from STDIN, otherwise, leave the data buffered. */
 
-    while (1) {
+    while (1)
+    {
 
         /* get max fd  for select loop */
         childfd = tgdb_get_inferior_fd(tgdb);
@@ -394,7 +419,7 @@ int main_loop(int gdbfd)
         /* if the signal interrupted system call keep going */
         if (result == -1 && errno == EINTR)
             continue;
-        else if (result == -1)  /* on error ... must die -> stupid OS */
+        else if (result == -1) /* on error ... must die -> stupid OS */
             logger_write_pos(logger, __FILE__, __LINE__, "select failed");
 
         /* Input received through the pty:  Handle it
@@ -408,12 +433,14 @@ int main_loop(int gdbfd)
             rline_rl_callback_read_char(rline);
 
         /* stdin -> readline input */
-        if (FD_ISSET(STDIN_FILENO, &rfds)) {
+        if (FD_ISSET(STDIN_FILENO, &rfds))
+        {
             stdin_input();
         }
 
         /* child's output -> stdout */
-        if (childfd != -1 && FD_ISSET(childfd, &rfds)) {
+        if (childfd != -1 && FD_ISSET(childfd, &rfds))
+        {
             tty_input();
             continue;
         }
@@ -436,7 +463,6 @@ static void print_message(const char *fmt, ...)
     va_end(ap);
 }
 
-
 int main(int argc, char **argv)
 {
 
@@ -452,19 +478,22 @@ int main(int argc, char **argv)
         logger_write_pos(logger, __FILE__, __LINE__, "tty_cbreak error");
 
     pty_pair = pty_pair_create();
-    if (!pty_pair) {
+    if (!pty_pair)
+    {
         fprintf(stderr, "%s:%d Unable to create PTY pair", __FILE__, __LINE__);
         exit(-1);
     }
 
     slavefd = pty_pair_get_slavefd(pty_pair);
-    if (slavefd == -1) {
+    if (slavefd == -1)
+    {
         fprintf(stderr, "%s:%d Unable to get slavefd", __FILE__, __LINE__);
         exit(-1);
     }
 
     masterfd = pty_pair_get_masterfd(pty_pair);
-    if (masterfd == -1) {
+    if (masterfd == -1)
+    {
         fprintf(stderr, "%s:%d Unable to get masterfd", __FILE__, __LINE__);
         exit(-1);
     }
@@ -473,20 +502,23 @@ int main(int argc, char **argv)
         exit(-1);
 
     rline = rline_initialize(slavefd, rlctx_send_user_command, tab_completion,
-            getenv("TERM"));
+        getenv("TERM"));
 
-    if ((tgdb = tgdb_initialize(NULL, argc - 1, argv + 1, &gdb_fd)) == NULL) {
+    if ((tgdb = tgdb_initialize(NULL, argc - 1, argv + 1, &gdb_fd)) == NULL)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "tgdb_start error");
         goto driver_end;
     }
 
-    if (tgdb_set_verbose_error_handling(tgdb, 1, print_message) != 1) {
+    if (tgdb_set_verbose_error_handling(tgdb, 1, print_message) != 1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "driver error");
         goto driver_end;
     }
 
     /* Ask TGDB to print error messages */
-    if (tgdb_set_verbose_gui_command_output(tgdb, 1) != 1) {
+    if (tgdb_set_verbose_gui_command_output(tgdb, 1) != 1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "driver error");
         goto driver_end;
     }
@@ -498,7 +530,7 @@ int main(int argc, char **argv)
     if (tgdb_shutdown(tgdb) == -1)
         logger_write_pos(logger, __FILE__, __LINE__, "could not shutdown");
 
-  driver_end:
+driver_end:
 
     if (tty_set_attributes(STDIN_FILENO, &term_attributes) == -1)
         logger_write_pos(logger, __FILE__, __LINE__, "tty_reset error");

@@ -60,7 +60,7 @@ void if_print(const char *buf, int source);
  *
  * fmt:     The message to display
  */
-void if_print_message(const char *fmt, ...) ATTRIBUTE_PRINTF( 1, 2 );
+void if_print_message(const char *fmt, ...) ATTRIBUTE_PRINTF(1, 2);
 
 /* if_tty_print: Prints data to the tty input/output window.
  * -------------
@@ -97,7 +97,7 @@ struct sviewer *if_get_sview();
  * fmt:     The message to display
  */
 void if_display_message(const char *msg, enum win_refresh dorefresh,
-                        int width, const char *fmt, ...) ATTRIBUTE_PRINTF( 4, 5 );
+    int width, const char *fmt, ...) ATTRIBUTE_PRINTF(4, 5);
 
 /* if_clear_filedlg: Clears all the files the file dialog has to show the user.
  * -----------------
@@ -131,7 +131,11 @@ void if_shutdown(void);
  *  CGDB_STATUS_BAR: focus on the status bar, accepts commands.
  *  FILE_DLG: focus on file dialog window
  */
-typedef enum Focus { GDB, TTY, CGDB, CGDB_STATUS_BAR, FILE_DLG } Focus;
+typedef enum Focus { GDB,
+    TTY,
+    CGDB,
+    CGDB_STATUS_BAR,
+    FILE_DLG } Focus;
 
 /* if_set_focus: Sets the current input focus to a different window 
  * ------------
@@ -167,12 +171,12 @@ void if_tty_toggle(void);
  */
 void if_draw(void);
 
- /* if_set_winorientation:
+/* if_set_winorientation:
   * ________________
   */
 void if_set_splitorientation(SPLIT_ORIENTATION_TYPE newOrientation);
 
- /* if_set_winsplit:
+/* if_set_winsplit:
   * ________________
   */
 void if_set_winsplit(WIN_SPLIT_TYPE newSplit);

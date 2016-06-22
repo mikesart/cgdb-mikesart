@@ -18,15 +18,16 @@
  */
 
 #include <stdlib.h>
-#include <stdio.h>              /* For debug only */
+#include <stdio.h> /* For debug only */
 
 #include "std_bbtree.h"
 
-#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 struct std_bbtreenode;
 
-struct std_bbtree {
+struct std_bbtree
+{
     struct std_bbtreenode *root;
     STDCompareDataFunc key_compare;
     STDDestroyNotify key_destroy_func;
@@ -34,54 +35,59 @@ struct std_bbtree {
     void *key_compare_data;
 };
 
-struct std_bbtreenode {
-    int balance;                /* height (left) - height (right) */
-    struct std_bbtreenode *left;    /* left subtree */
-    struct std_bbtreenode *right;   /* right subtree */
-    void *key;                  /* key for this node */
-    void *value;                /* value stored at this node */
+struct std_bbtreenode
+{
+    int balance;                  /* height (left) - height (right) */
+    struct std_bbtreenode *left;  /* left subtree */
+    struct std_bbtreenode *right; /* right subtree */
+    void *key;                    /* key for this node */
+    void *value;                  /* value stored at this node */
 };
 
 static struct std_bbtreenode *std_bbtree_node_new(void *key, void *value);
 
 static void std_bbtree_node_destroy(struct std_bbtreenode *node,
-        STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func);
+    STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func);
 
 static struct std_bbtreenode *std_bbtree_node_insert(struct std_bbtree *tree,
-        struct std_bbtreenode *node,
-        void *key, void *value, int replace, int *inserted);
+    struct std_bbtreenode *node,
+    void *key, void *value, int replace, int *inserted);
 
 static struct std_bbtreenode *std_bbtree_node_remove(struct std_bbtree *tree,
-        struct std_bbtreenode *node, const void *key, int notify);
+    struct std_bbtreenode *node, const void *key, int notify);
 
 static struct std_bbtreenode *std_bbtree_node_balance(struct std_bbtreenode
         *node);
 
 static struct std_bbtreenode *std_bbtree_node_remove_leftmost(struct
-        std_bbtreenode *node, struct std_bbtreenode **leftmost);
+    std_bbtreenode *node,
+    struct std_bbtreenode **leftmost);
 
 static struct std_bbtreenode *std_bbtree_node_restore_left_balance(struct
-        std_bbtreenode *node, int old_balance);
+    std_bbtreenode *node,
+    int old_balance);
 
 static struct std_bbtreenode *std_bbtree_node_restore_right_balance(struct
-        std_bbtreenode *node, int old_balance);
+    std_bbtreenode *node,
+    int old_balance);
 
 static struct std_bbtreenode *std_bbtree_node_lookup(struct std_bbtreenode
-        *node, STDCompareDataFunc compare, void *comp_data, const void *key);
+                                                         *node,
+    STDCompareDataFunc compare, void *comp_data, const void *key);
 
 static int std_bbtree_node_count(struct std_bbtreenode *node);
 
 static int std_bbtree_node_pre_order(struct std_bbtreenode *node,
-        STDTraverseFunc traverse_func, void *data);
+    STDTraverseFunc traverse_func, void *data);
 
 static int std_bbtree_node_in_order(struct std_bbtreenode *node,
-        STDTraverseFunc traverse_func, void *data);
+    STDTraverseFunc traverse_func, void *data);
 
 static int std_bbtree_node_post_order(struct std_bbtreenode *node,
-        STDTraverseFunc traverse_func, void *data);
+    STDTraverseFunc traverse_func, void *data);
 
 static void *std_bbtree_node_search(struct std_bbtreenode *node,
-        STDCompareFunc search_func, const void *data);
+    STDCompareFunc search_func, const void *data);
 
 static int std_bbtree_node_height(struct std_bbtreenode *node);
 
@@ -97,7 +103,7 @@ static struct std_bbtreenode *std_bbtree_node_new(void *key, void *value)
 {
     struct std_bbtreenode *node;
 
-    node = (struct std_bbtreenode *)malloc(sizeof (struct std_bbtreenode));
+    node = (struct std_bbtreenode *)malloc(sizeof(struct std_bbtreenode));
 
     node->balance = 0;
     node->left = NULL;
@@ -110,13 +116,14 @@ static struct std_bbtreenode *std_bbtree_node_new(void *key, void *value)
 
 static void
 std_bbtree_node_destroy(struct std_bbtreenode *node,
-        STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func)
+    STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func)
 {
-    if (node) {
+    if (node)
+    {
         std_bbtree_node_destroy(node->right,
-                key_destroy_func, value_destroy_func);
+            key_destroy_func, value_destroy_func);
         std_bbtree_node_destroy(node->left,
-                key_destroy_func, value_destroy_func);
+            key_destroy_func, value_destroy_func);
 
         if (key_destroy_func)
             key_destroy_func(node->key);
@@ -138,12 +145,12 @@ struct std_bbtree *std_bbtree_new(STDCompareFunc key_compare_func)
     if (!key_compare_func)
         return NULL;
 
-    return std_bbtree_new_full((STDCompareDataFunc) key_compare_func, NULL,
-            NULL, NULL);
+    return std_bbtree_new_full((STDCompareDataFunc)key_compare_func, NULL,
+        NULL, NULL);
 }
 
 struct std_bbtree *std_bbtree_new_with_data(STDCompareDataFunc key_compare_func,
-        void *key_compare_data)
+    void *key_compare_data)
 {
     if (!key_compare_func)
         return NULL;
@@ -152,15 +159,15 @@ struct std_bbtree *std_bbtree_new_with_data(STDCompareDataFunc key_compare_func,
 }
 
 struct std_bbtree *std_bbtree_new_full(STDCompareDataFunc key_compare_func,
-        void *key_compare_data,
-        STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func)
+    void *key_compare_data,
+    STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func)
 {
     struct std_bbtree *tree;
 
     if (!key_compare_func)
         return NULL;
 
-    tree = (struct std_bbtree *)malloc(sizeof (struct std_bbtree));
+    tree = (struct std_bbtree *)malloc(sizeof(struct std_bbtree));
     tree->root = NULL;
     tree->key_compare = key_compare_func;
     tree->key_destroy_func = key_destroy_func;
@@ -176,7 +183,7 @@ int std_bbtree_destroy(struct std_bbtree *tree)
         return -1;
 
     std_bbtree_node_destroy(tree->root,
-            tree->key_destroy_func, tree->value_destroy_func);
+        tree->key_destroy_func, tree->value_destroy_func);
 
     free(tree);
 
@@ -192,7 +199,7 @@ int std_bbtree_insert(struct std_bbtree *tree, void *key, void *value)
 
     inserted = 0;
     tree->root = std_bbtree_node_insert(tree,
-            tree->root, key, value, 0, &inserted);
+        tree->root, key, value, 0, &inserted);
     return 0;
 }
 
@@ -205,7 +212,7 @@ int std_bbtree_replace(struct std_bbtree *tree, void *key, void *value)
 
     inserted = 0;
     tree->root = std_bbtree_node_insert(tree,
-            tree->root, key, value, 1, &inserted);
+        tree->root, key, value, 1, &inserted);
     return 0;
 }
 
@@ -237,14 +244,13 @@ void *std_bbtree_lookup(struct std_bbtree *tree, const void *key)
         return NULL;
 
     node = std_bbtree_node_lookup(tree->root,
-            tree->key_compare, tree->key_compare_data, key);
+        tree->key_compare, tree->key_compare_data, key);
 
     return node ? node->value : NULL;
 }
 
-int
-std_bbtree_lookup_extended(struct std_bbtree *tree,
-        const void *lookup_key, void * *orig_key, void * *value)
+int std_bbtree_lookup_extended(struct std_bbtree *tree,
+    const void *lookup_key, void **orig_key, void **value)
 {
     struct std_bbtreenode *node;
 
@@ -252,21 +258,22 @@ std_bbtree_lookup_extended(struct std_bbtree *tree,
         return 0;
 
     node = std_bbtree_node_lookup(tree->root,
-            tree->key_compare, tree->key_compare_data, lookup_key);
+        tree->key_compare, tree->key_compare_data, lookup_key);
 
-    if (node) {
+    if (node)
+    {
         if (orig_key)
             *orig_key = node->key;
         if (value)
             *value = node->value;
         return 1;
-    } else
+    }
+    else
         return 0;
 }
 
-int
-std_bbtree_foreach(struct std_bbtree *tree,
-        STDTraverseFunc func, void *user_data)
+int std_bbtree_foreach(struct std_bbtree *tree,
+    STDTraverseFunc func, void *user_data)
 {
     if (!tree)
         return -1;
@@ -280,7 +287,7 @@ std_bbtree_foreach(struct std_bbtree *tree,
 }
 
 void *std_bbtree_search(struct std_bbtree *tree,
-        STDCompareFunc search_func, const void *user_data)
+    STDCompareFunc search_func, const void *user_data)
 {
     if (!tree)
         return NULL;
@@ -314,19 +321,21 @@ int std_bbtree_nnodes(struct std_bbtree *tree)
 }
 
 static struct std_bbtreenode *std_bbtree_node_insert(struct std_bbtree *tree,
-        struct std_bbtreenode *node,
-        void *key, void *value, int replace, int *inserted)
+    struct std_bbtreenode *node,
+    void *key, void *value, int replace, int *inserted)
 {
     int old_balance;
     int cmp;
 
-    if (!node) {
+    if (!node)
+    {
         *inserted = 1;
         return std_bbtree_node_new(key, value);
     }
 
     cmp = tree->key_compare(key, node->key, tree->key_compare_data);
-    if (cmp == 0) {
+    if (cmp == 0)
+    {
         *inserted = 0;
 
         if (tree->value_destroy_func)
@@ -334,12 +343,15 @@ static struct std_bbtreenode *std_bbtree_node_insert(struct std_bbtree *tree,
 
         node->value = value;
 
-        if (replace) {
+        if (replace)
+        {
             if (tree->key_destroy_func)
                 tree->key_destroy_func(node->key);
 
             node->key = key;
-        } else {
+        }
+        else
+        {
             /* free the passed key */
             if (tree->key_destroy_func)
                 tree->key_destroy_func(key);
@@ -348,35 +360,45 @@ static struct std_bbtreenode *std_bbtree_node_insert(struct std_bbtree *tree,
         return node;
     }
 
-    if (cmp < 0) {
-        if (node->left) {
+    if (cmp < 0)
+    {
+        if (node->left)
+        {
             old_balance = node->left->balance;
             node->left = std_bbtree_node_insert(tree,
-                    node->left, key, value, replace, inserted);
+                node->left, key, value, replace, inserted);
 
             if ((old_balance != node->left->balance) && node->left->balance)
                 node->balance -= 1;
-        } else {
+        }
+        else
+        {
             *inserted = 1;
             node->left = std_bbtree_node_new(key, value);
             node->balance -= 1;
         }
-    } else if (cmp > 0) {
-        if (node->right) {
+    }
+    else if (cmp > 0)
+    {
+        if (node->right)
+        {
             old_balance = node->right->balance;
             node->right = std_bbtree_node_insert(tree,
-                    node->right, key, value, replace, inserted);
+                node->right, key, value, replace, inserted);
 
             if ((old_balance != node->right->balance) && node->right->balance)
                 node->balance += 1;
-        } else {
+        }
+        else
+        {
             *inserted = 1;
             node->right = std_bbtree_node_new(key, value);
             node->balance += 1;
         }
     }
 
-    if (*inserted) {
+    if (*inserted)
+    {
         if ((node->balance < -1) || (node->balance > 1))
             node = std_bbtree_node_balance(node);
     }
@@ -385,7 +407,7 @@ static struct std_bbtreenode *std_bbtree_node_insert(struct std_bbtree *tree,
 }
 
 static struct std_bbtreenode *std_bbtree_node_remove(struct std_bbtree *tree,
-        struct std_bbtreenode *node, const void *key, int notify)
+    struct std_bbtreenode *node, const void *key, int notify)
 {
     struct std_bbtreenode *new_root;
     int old_balance;
@@ -395,24 +417,29 @@ static struct std_bbtreenode *std_bbtree_node_remove(struct std_bbtree *tree,
         return NULL;
 
     cmp = tree->key_compare(key, node->key, tree->key_compare_data);
-    if (cmp == 0) {
+    if (cmp == 0)
+    {
         struct std_bbtreenode *garbage;
 
         garbage = node;
 
-        if (!node->right) {
+        if (!node->right)
+        {
             node = node->left;
-        } else {
+        }
+        else
+        {
             old_balance = node->right->balance;
             node->right =
-                    std_bbtree_node_remove_leftmost(node->right, &new_root);
+                std_bbtree_node_remove_leftmost(node->right, &new_root);
             new_root->left = node->left;
             new_root->right = node->right;
             new_root->balance = node->balance;
             node = std_bbtree_node_restore_right_balance(new_root, old_balance);
         }
 
-        if (notify) {
+        if (notify)
+        {
             if (tree->key_destroy_func)
                 tree->key_destroy_func(garbage->key);
             if (tree->value_destroy_func)
@@ -426,17 +453,23 @@ static struct std_bbtreenode *std_bbtree_node_remove(struct std_bbtree *tree,
         garbage->right = NULL;
         free(garbage);
         garbage = NULL;
-    } else if (cmp < 0) {
-        if (node->left) {
+    }
+    else if (cmp < 0)
+    {
+        if (node->left)
+        {
             old_balance = node->left->balance;
             node->left = std_bbtree_node_remove(tree, node->left, key, notify);
             node = std_bbtree_node_restore_left_balance(node, old_balance);
         }
-    } else if (cmp > 0) {
-        if (node->right) {
+    }
+    else if (cmp > 0)
+    {
+        if (node->right)
+        {
             old_balance = node->right->balance;
             node->right =
-                    std_bbtree_node_remove(tree, node->right, key, notify);
+                std_bbtree_node_remove(tree, node->right, key, notify);
             node = std_bbtree_node_restore_right_balance(node, old_balance);
         }
     }
@@ -447,11 +480,14 @@ static struct std_bbtreenode *std_bbtree_node_remove(struct std_bbtree *tree,
 static struct std_bbtreenode *std_bbtree_node_balance(struct std_bbtreenode
         *node)
 {
-    if (node->balance < -1) {
+    if (node->balance < -1)
+    {
         if (node->left->balance > 0)
             node->left = std_bbtree_node_rotate_left(node->left);
         node = std_bbtree_node_rotate_right(node);
-    } else if (node->balance > 1) {
+    }
+    else if (node->balance > 1)
+    {
         if (node->right->balance < 0)
             node->right = std_bbtree_node_rotate_right(node->right);
         node = std_bbtree_node_rotate_left(node);
@@ -461,11 +497,13 @@ static struct std_bbtreenode *std_bbtree_node_balance(struct std_bbtreenode
 }
 
 static struct std_bbtreenode *std_bbtree_node_remove_leftmost(struct
-        std_bbtreenode *node, struct std_bbtreenode **leftmost)
+    std_bbtreenode *node,
+    struct std_bbtreenode **leftmost)
 {
     int old_balance;
 
-    if (!node->left) {
+    if (!node->left)
+    {
         *leftmost = node;
         return node->right;
     }
@@ -476,7 +514,8 @@ static struct std_bbtreenode *std_bbtree_node_remove_leftmost(struct
 }
 
 static struct std_bbtreenode *std_bbtree_node_restore_left_balance(struct
-        std_bbtreenode *node, int old_balance)
+    std_bbtreenode *node,
+    int old_balance)
 {
     if (!node->left)
         node->balance += 1;
@@ -489,12 +528,13 @@ static struct std_bbtreenode *std_bbtree_node_restore_left_balance(struct
 }
 
 static struct std_bbtreenode *std_bbtree_node_restore_right_balance(struct
-        std_bbtreenode *node, int old_balance)
+    std_bbtreenode *node,
+    int old_balance)
 {
     if (!node->right)
         node->balance -= 1;
     else if ((node->right->balance != old_balance) &&
-            (node->right->balance == 0))
+        (node->right->balance == 0))
         node->balance -= 1;
 
     if (node->balance < -1)
@@ -503,25 +543,29 @@ static struct std_bbtreenode *std_bbtree_node_restore_right_balance(struct
 }
 
 static struct std_bbtreenode *std_bbtree_node_lookup(struct std_bbtreenode
-        *node, STDCompareDataFunc compare, void *compare_data, const void *key)
+                                                         *node,
+    STDCompareDataFunc compare, void *compare_data, const void *key)
 {
     int cmp;
 
     if (!node)
         return NULL;
 
-    cmp = (*compare) (key, node->key, compare_data);
+    cmp = (*compare)(key, node->key, compare_data);
     if (cmp == 0)
         return node;
 
-    if (cmp < 0) {
+    if (cmp < 0)
+    {
         if (node->left)
             return std_bbtree_node_lookup(node->left, compare, compare_data,
-                    key);
-    } else if (cmp > 0) {
+                key);
+    }
+    else if (cmp > 0)
+    {
         if (node->right)
             return std_bbtree_node_lookup(node->right, compare, compare_data,
-                    key);
+                key);
     }
 
     return NULL;
@@ -542,15 +586,17 @@ static int std_bbtree_node_count(struct std_bbtreenode *node)
 
 static int
 std_bbtree_node_pre_order(struct std_bbtreenode *node,
-        STDTraverseFunc traverse_func, void *data)
+    STDTraverseFunc traverse_func, void *data)
 {
-    if ((*traverse_func) (node->key, node->value, data))
+    if ((*traverse_func)(node->key, node->value, data))
         return 1;
-    if (node->left) {
+    if (node->left)
+    {
         if (std_bbtree_node_pre_order(node->left, traverse_func, data))
             return 1;
     }
-    if (node->right) {
+    if (node->right)
+    {
         if (std_bbtree_node_pre_order(node->right, traverse_func, data))
             return 1;
     }
@@ -560,15 +606,17 @@ std_bbtree_node_pre_order(struct std_bbtreenode *node,
 
 static int
 std_bbtree_node_in_order(struct std_bbtreenode *node,
-        STDTraverseFunc traverse_func, void *data)
+    STDTraverseFunc traverse_func, void *data)
 {
-    if (node->left) {
+    if (node->left)
+    {
         if (std_bbtree_node_in_order(node->left, traverse_func, data))
             return 1;
     }
-    if ((*traverse_func) (node->key, node->value, data))
+    if ((*traverse_func)(node->key, node->value, data))
         return 1;
-    if (node->right) {
+    if (node->right)
+    {
         if (std_bbtree_node_in_order(node->right, traverse_func, data))
             return 1;
     }
@@ -578,32 +626,35 @@ std_bbtree_node_in_order(struct std_bbtreenode *node,
 
 static int
 std_bbtree_node_post_order(struct std_bbtreenode *node,
-        STDTraverseFunc traverse_func, void *data)
+    STDTraverseFunc traverse_func, void *data)
 {
-    if (node->left) {
+    if (node->left)
+    {
         if (std_bbtree_node_post_order(node->left, traverse_func, data))
             return 1;
     }
-    if (node->right) {
+    if (node->right)
+    {
         if (std_bbtree_node_post_order(node->right, traverse_func, data))
             return 1;
     }
-    if ((*traverse_func) (node->key, node->value, data))
+    if ((*traverse_func)(node->key, node->value, data))
         return 1;
 
     return 0;
 }
 
 static void *std_bbtree_node_search(struct std_bbtreenode *node,
-        STDCompareFunc search_func, const void *data)
+    STDCompareFunc search_func, const void *data)
 {
     int dir;
 
     if (!node)
         return NULL;
 
-    do {
-        dir = (*search_func) (node->key, data);
+    do
+    {
+        dir = (*search_func)(node->key, data);
         if (dir == 0)
             return node->value;
 
@@ -621,7 +672,8 @@ static int std_bbtree_node_height(struct std_bbtreenode *node)
     int left_height;
     int right_height;
 
-    if (node) {
+    if (node)
+    {
         left_height = 0;
         right_height = 0;
 
@@ -652,13 +704,16 @@ static struct std_bbtreenode *std_bbtree_node_rotate_left(struct std_bbtreenode
     a_bal = node->balance;
     b_bal = right->balance;
 
-    if (b_bal <= 0) {
+    if (b_bal <= 0)
+    {
         if (a_bal >= 1)
             right->balance = b_bal - 1;
         else
             right->balance = a_bal + b_bal - 2;
         node->balance = a_bal - 1;
-    } else {
+    }
+    else
+    {
         if (a_bal <= b_bal)
             right->balance = a_bal - 2;
         else
@@ -684,13 +739,16 @@ static struct std_bbtreenode *std_bbtree_node_rotate_right(struct std_bbtreenode
     a_bal = node->balance;
     b_bal = left->balance;
 
-    if (b_bal <= 0) {
+    if (b_bal <= 0)
+    {
         if (b_bal > a_bal)
             left->balance = b_bal + 1;
         else
             left->balance = a_bal + 2;
         node->balance = a_bal - b_bal + 1;
-    } else {
+    }
+    else
+    {
         if (a_bal <= -1)
             left->balance = b_bal + 1;
         else
@@ -707,7 +765,8 @@ static void std_bbtree_node_check(struct std_bbtreenode *node)
     int right_height;
     int balance;
 
-    if (node) {
+    if (node)
+    {
         left_height = 0;
         right_height = 0;
 
@@ -719,7 +778,7 @@ static void std_bbtree_node_check(struct std_bbtreenode *node)
         balance = right_height - left_height;
         if (balance != node->balance)
             printf("std_bbtree_node_check: failed: %d ( %d )\n",
-                    balance, node->balance);
+                balance, node->balance);
 
         if (node->left)
             std_bbtree_node_check(node->left);

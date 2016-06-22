@@ -76,18 +76,20 @@ static void kui_shutdown(int use_endwin)
 static void usage(void)
 {
     printf("KUI Usage:\r\n"
-            "   kui_driver [kui options]\r\n" "\r\n" "KUI Options:\r\n"
+           "   kui_driver [kui options]\r\n"
+           "\r\n"
+           "KUI Options:\r\n"
 #ifdef HAVE_GETOPT_H
-            "   --file      Load an rc file consisting of map and unmap commands.\r\n"
+           "   --file      Load an rc file consisting of map and unmap commands.\r\n"
 #else
-            "   -f          Load an rc file consisting of map and unmap commands.\r\n"
+           "   -f          Load an rc file consisting of map and unmap commands.\r\n"
 #endif
 #ifdef HAVE_GETOPT_H
-            "   --help      Print help (this message) and then exit.\r\n"
+           "   --help      Print help (this message) and then exit.\r\n"
 #else
-            "   -h          Print help (this message) and then exit.\r\n"
+           "   -h          Print help (this message) and then exit.\r\n"
 #endif
-            "\r\nType 'q' to quit and Ctrl-z to send map or unmap command.\r\n");
+           "\r\nType 'q' to quit and Ctrl-z to send map or unmap command.\r\n");
     fflush(stdout);
 }
 
@@ -104,38 +106,45 @@ static int load_map(const char *line)
     regcomp(&regex_map_t, regex_map, REG_EXTENDED);
     regcomp(&regex_unmap_t, regex_unmap, REG_EXTENDED);
 
-    if (regexec(&regex_map_t, line, nmatch, pmatch, 0) == 0) {
+    if (regexec(&regex_map_t, line, nmatch, pmatch, 0) == 0)
+    {
         if (pmatch[0].rm_so != -1 &&
-                pmatch[1].rm_so != -1 && pmatch[2].rm_so != -1) {
+            pmatch[1].rm_so != -1 && pmatch[2].rm_so != -1)
+        {
             int size;
             char *key, *value;
 
             size = pmatch[1].rm_eo - pmatch[1].rm_so;
-            key = (char *) cgdb_malloc(sizeof (char) * (size) + 1);
+            key = (char *)cgdb_malloc(sizeof(char) * (size) + 1);
             strncpy(key, &line[pmatch[1].rm_so], size);
             key[size] = 0;
 
             size = pmatch[2].rm_eo - pmatch[2].rm_so;
-            value = (char *) cgdb_malloc(sizeof (char) * (size) + 1);
+            value = (char *)cgdb_malloc(sizeof(char) * (size) + 1);
             strncpy(value, &line[pmatch[2].rm_so], size);
             value[size] = 0;
 
-            if (kui_ms_register_map(map, key, value) == 0) {
+            if (kui_ms_register_map(map, key, value) == 0)
+            {
                 fprintf(stderr, "\r\nregestered key=%s value=%s", key, value);
                 return 1;
             }
         }
-    } else if (regexec(&regex_unmap_t, line, nmatch, pmatch, 0) == 0) {
-        if (pmatch[0].rm_so != -1 && pmatch[1].rm_so != -1) {
+    }
+    else if (regexec(&regex_unmap_t, line, nmatch, pmatch, 0) == 0)
+    {
+        if (pmatch[0].rm_so != -1 && pmatch[1].rm_so != -1)
+        {
             int size;
             char *key;
 
             size = pmatch[1].rm_eo - pmatch[1].rm_so;
-            key = (char *) cgdb_malloc(sizeof (char) * (size) + 1);
+            key = (char *)cgdb_malloc(sizeof(char) * (size) + 1);
             strncpy(key, &line[pmatch[1].rm_so], size);
             key[size] = 0;
 
-            if (kui_ms_deregister_map(map, key) == 0) {
+            if (kui_ms_deregister_map(map, key) == 0)
+            {
                 fprintf(stderr, "\r\nderegister key=%s", key);
                 return 1;
             }
@@ -152,12 +161,14 @@ static int read_mappings(const char *file)
 {
     FILE *fd = fopen(file, "r");
 
-    if (!fd) {
+    if (!fd)
+    {
         fprintf(stderr, "%s:%d fopen failed\n", __FILE__, __LINE__);
         return 0;
     }
 
-    while (!feof(fd)) {
+    while (!feof(fd))
+    {
         char line[4096];
 
         if (fgets(line, 4096, fd) == NULL)
@@ -178,13 +189,14 @@ static void parse_long_options(int argc, char **argv)
 
 #ifdef HAVE_GETOPT_H
     static struct option long_options[] = {
-        {"file", 1, 0, 'f'},
-        {"help", 0, 0, 'h'},
-        {0, 0, 0, 0}
+        { "file", 1, 0, 'f' },
+        { "help", 0, 0, 'h' },
+        { 0, 0, 0, 0 }
     };
 #endif
 
-    while (1) {
+    while (1)
+    {
 #ifdef HAVE_GETOPT_H
         opt = getopt_long(argc, argv, args, long_options, &option_index);
 #else
@@ -193,18 +205,19 @@ static void parse_long_options(int argc, char **argv)
         if (opt == -1)
             break;
 
-        switch (opt) {
-            case 'f':
-                /* Load a file */
-                read_mappings(optarg);
-                break;
-            case '?':
-            case 'h':
-                endwin();
-                usage();
-                kui_shutdown(0);
-            default:
-                break;
+        switch (opt)
+        {
+        case 'f':
+            /* Load a file */
+            read_mappings(optarg);
+            break;
+        case '?':
+        case 'h':
+            endwin();
+            usage();
+            kui_shutdown(0);
+        default:
+            break;
         }
     }
 }
@@ -217,7 +230,8 @@ void main_loop(struct kui_manager *i)
 
     max = STDIN_FILENO;
 
-    while (1) {
+    while (1)
+    {
         FD_ZERO(&rfds);
         FD_SET(STDIN_FILENO, &rfds);
 
@@ -228,22 +242,28 @@ void main_loop(struct kui_manager *i)
         /* if the signal interrupted system call keep going */
         if (result == -1 && errno == EINTR)
             continue;
-        else if (result == -1)  /* on error ... must die -> stupid OS */
+        else if (result == -1) /* on error ... must die -> stupid OS */
             fprintf(stderr, "%s:%d select failed\n", __FILE__, __LINE__);
 
-        if (FD_ISSET(STDIN_FILENO, &rfds)) {
-            while (1) {
+        if (FD_ISSET(STDIN_FILENO, &rfds))
+        {
+            while (1)
+            {
                 int c = kui_manager_getkey(i);
 
-                if (c == -1) {
+                if (c == -1)
+                {
                     fprintf(stderr, "kui_manager_getkey failed\n");
                     return;
                 }
 
-                if (c == 'q') {
+                if (c == 'q')
+                {
                     fprintf(stderr, "User aborted\r\n");
                     return;
-                } else if (kui_term_is_cgdb_key(c) && c == CGDB_KEY_CTRL_Z) {
+                }
+                else if (kui_term_is_cgdb_key(c) && c == CGDB_KEY_CTRL_Z)
+                {
                     /* Read a complete line, and check to see if it's a 
                      * map or umap command. */
                     char ch;
@@ -252,7 +272,8 @@ void main_loop(struct kui_manager *i)
 
                     fprintf(stderr, "\r\n(kui_map)");
 
-                    do {
+                    do
+                    {
                         ch = fgetc(stdin);
                         line[pos++] = ch;
                         fprintf(stderr, "%c", ch);
@@ -260,23 +281,28 @@ void main_loop(struct kui_manager *i)
                     line[pos++] = 0;
 
                     load_map(line);
-                } else {
-                    if (kui_term_is_cgdb_key(c)) {
+                }
+                else
+                {
+                    if (kui_term_is_cgdb_key(c))
+                    {
                         char *val;
                         char *sequence;
 
-                        val = (char *) kui_term_get_string_from_key(c);
+                        val = (char *)kui_term_get_string_from_key(c);
 
                         fprintf(stderr, "%s", val);
 
                         /* Print out the sequence received */
                         sequence = (char *)
-                                kui_term_get_ascii_char_sequence_from_key(c);
-                        while (sequence && sequence[0]) {
+                            kui_term_get_ascii_char_sequence_from_key(c);
+                        while (sequence && sequence[0])
+                        {
                             fprintf(stderr, "[%d]", sequence[0]);
                             sequence = sequence + 1;
                         }
-                    } else
+                    }
+                    else
                         fprintf(stderr, "%c", c);
                 }
 
@@ -360,7 +386,6 @@ static int create_mappings(struct kui_manager *kuim)
         return -1;
 
     return 0;
-
 }
 
 int main(int argc, char **argv)

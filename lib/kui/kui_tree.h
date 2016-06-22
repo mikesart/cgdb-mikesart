@@ -114,7 +114,8 @@ int kui_tree_delete(struct kui_tree *ktree, int *klist);
 
 /*@{*/
 
-enum kui_tree_state {
+enum kui_tree_state
+{
     KUI_TREE_FOUND = 0,
     KUI_TREE_MATCHING,
     KUI_TREE_NOT_FOUND,

@@ -33,28 +33,30 @@
 #include "kui_term.h"
 #include "highlight_groups.h"
 
-struct file_buffer {
-    char **files;               /* Array containing file */
-    int max_width;              /* Width of longest line in file */
+struct file_buffer
+{
+    char **files;  /* Array containing file */
+    int max_width; /* Width of longest line in file */
 
-    int sel_line;               /* Current line selected in file dialog */
-    int sel_col;                /* Current column selected in file dialog */
+    int sel_line; /* Current line selected in file dialog */
+    int sel_col;  /* Current column selected in file dialog */
 
-    int sel_rline;              /* Current line used by regex */
+    int sel_rline; /* Current line used by regex */
 };
 
-struct filedlg {
-    struct file_buffer *buf;    /* All of the widget's data ( files ) */
+struct filedlg
+{
+    struct file_buffer *buf; /* All of the widget's data ( files ) */
     struct hl_regex_info *hlregex;
-    WINDOW *win;                /* Curses window */
+    WINDOW *win; /* Curses window */
 };
 
-static char regex_line[MAX_LINE];   /* The regex the user enters */
-static int regex_line_pos;      /* The index into the current regex */
-static int regex_search;        /* Currently searching text ? */
-static int regex_direction;     /* Direction to search */
+static char regex_line[MAX_LINE]; /* The regex the user enters */
+static int regex_line_pos;        /* The index into the current regex */
+static int regex_search;          /* Currently searching text ? */
+static int regex_direction;       /* Direction to search */
 
-static int G_line_number = -1;      /* Line number user wants to 'G' to */
+static int G_line_number = -1; /* Line number user wants to 'G' to */
 
 /* print_in_middle: Prints the message 'string' centered at line in win 
  * ----------------
@@ -64,7 +66,7 @@ static int G_line_number = -1;      /* Line number user wants to 'G' to */
  *  width:  The width of the window
  *  string: The message to print
  */
-static void print_in_middle(WINDOW * win, int line, int width, const char *string)
+static void print_in_middle(WINDOW *win, int line, int width, const char *string)
 {
     int x, y;
     int j;
@@ -72,7 +74,7 @@ static void print_in_middle(WINDOW * win, int line, int width, const char *strin
 
     getyx(win, y, x);
 
-    x = (int) ((width - length) / 2);
+    x = (int)((width - length) / 2);
 
     wmove(win, line, 0);
     for (j = 0; j < x; j++)
@@ -89,7 +91,7 @@ struct filedlg *filedlg_new(int pos_r, int pos_c, int height, int width)
     struct filedlg *fd;
 
     /* Allocate a new structure */
-    if ((fd = (struct filedlg *)malloc(sizeof (struct filedlg))) == NULL)
+    if ((fd = (struct filedlg *)malloc(sizeof(struct filedlg))) == NULL)
         return NULL;
 
     /* Initialize the structure */
@@ -97,7 +99,7 @@ struct filedlg *filedlg_new(int pos_r, int pos_c, int height, int width)
     keypad(fd->win, TRUE);
 
     /* Initialize the buffer */
-    if ((fd->buf = (struct file_buffer *)malloc(sizeof (struct file_buffer))) == NULL)
+    if ((fd->buf = (struct file_buffer *)malloc(sizeof(struct file_buffer))) == NULL)
         return NULL;
 
     fd->hlregex = NULL;
@@ -130,7 +132,7 @@ int filedlg_add_file_choice(struct filedlg *fd, const char *file_choice)
 {
     int length;
     int index, i;
-    int equal = 1;              /* Not set to 0, because 0 *is* equal */
+    int equal = 1; /* Not set to 0, because 0 *is* equal */
 
     if (file_choice == NULL || *file_choice == '\0')
         return -1;
@@ -139,7 +141,8 @@ int filedlg_add_file_choice(struct filedlg *fd, const char *file_choice)
      * delete and it pollutes the file open dialog with files you
      * can't actually open.
      */
-    if (file_choice[0] != '*') {
+    if (file_choice[0] != '*')
+    {
         if (access(file_choice, F_OK) == -1)
             return -4;
     }
@@ -148,28 +151,29 @@ int filedlg_add_file_choice(struct filedlg *fd, const char *file_choice)
      * Absolute paths go to the end
      * Relative paths go before the absolute paths 
      */
-    for (i = 0; i < sbcount(fd->buf->files); i++) {
+    for (i = 0; i < sbcount(fd->buf->files); i++)
+    {
         /* Don't add duplicate entry's ... gdb outputs duplicates */
         if ((equal = strcmp(fd->buf->files[i], file_choice)) == 0)
             return -3;
-        else if (equal < 0) {
+        else if (equal < 0)
+        {
             /* Inserting filename, stop before relative path */
-            if ((file_choice[0] != '.' && file_choice[0] != '/')
-                    && fd->buf->files[i][0] == '.')
+            if ((file_choice[0] != '.' && file_choice[0] != '/') && fd->buf->files[i][0] == '.')
                 break;
 
             /* Inserting filename, stop before absolute path */
             if (file_choice[0] != '/' && fd->buf->files[i][0] == '/')
                 break;
-
-        } else if (equal > 0) { /* Found ( file_choice is greater ) */
+        }
+        else if (equal > 0)
+        { /* Found ( file_choice is greater ) */
             /* Inserting Absolute path, it goes to the end */
             if (file_choice[0] == '/' && fd->buf->files[i][0] != '/')
                 continue;
 
             /* Inserting relative path, continue until before absolute or relative path */
-            if (file_choice[0] == '.' && (fd->buf->files[i][0] != '.'
-                            && fd->buf->files[i][0] != '/'))
+            if (file_choice[0] == '.' && (fd->buf->files[i][0] != '.' && fd->buf->files[i][0] != '/'))
                 continue;
 
             break;
@@ -230,7 +234,8 @@ static void filedlg_hscroll(struct filedlg *fd, int offset)
     int max_width;
     int width, height;
 
-    if (fd->buf) {
+    if (fd->buf)
+    {
         getmaxyx(fd->win, height, width);
 
         lwidth = log10_uint(sbcount(fd->buf->files)) + 1;
@@ -272,12 +277,13 @@ static int wrap_line(struct file_buffer *buffer, int line)
 }
 
 static int filedlg_search_regex(struct filedlg *fd, const char *regex,
-        int opt, int direction, int icase)
+    int opt, int direction, int icase)
 {
     if (!fd || !fd->buf)
         return -1;
 
-    if (regex && regex[0]) {
+    if (regex && regex[0])
+    {
         int line;
         int line_end;
         int line_inc = direction ? +1 : -1;
@@ -290,13 +296,15 @@ static int filedlg_search_regex(struct filedlg *fd, const char *regex,
         else
             line_end = direction ? sbcount(fd->buf->files) : -1;
 
-        for(;;) {
+        for (;;)
+        {
             int ret;
             int start, end;
             char *file = fd->buf->files[line];
 
             ret = hl_regex_search(&fd->hlregex, file, regex, icase, &start, &end);
-            if (ret > 0) {
+            if (ret > 0)
+            {
                 /* Got a match */
                 fd->buf->sel_line = line;
 
@@ -332,7 +340,8 @@ int filedlg_display(struct filedlg *fd)
     curs_set(0);
 
     /* Check that a file is loaded */
-    if (fd == NULL || fd->buf == NULL || fd->buf->files == NULL) {
+    if (fd == NULL || fd->buf == NULL || fd->buf->files == NULL)
+    {
         wrefresh(fd->win);
         return 0;
     }
@@ -347,7 +356,8 @@ int filedlg_display(struct filedlg *fd)
     /* Set starting line number (center source file if it's small enough) */
     if (count < height)
         file = (count - height) / 2;
-    else {
+    else
+    {
         file = fd->buf->sel_line - height / 2;
         if (file > count - height)
             file = count - height;
@@ -365,11 +375,13 @@ int filedlg_display(struct filedlg *fd)
 
     wmove(fd->win, 0, 0);
 
-    for (i = 1; i < height + 1; i++, file++) {
+    for (i = 1; i < height + 1; i++, file++)
+    {
         wmove(fd->win, i, 0);
 
         /* Outside of filename, just finish drawing the vertical file */
-        if (file < 0 || file >= count) {
+        if (file < 0 || file >= count)
+        {
             int j;
 
             for (j = 1; j < lwidth; j++)
@@ -389,7 +401,8 @@ int filedlg_display(struct filedlg *fd)
         char *filename = fd->buf->files[file];
 
         /* Mark the current file with an arrow */
-        if (file == fd->buf->sel_line) {
+        if (file == fd->buf->sel_line)
+        {
             wattron(fd->win, A_BOLD);
             wprintw(fd->win, fmt, file + 1);
             wattroff(fd->win, A_BOLD);
@@ -398,9 +411,9 @@ int filedlg_display(struct filedlg *fd)
             waddch(fd->win, '-');
             waddch(fd->win, '>');
             wattroff(fd->win, arrow_attr);
-
         }
-        else {
+        else
+        {
             /* Ordinary file */
             wprintw(fd->win, fmt, file + 1);
 
@@ -413,16 +426,18 @@ int filedlg_display(struct filedlg *fd)
 
         getyx(fd->win, y, x);
         hl_printline(fd->win, filename, strlen(filename),
-                     NULL, -1, -1, fd->buf->sel_col, width - lwidth - 2);
+            NULL, -1, -1, fd->buf->sel_col, width - lwidth - 2);
 
-        if (regex_line[0]) {
+        if (regex_line[0])
+        {
             struct hl_line_attr *attrs;
 
             attrs = hl_regex_highlight(&fd->hlregex, filename);
 
-            if (sbcount(attrs)) {
+            if (sbcount(attrs))
+            {
                 hl_printline_highlight(fd->win, filename, strlen(filename),
-                             attrs, x, y, fd->buf->sel_col, width - lwidth - 2);
+                    attrs, x, y, fd->buf->sel_col, width - lwidth - 2);
                 sbfree(attrs);
             }
         }
@@ -494,14 +509,16 @@ static int capture_regex(struct filedlg *fd)
     regex_line[regex_line_pos] = '\0';
     filedlg_display(fd);
 
-    do {
+    do
+    {
         c = kui_manager_getkey_blocking(kui_ctx);
 
         if (regex_line_pos == (MAX_LINE - 1) && !(c == CGDB_KEY_ESC || c == 8 || c == 127))
             continue;
 
         /* Quit the search if the user hit escape */
-        if (c == CGDB_KEY_ESC) {
+        if (c == CGDB_KEY_ESC)
+        {
             regex_line_pos = 0;
             regex_line[regex_line_pos] = '\0';
             regex_search = 0;
@@ -511,13 +528,15 @@ static int capture_regex(struct filedlg *fd)
         }
 
         /* If the user hit enter, then a successful regex has been received */
-        if (c == '\r' || c == '\n' || c == CGDB_KEY_CTRL_M) {
+        if (c == '\r' || c == '\n' || c == CGDB_KEY_CTRL_M)
+        {
             regex_line[regex_line_pos] = '\0';
             break;
         }
 
         /* If the user hit backspace or delete remove a char */
-        if (CGDB_BACKSPACE_KEY(c)) {
+        if (CGDB_BACKSPACE_KEY(c))
+        {
             if (regex_line_pos > 0)
                 --regex_line_pos;
 
@@ -550,71 +569,72 @@ int filedlg_recv_char(struct filedlg *fd, int key, char *file, int last_key_pres
 
     filedlg_display(fd);
 
-    switch (key) {
-        case 'q':
-            return -1;
-            /* Vertical scrolling */
-        case CGDB_KEY_DOWN:
-        case 'j':
-            filedlg_vscroll(fd, 1);
-            break;
-        case CGDB_KEY_NPAGE:
-        case CGDB_KEY_CTRL_F:  /* VI-style page down */
-            filedlg_vscroll(fd, height - 1);
-            break;
-        case CGDB_KEY_CTRL_D:  /* VI-style 1/2 page down */
-            filedlg_vscroll(fd, height / 2);
-            break;
-        case CGDB_KEY_CTRL_U:  /* VI-style 1/2 page up */
-            filedlg_vscroll(fd, -height / 2);
-            break;
-        case CGDB_KEY_UP:
-        case 'k':
-            filedlg_vscroll(fd, -1);
-            break;
-        case CGDB_KEY_PPAGE:
-        case CGDB_KEY_CTRL_B:  /* VI-style page up */
-            filedlg_vscroll(fd, -(height - 1));
-            break;
-            /* Horizontal scrolling */
-        case CGDB_KEY_RIGHT:
-        case 'l':
-            filedlg_hscroll(fd, 1);
-            break;
-        case CGDB_KEY_LEFT:
-        case 'h':
-            filedlg_hscroll(fd, -1);
-            break;
-        case '/':
-        case '?':
-            regex_direction = ('/' == key);
+    switch (key)
+    {
+    case 'q':
+        return -1;
+    /* Vertical scrolling */
+    case CGDB_KEY_DOWN:
+    case 'j':
+        filedlg_vscroll(fd, 1);
+        break;
+    case CGDB_KEY_NPAGE:
+    case CGDB_KEY_CTRL_F: /* VI-style page down */
+        filedlg_vscroll(fd, height - 1);
+        break;
+    case CGDB_KEY_CTRL_D: /* VI-style 1/2 page down */
+        filedlg_vscroll(fd, height / 2);
+        break;
+    case CGDB_KEY_CTRL_U: /* VI-style 1/2 page up */
+        filedlg_vscroll(fd, -height / 2);
+        break;
+    case CGDB_KEY_UP:
+    case 'k':
+        filedlg_vscroll(fd, -1);
+        break;
+    case CGDB_KEY_PPAGE:
+    case CGDB_KEY_CTRL_B: /* VI-style page up */
+        filedlg_vscroll(fd, -(height - 1));
+        break;
+    /* Horizontal scrolling */
+    case CGDB_KEY_RIGHT:
+    case 'l':
+        filedlg_hscroll(fd, 1);
+        break;
+    case CGDB_KEY_LEFT:
+    case 'h':
+        filedlg_hscroll(fd, -1);
+        break;
+    case '/':
+    case '?':
+        regex_direction = ('/' == key);
 
-            /* Capturing regular expressions */
-            filedlg_search_regex_init(fd);
-            capture_regex(fd);
-            break;
-        case 'n':
-            filedlg_search_regex(fd, regex_line, 2, regex_direction, 1);
-            break;
-        case 'N':
-            filedlg_search_regex(fd, regex_line, 2, !regex_direction, 1);
-            break;
-            /* User selected a file */
-        case '\n':
-        case '\r':
-        case CGDB_KEY_CTRL_M:
-            strcpy(file, fd->buf->files[fd->buf->sel_line]);
-            return 1;
+        /* Capturing regular expressions */
+        filedlg_search_regex_init(fd);
+        capture_regex(fd);
+        break;
+    case 'n':
+        filedlg_search_regex(fd, regex_line, 2, regex_direction, 1);
+        break;
+    case 'N':
+        filedlg_search_regex(fd, regex_line, 2, !regex_direction, 1);
+        break;
+    /* User selected a file */
+    case '\n':
+    case '\r':
+    case CGDB_KEY_CTRL_M:
+        strcpy(file, fd->buf->files[fd->buf->sel_line]);
+        return 1;
 
-        case 'g':              /* beginning of file */
-            if (last_key_pressed == 'g')
-                filedlg_set_sel_line(fd, 0);
-            break;
-        case 'G':              /* end of file, or a line number*/
-            filedlg_set_sel_line(fd, G_line_number >= 0 ? G_line_number - 1 : INT_MAX);
-            break;
-        default:
-            break;
+    case 'g': /* beginning of file */
+        if (last_key_pressed == 'g')
+            filedlg_set_sel_line(fd, 0);
+        break;
+    case 'G': /* end of file, or a line number*/
+        filedlg_set_sel_line(fd, G_line_number >= 0 ? G_line_number - 1 : INT_MAX);
+        break;
+    default:
+        break;
     }
 
     /* Store digits into G_line_number for 'G' command. */

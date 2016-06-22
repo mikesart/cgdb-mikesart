@@ -26,7 +26,8 @@ struct annotate_two;
 /**  
  * This should probably be moved out of a2-tgdb.h
  */
-enum annotate_commands {
+enum annotate_commands
+{
 
     /** Currently not used. */
     ANNOTATE_VOID = 0,
@@ -94,7 +95,7 @@ enum annotate_commands {
  * NULL on error, A valid descriptor upon success
  */
 struct annotate_two *a2_create_context(const char *debugger_path,
-        int argc, char **argv, const char *config_dir, struct logger *logger);
+    int argc, char **argv, const char *config_dir, struct logger *logger);
 
 /** 
  * This initializes the libannotate_two libarary.
@@ -118,8 +119,8 @@ struct annotate_two *a2_create_context(const char *debugger_path,
  * 0 on success, otherwise -1 on error.
  */
 int a2_initialize(struct annotate_two *a2,
-        int *debugger_stdin, int *debugger_stdout,
-        int *inferior_stdin, int *inferior_stdout);
+    int *debugger_stdin, int *debugger_stdout,
+    int *inferior_stdin, int *inferior_stdout);
 
 /**
  * Shuts down the annotate two context. No more calls can be made on the
@@ -194,7 +195,7 @@ int a2_is_misc_prompt(struct annotate_two *a2);
 
 /*@{*/
 
- /** 
+/** 
   * This receives all of the output from the debugger. It is all routed 
   * through this function. 
   *
@@ -233,10 +234,10 @@ int a2_is_misc_prompt(struct annotate_two *a2);
   * otherwise -1 on error.
   */
 int a2_parse_io(struct annotate_two *a2,
-        const char *input_data, const size_t input_data_size,
-        char *debugger_output, size_t * debugger_output_size,
-        char *inferior_output, size_t * inferior_output_size,
-        struct tgdb_list *list);
+    const char *input_data, const size_t input_data_size,
+    char *debugger_output, size_t *debugger_output_size,
+    char *inferior_output, size_t *inferior_output_size,
+    struct tgdb_list *list);
 
 /*@}*/
 

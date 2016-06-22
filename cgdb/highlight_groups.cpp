@@ -31,7 +31,8 @@
 
 #define UNSPECIFIED_COLOR (-2)
 
-struct hl_setup_group_info {
+struct hl_setup_group_info
+{
     enum hl_group_kind group_kind;
     int mono_attrs;
     int color_attrs;
@@ -41,35 +42,39 @@ struct hl_setup_group_info {
 static struct hl_setup_group_info *setup_group_infos = NULL;
 
 /** This represents all the data for a particular highlighting group. */
-struct hl_group_info {
-  /** The kind of group */
+struct hl_group_info
+{
+    /** The kind of group */
     enum hl_group_kind kind;
-  /** The attributes for a terminal, if it has no color support. */
+    /** The attributes for a terminal, if it has no color support. */
     int mono_attrs;
-  /** The attributes for a terminal, if it has color support. */
+    /** The attributes for a terminal, if it has color support. */
     int color_attrs;
-  /** The id ncurses uses to represent a color-pair */
+    /** The id ncurses uses to represent a color-pair */
     int color_pair;
 };
 
 /** The main context used to represent all of the highlighting groups. */
-struct hl_groups {
-  /** If 0 then the terminal doesn't support colors, otherwise it does. */
+struct hl_groups
+{
+    /** If 0 then the terminal doesn't support colors, otherwise it does. */
     int in_color;
-  /** If 1 then we parse ansi escape codes */
+    /** If 1 then we parse ansi escape codes */
     int ansi_esc_parsing;
-  /** 1 if the terminal supports ansi colors (8 colors, 64 color pairs). */
+    /** 1 if the terminal supports ansi colors (8 colors, 64 color pairs). */
     int ansi_color;
-  /** This is the data for each highlighting group. */
+    /** This is the data for each highlighting group. */
     struct hl_group_info groups[HLG_LAST];
 };
 
 static struct hl_group_info *lookup_group_info_by_key(struct hl_groups *groups,
-        enum hl_group_kind kind)
+    enum hl_group_kind kind)
 {
-    if (groups) {
+    if (groups)
+    {
         int i;
-        for (i = 0; i < HLG_LAST; ++i) {
+        for (i = 0; i < HLG_LAST; ++i)
+        {
             struct hl_group_info *lgroups = &groups->groups[i];
             if (kind == lgroups->kind)
                 return lgroups;
@@ -86,16 +91,17 @@ hl_groups_ptr hl_groups_instance = NULL;
  * This describes all the attributes that a highlighting group can represent.
  * It is used to represent the default value for a group.
  */
-struct default_hl_group_info {
-  /** The kind of group */
+struct default_hl_group_info
+{
+    /** The kind of group */
     enum hl_group_kind kind;
-  /** Same as description above. */
+    /** Same as description above. */
     int mono_attrs;
-  /** Same as description above. */
+    /** Same as description above. */
     int color_attrs;
-  /** The foreground number, representing the color. */
+    /** The foreground number, representing the color. */
     int fore_color;
-  /** The background number, representing the color. */
+    /** The background number, representing the color. */
     int back_color;
 };
 
@@ -106,72 +112,72 @@ struct default_hl_group_info {
  * could eventually be configurable.
  */
 static const struct default_hl_group_info default_groups_for_curses[] = {
-    {HLG_KEYWORD, A_BOLD, A_BOLD, COLOR_BLUE, COLOR_BLACK},
-    {HLG_TYPE, A_BOLD, A_BOLD, COLOR_GREEN, COLOR_BLACK},
-    {HLG_LITERAL, A_BOLD, A_BOLD, COLOR_RED, COLOR_BLACK},
-    {HLG_COMMENT, A_NORMAL, A_NORMAL, COLOR_YELLOW, COLOR_BLACK},
-    {HLG_DIRECTIVE, A_BOLD, A_BOLD, COLOR_CYAN, COLOR_BLACK},
-    {HLG_TEXT, A_NORMAL, A_NORMAL, COLOR_WHITE, COLOR_BLACK},
-    {HLG_SEARCH, A_NORMAL, A_NORMAL, COLOR_BLACK, COLOR_WHITE},
-    {HLG_STATUS_BAR, A_NORMAL, A_NORMAL, COLOR_BLACK, COLOR_WHITE},
-    {HLG_ARROW, A_BOLD, A_BOLD, COLOR_GREEN, COLOR_BLACK},
-    {HLG_LINE_HIGHLIGHT, A_BOLD, A_BOLD, COLOR_BLACK, COLOR_GREEN},
-    {HLG_ENABLED_BREAKPOINT, A_BOLD, A_BOLD, COLOR_RED, COLOR_BLACK},
-    {HLG_DISABLED_BREAKPOINT, A_BOLD, A_BOLD, COLOR_YELLOW, COLOR_BLACK},
-    {HLG_SELECTED_LINE_NUMBER, A_BOLD, A_BOLD, COLOR_WHITE, COLOR_BLACK},
-    {HLG_ARROW_SEL, A_BOLD, A_BOLD, COLOR_WHITE, COLOR_BLACK},
-    {HLG_LOGO, A_BOLD, A_BOLD, COLOR_BLUE, COLOR_BLACK},
-    {HLG_LAST, A_NORMAL, A_NORMAL, -1, -1}
+    { HLG_KEYWORD, A_BOLD, A_BOLD, COLOR_BLUE, COLOR_BLACK },
+    { HLG_TYPE, A_BOLD, A_BOLD, COLOR_GREEN, COLOR_BLACK },
+    { HLG_LITERAL, A_BOLD, A_BOLD, COLOR_RED, COLOR_BLACK },
+    { HLG_COMMENT, A_NORMAL, A_NORMAL, COLOR_YELLOW, COLOR_BLACK },
+    { HLG_DIRECTIVE, A_BOLD, A_BOLD, COLOR_CYAN, COLOR_BLACK },
+    { HLG_TEXT, A_NORMAL, A_NORMAL, COLOR_WHITE, COLOR_BLACK },
+    { HLG_SEARCH, A_NORMAL, A_NORMAL, COLOR_BLACK, COLOR_WHITE },
+    { HLG_STATUS_BAR, A_NORMAL, A_NORMAL, COLOR_BLACK, COLOR_WHITE },
+    { HLG_ARROW, A_BOLD, A_BOLD, COLOR_GREEN, COLOR_BLACK },
+    { HLG_LINE_HIGHLIGHT, A_BOLD, A_BOLD, COLOR_BLACK, COLOR_GREEN },
+    { HLG_ENABLED_BREAKPOINT, A_BOLD, A_BOLD, COLOR_RED, COLOR_BLACK },
+    { HLG_DISABLED_BREAKPOINT, A_BOLD, A_BOLD, COLOR_YELLOW, COLOR_BLACK },
+    { HLG_SELECTED_LINE_NUMBER, A_BOLD, A_BOLD, COLOR_WHITE, COLOR_BLACK },
+    { HLG_ARROW_SEL, A_BOLD, A_BOLD, COLOR_WHITE, COLOR_BLACK },
+    { HLG_LOGO, A_BOLD, A_BOLD, COLOR_BLUE, COLOR_BLACK },
+    { HLG_LAST, A_NORMAL, A_NORMAL, -1, -1 }
 };
 
 /** 
  * The default colors and attributes for each type of token. 
  * This is used when ncurses is available.
  */
-static const struct default_hl_group_info default_groups_for_background_dark[]
-        = {
-    {HLG_KEYWORD, A_BOLD, A_BOLD, COLOR_BLUE, -1},
-    {HLG_TYPE, A_BOLD, A_BOLD, COLOR_GREEN, -1},
-    {HLG_LITERAL, A_BOLD, A_BOLD, COLOR_RED, -1},
-    {HLG_COMMENT, A_NORMAL, A_NORMAL, COLOR_YELLOW, -1},
-    {HLG_DIRECTIVE, A_BOLD, A_BOLD, COLOR_CYAN, -1},
-    {HLG_TEXT, A_NORMAL, A_NORMAL, -1, -1},
-    {HLG_SEARCH, A_REVERSE, A_REVERSE, -1, -1},
-    {HLG_STATUS_BAR, A_REVERSE, A_REVERSE, -1, -1},
-    {HLG_ARROW, A_BOLD, A_BOLD, COLOR_GREEN, -1},
-    {HLG_LINE_HIGHLIGHT, A_BOLD, A_BOLD, COLOR_BLACK, COLOR_GREEN},
-    {HLG_ENABLED_BREAKPOINT, A_BOLD, A_BOLD, COLOR_RED, -1},
-    {HLG_DISABLED_BREAKPOINT, A_BOLD, A_BOLD, COLOR_YELLOW, -1},
-    {HLG_SELECTED_LINE_NUMBER, A_BOLD, A_BOLD, -1, -1},
-    {HLG_ARROW_SEL, A_BOLD, A_BOLD, -1, -1},
-    {HLG_LOGO, A_BOLD, A_BOLD, COLOR_BLUE, -1},
-    {HLG_LAST, A_NORMAL, A_NORMAL, -1, -1}
+static const struct default_hl_group_info default_groups_for_background_dark[] = {
+    { HLG_KEYWORD, A_BOLD, A_BOLD, COLOR_BLUE, -1 },
+    { HLG_TYPE, A_BOLD, A_BOLD, COLOR_GREEN, -1 },
+    { HLG_LITERAL, A_BOLD, A_BOLD, COLOR_RED, -1 },
+    { HLG_COMMENT, A_NORMAL, A_NORMAL, COLOR_YELLOW, -1 },
+    { HLG_DIRECTIVE, A_BOLD, A_BOLD, COLOR_CYAN, -1 },
+    { HLG_TEXT, A_NORMAL, A_NORMAL, -1, -1 },
+    { HLG_SEARCH, A_REVERSE, A_REVERSE, -1, -1 },
+    { HLG_STATUS_BAR, A_REVERSE, A_REVERSE, -1, -1 },
+    { HLG_ARROW, A_BOLD, A_BOLD, COLOR_GREEN, -1 },
+    { HLG_LINE_HIGHLIGHT, A_BOLD, A_BOLD, COLOR_BLACK, COLOR_GREEN },
+    { HLG_ENABLED_BREAKPOINT, A_BOLD, A_BOLD, COLOR_RED, -1 },
+    { HLG_DISABLED_BREAKPOINT, A_BOLD, A_BOLD, COLOR_YELLOW, -1 },
+    { HLG_SELECTED_LINE_NUMBER, A_BOLD, A_BOLD, -1, -1 },
+    { HLG_ARROW_SEL, A_BOLD, A_BOLD, -1, -1 },
+    { HLG_LOGO, A_BOLD, A_BOLD, COLOR_BLUE, -1 },
+    { HLG_LAST, A_NORMAL, A_NORMAL, -1, -1 }
 };
 
-struct hl_group_name {
-  /** The kind of group */
+struct hl_group_name
+{
+    /** The kind of group */
     enum hl_group_kind kind;
-  /** The name of the group */
+    /** The name of the group */
     const char *name;
 };
 
 static struct hl_group_name hl_group_names[] = {
-    {HLG_KEYWORD, "Statement"},
-    {HLG_TYPE, "Type"},
-    {HLG_LITERAL, "Constant"},
-    {HLG_COMMENT, "Comment"},
-    {HLG_DIRECTIVE, "PreProc"},
-    {HLG_TEXT, "Normal"},
-    {HLG_SEARCH, "IncSearch"},
-    {HLG_STATUS_BAR, "StatusLine"},
-    {HLG_ARROW, "Arrow"},
-    {HLG_LINE_HIGHLIGHT, "LineHighlight"},
-    {HLG_ENABLED_BREAKPOINT, "Breakpoint"},
-    {HLG_DISABLED_BREAKPOINT, "DisabledBreakpoint"},
-    {HLG_SELECTED_LINE_NUMBER, "SelectedLineNr"},
-    {HLG_ARROW_SEL, "SelectedLineArrow"},
-    {HLG_LOGO, "Logo"},
-    {HLG_LAST, NULL}
+    { HLG_KEYWORD, "Statement" },
+    { HLG_TYPE, "Type" },
+    { HLG_LITERAL, "Constant" },
+    { HLG_COMMENT, "Comment" },
+    { HLG_DIRECTIVE, "PreProc" },
+    { HLG_TEXT, "Normal" },
+    { HLG_SEARCH, "IncSearch" },
+    { HLG_STATUS_BAR, "StatusLine" },
+    { HLG_ARROW, "Arrow" },
+    { HLG_LINE_HIGHLIGHT, "LineHighlight" },
+    { HLG_ENABLED_BREAKPOINT, "Breakpoint" },
+    { HLG_DISABLED_BREAKPOINT, "DisabledBreakpoint" },
+    { HLG_SELECTED_LINE_NUMBER, "SelectedLineNr" },
+    { HLG_ARROW_SEL, "SelectedLineArrow" },
+    { HLG_LOGO, "Logo" },
+    { HLG_LAST, NULL }
 };
 
 /**
@@ -195,7 +201,8 @@ get_hl_group_kind_from_name(const char *name, enum hl_group_kind *kind)
         return -1;
 
     for (i = 0; hl_group_names[i].name != NULL; ++i)
-        if (strcasecmp(name, hl_group_names[i].name) == 0) {
+        if (strcasecmp(name, hl_group_names[i].name) == 0)
+        {
             *kind = hl_group_names[i].kind;
             return 0;
         }
@@ -204,25 +211,26 @@ get_hl_group_kind_from_name(const char *name, enum hl_group_kind *kind)
 }
 
 /** This maps a particular attribute to a name. */
-struct attr_pair {
-  /** The name of the attribute. */
+struct attr_pair
+{
+    /** The name of the attribute. */
     const char *name;
-  /** The attribute value */
+    /** The attribute value */
     int value;
 };
 
 /** The list of terminal attributes that CGDB supports */
 static const struct attr_pair attr_names[] = {
-    {"bold", A_BOLD},
-    {"underline", A_UNDERLINE},
-    {"reverse", A_REVERSE},
-    {"inverse", A_REVERSE},
-    {"standout", A_STANDOUT},
-    {"NONE", A_NORMAL},
-    {"normal", A_NORMAL},
-    {"blink", A_BLINK},
-    {"dim", A_DIM},
-    {NULL, 0}
+    { "bold", A_BOLD },
+    { "underline", A_UNDERLINE },
+    { "reverse", A_REVERSE },
+    { "inverse", A_REVERSE },
+    { "standout", A_STANDOUT },
+    { "NONE", A_NORMAL },
+    { "normal", A_NORMAL },
+    { "blink", A_BLINK },
+    { "dim", A_DIM },
+    { NULL, 0 }
 };
 
 const struct attr_pair *lookup_attr_pair_by_name(const char *name)
@@ -237,7 +245,8 @@ const struct attr_pair *lookup_attr_pair_by_name(const char *name)
 }
 
 /** A structure to represent a specific color. */
-struct color_info {
+struct color_info
+{
     /* The name of the color */
     const char *name;
     /* The number this color represents if the terminal supports 8 colors. */
@@ -250,42 +259,43 @@ struct color_info {
 
 /** A list of all the default colors and their values */
 static const struct color_info hl_color_names[] = {
-    {"Black", COLOR_BLACK, 0, HLG_BLACK},
-    {"DarkBlue", COLOR_BLUE, 0, HLG_BLUE},
-    {"DarkGreen", COLOR_GREEN, 0, HLG_GREEN},
-    {"DarkCyan", COLOR_CYAN, 0, HLG_CYAN},
-    {"DarkRed", COLOR_RED, 0, HLG_RED},
-    {"DarkMagenta", COLOR_MAGENTA, 0, HLG_MAGENTA},
-    {"Brown", COLOR_YELLOW, 0, HLG_YELLOW},
-    {"DarkYellow", COLOR_YELLOW, 0, HLG_YELLOW},
-    {"LightGray", COLOR_WHITE, 0, HLG_WHITE},
-    {"LightGrey", COLOR_WHITE, 0, HLG_WHITE},
-    {"Gray", COLOR_WHITE, 0, HLG_WHITE},
-    {"Grey", COLOR_WHITE, 0, HLG_WHITE},
+    { "Black", COLOR_BLACK, 0, HLG_BLACK },
+    { "DarkBlue", COLOR_BLUE, 0, HLG_BLUE },
+    { "DarkGreen", COLOR_GREEN, 0, HLG_GREEN },
+    { "DarkCyan", COLOR_CYAN, 0, HLG_CYAN },
+    { "DarkRed", COLOR_RED, 0, HLG_RED },
+    { "DarkMagenta", COLOR_MAGENTA, 0, HLG_MAGENTA },
+    { "Brown", COLOR_YELLOW, 0, HLG_YELLOW },
+    { "DarkYellow", COLOR_YELLOW, 0, HLG_YELLOW },
+    { "LightGray", COLOR_WHITE, 0, HLG_WHITE },
+    { "LightGrey", COLOR_WHITE, 0, HLG_WHITE },
+    { "Gray", COLOR_WHITE, 0, HLG_WHITE },
+    { "Grey", COLOR_WHITE, 0, HLG_WHITE },
     // Bold/high-intensity colors
-    {"DarkGray", COLOR_BLACK, 1, HLG_BOLD_BLACK},
-    {"DarkGrey", COLOR_BLACK, 1, HLG_BOLD_BLACK},
-    {"Blue", COLOR_BLUE, 1, HLG_BOLD_BLUE},
-    {"LightBlue", COLOR_BLUE, 1, HLG_BOLD_BLUE},
-    {"Green", COLOR_GREEN, 1, HLG_BOLD_GREEN},
-    {"LightGreen", COLOR_GREEN, 1, HLG_BOLD_GREEN},
-    {"Cyan", COLOR_CYAN, 1, HLG_BOLD_CYAN},
-    {"LightCyan", COLOR_CYAN, 1, HLG_BOLD_CYAN},
-    {"Red", COLOR_RED, 1, HLG_BOLD_RED},
-    {"LightRed", COLOR_RED, 1, HLG_BOLD_RED},
-    {"Magenta", COLOR_MAGENTA, 1, HLG_BOLD_MAGENTA},
-    {"LightMagenta", COLOR_MAGENTA, 1, HLG_BOLD_MAGENTA},
-    {"Yellow", COLOR_YELLOW, 1, HLG_BOLD_YELLOW},
-    {"LightYellow", COLOR_YELLOW, 1, HLG_BOLD_YELLOW},
-    {"White", COLOR_WHITE, 1, HLG_BOLD_WHITE},
-    {NULL, 0, 0, HLG_LAST}
+    { "DarkGray", COLOR_BLACK, 1, HLG_BOLD_BLACK },
+    { "DarkGrey", COLOR_BLACK, 1, HLG_BOLD_BLACK },
+    { "Blue", COLOR_BLUE, 1, HLG_BOLD_BLUE },
+    { "LightBlue", COLOR_BLUE, 1, HLG_BOLD_BLUE },
+    { "Green", COLOR_GREEN, 1, HLG_BOLD_GREEN },
+    { "LightGreen", COLOR_GREEN, 1, HLG_BOLD_GREEN },
+    { "Cyan", COLOR_CYAN, 1, HLG_BOLD_CYAN },
+    { "LightCyan", COLOR_CYAN, 1, HLG_BOLD_CYAN },
+    { "Red", COLOR_RED, 1, HLG_BOLD_RED },
+    { "LightRed", COLOR_RED, 1, HLG_BOLD_RED },
+    { "Magenta", COLOR_MAGENTA, 1, HLG_BOLD_MAGENTA },
+    { "LightMagenta", COLOR_MAGENTA, 1, HLG_BOLD_MAGENTA },
+    { "Yellow", COLOR_YELLOW, 1, HLG_BOLD_YELLOW },
+    { "LightYellow", COLOR_YELLOW, 1, HLG_BOLD_YELLOW },
+    { "White", COLOR_WHITE, 1, HLG_BOLD_WHITE },
+    { NULL, 0, 0, HLG_LAST }
 };
 
 static const struct color_info *color_spec_for_name(const char *name)
 {
     int i;
 
-    for (i = 0; hl_color_names[i].name != NULL; ++i) {
+    for (i = 0; hl_color_names[i].name != NULL; ++i)
+    {
         if (strcasecmp(name, hl_color_names[i].name) == 0)
             return &hl_color_names[i];
     }
@@ -312,13 +322,16 @@ static int hl_get_ansicolor_pair(hl_groups_ptr hl_groups, int bgcolor, int fgcol
     if (!hl_groups->ansi_color)
         return 0;
 
-    if (!color_pairs_inited) {
+    if (!color_pairs_inited)
+    {
         int fg, bg;
         int color_pair = 1;
 
         /* Initialize 64 [1..8][1..8] color entries */
-        for (fg = COLOR_BLACK; fg <= COLOR_WHITE; fg++) {
-            for (bg = COLOR_BLACK; bg <= COLOR_WHITE; bg++) {
+        for (fg = COLOR_BLACK; fg <= COLOR_WHITE; fg++)
+        {
+            for (bg = COLOR_BLACK; bg <= COLOR_WHITE; bg++)
+            {
                 init_pair(color_pair, fg, bg);
                 color_pair_table[bg + 1][fg + 1] = color_pair++;
             }
@@ -332,12 +345,14 @@ static int hl_get_ansicolor_pair(hl_groups_ptr hl_groups, int bgcolor, int fgcol
          */
 
         /* Initialize colors with default bg: [0][1..8] */
-        for (fg = COLOR_BLACK; fg <= COLOR_WHITE; fg++) {
+        for (fg = COLOR_BLACK; fg <= COLOR_WHITE; fg++)
+        {
             init_pair(color_pair, fg, -1);
             color_pair_table[0][fg + 1] = color_pair++;
         }
         /* Initialize colors with default fg: [1..8][0] */
-        for (bg = COLOR_BLACK; bg <= COLOR_WHITE; bg++) {
+        for (bg = COLOR_BLACK; bg <= COLOR_WHITE; bg++)
+        {
             init_pair(color_pair, -1, bg);
             color_pair_table[bg + 1][0] = color_pair++;
         }
@@ -373,9 +388,9 @@ static int hl_get_ansicolor_pair(hl_groups_ptr hl_groups, int bgcolor, int fgcol
  */
 static int
 setup_group(hl_groups_ptr hl_groups, enum hl_group_kind group,
-        int mono_attrs, int color_attrs, int fore_color, int back_color)
+    int mono_attrs, int color_attrs, int fore_color, int back_color)
 {
-  /** Starts creating new colors at 1, and then is incremented each time. */
+    /** Starts creating new colors at 1, and then is incremented each time. */
     static int next_color_pair = 1;
     struct hl_group_info *info;
 
@@ -398,7 +413,8 @@ setup_group(hl_groups_ptr hl_groups, enum hl_group_kind group,
         return 0;
 
 #ifdef NCURSES_VERSION
-    if (hl_groups->ansi_color) {
+    if (hl_groups->ansi_color)
+    {
         /* Ansi mode is enabled so we've got 16 colors and 64 color pairs.
            Set the color_pair index for this bg / fg color combination. */
         info->color_pair = hl_get_ansicolor_pair(hl_groups, back_color, fore_color);
@@ -406,7 +422,7 @@ setup_group(hl_groups_ptr hl_groups, enum hl_group_kind group,
     }
 #endif
 
-    /* Don't allow -1 to be used in curses mode */
+/* Don't allow -1 to be used in curses mode */
 #ifndef NCURSES_VERSION
     if (fore_color < 0 || back_color < 0)
         return 0;
@@ -414,12 +430,15 @@ setup_group(hl_groups_ptr hl_groups, enum hl_group_kind group,
 
     /* If either the foreground or background color is unspecified, we
      * need to read the other so we don't clobber it. */
-    if (fore_color == UNSPECIFIED_COLOR) {
+    if (fore_color == UNSPECIFIED_COLOR)
+    {
         short old_fore_color, old_back_color;
 
         pair_content(info->color_pair, &old_fore_color, &old_back_color);
         fore_color = old_fore_color;
-    } else if (back_color == UNSPECIFIED_COLOR) {
+    }
+    else if (back_color == UNSPECIFIED_COLOR)
+    {
         short old_fore_color, old_back_color;
 
         pair_content(info->color_pair, &old_fore_color, &old_back_color);
@@ -432,16 +451,19 @@ setup_group(hl_groups_ptr hl_groups, enum hl_group_kind group,
         return 0;
 
     /* Allocate a new color pair if the group doesn't have one yet. */
-    if (info->color_pair == 0) {
+    if (info->color_pair == 0)
+    {
         info->color_pair = next_color_pair;
         next_color_pair += 1;
     }
 
     /* Set up the color pair. */
-    if (info->color_pair < COLOR_PAIRS) {
+    if (info->color_pair < COLOR_PAIRS)
+    {
         if (init_pair(info->color_pair, fore_color, back_color) != OK)
             return -1;
-    } else
+    }
+    else
         return -1;
 
     return 0;
@@ -455,17 +477,18 @@ setup_group(hl_groups_ptr hl_groups, enum hl_group_kind group,
 hl_groups_ptr hl_groups_initialize(void)
 {
     int i;
-    hl_groups_ptr hl_groups = (hl_groups_ptr) cgdb_malloc(sizeof (struct hl_groups));
+    hl_groups_ptr hl_groups = (hl_groups_ptr)cgdb_malloc(sizeof(struct hl_groups));
 
     hl_groups->in_color = 0;
     hl_groups->ansi_esc_parsing = 0;
     hl_groups->ansi_color = 0;
 
-    for (i = 0; i < HLG_LAST; ++i) {
+    for (i = 0; i < HLG_LAST; ++i)
+    {
         struct hl_group_info *info;
 
         info = &hl_groups->groups[i];
-        info->kind = (enum hl_group_kind) (i + 1);
+        info->kind = (enum hl_group_kind)(i + 1);
         info->mono_attrs = 0;
         info->color_attrs = 0;
         info->color_pair = 0;
@@ -476,7 +499,8 @@ hl_groups_ptr hl_groups_initialize(void)
 
 int hl_groups_shutdown(hl_groups_ptr hl_groups)
 {
-    if (hl_groups) {
+    if (hl_groups)
+    {
         free(hl_groups);
         hl_groups = NULL;
     }
@@ -511,29 +535,34 @@ int hl_groups_setup(hl_groups_ptr hl_groups)
     hl_groups->ansi_esc_parsing = cgdbrc_get_int(CGDBRC_ANSIESCAPEPARSING);
 
     hl_groups->ansi_color = hl_groups->ansi_esc_parsing &&
-                            hl_groups->in_color &&
-                            (COLORS >= 8) && (COLOR_PAIRS >= 64);
+        hl_groups->in_color &&
+        (COLORS >= 8) && (COLOR_PAIRS >= 64);
 
     /* Set up the default groups. */
-    for (i = 0; ginfo[i].kind != HLG_LAST; ++i) {
+    for (i = 0; ginfo[i].kind != HLG_LAST; ++i)
+    {
         const struct default_hl_group_info *spec = &ginfo[i];
 
         val = setup_group(hl_groups, spec->kind, spec->mono_attrs,
-                spec->color_attrs, spec->fore_color, spec->back_color);
-        if (val == -1) {
+            spec->color_attrs, spec->fore_color, spec->back_color);
+        if (val == -1)
+        {
             logger_write_pos(logger, __FILE__, __LINE__, "setup group.");
             return -1;
         }
     }
 
-    if (setup_group_infos) {
-        for (i = 0; i < sbcount(setup_group_infos); i++) {
+    if (setup_group_infos)
+    {
+        for (i = 0; i < sbcount(setup_group_infos); i++)
+        {
             struct hl_setup_group_info *group_info = &setup_group_infos[i];
 
             val = setup_group(hl_groups, group_info->group_kind,
-                              group_info->mono_attrs, group_info->color_attrs,
-                              group_info->fg_color, group_info->bg_color);
-            if (val == -1) {
+                group_info->mono_attrs, group_info->color_attrs,
+                group_info->fg_color, group_info->bg_color);
+            if (val == -1)
+            {
                 logger_write_pos(logger, __FILE__, __LINE__, "setup group.");
                 return -1;
             }
@@ -546,10 +575,9 @@ int hl_groups_setup(hl_groups_ptr hl_groups)
     return 0;
 }
 
-int
-hl_groups_get_attr(hl_groups_ptr hl_groups, enum hl_group_kind kind, int *attr)
+int hl_groups_get_attr(hl_groups_ptr hl_groups, enum hl_group_kind kind, int *attr)
 {
-    switch(kind)
+    switch (kind)
     {
     case HLG_BLACK:
     case HLG_RED:
@@ -579,15 +607,19 @@ hl_groups_get_attr(hl_groups_ptr hl_groups, enum hl_group_kind kind, int *attr)
 
     struct hl_group_info *info = lookup_group_info_by_key(hl_groups, kind);
 
-    if (!info) {
+    if (!info)
+    {
         /* Default to normal, or bold if this was a highlight */
         *attr = (kind == HLG_LINE_HIGHLIGHT) ? A_BOLD : A_NORMAL;
         return -1;
     }
 
-    if (!hl_groups->in_color) {
+    if (!hl_groups->in_color)
+    {
         *attr = info->mono_attrs;
-    } else {
+    }
+    else
+    {
         *attr = info->color_attrs;
         if (info->color_pair)
             *attr |= COLOR_PAIR(info->color_pair);
@@ -606,7 +638,8 @@ int hl_groups_parse_config(hl_groups_ptr hl_groups)
     const struct color_info *color_spec;
     enum hl_group_kind group_kind;
     const struct attr_pair *pair;
-    enum {
+    enum
+    {
         TERM,
         CTERM,
         FG,
@@ -616,7 +649,8 @@ int hl_groups_parse_config(hl_groups_ptr hl_groups)
 
     /* First, get the "group", that is, the group. */
     token = yylex();
-    if (token != IDENTIFIER) {
+    if (token != IDENTIFIER)
+    {
 #ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
         logger_write_pos(logger, __FILE__, __LINE__, "Missing group name.");
 #endif
@@ -626,15 +660,17 @@ int hl_groups_parse_config(hl_groups_ptr hl_groups)
     name = get_token();
 
     val = get_hl_group_kind_from_name(name, &group_kind);
-    if (val == -1) {
+    if (val == -1)
+    {
 #ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
         logger_write_pos(logger, __FILE__, __LINE__,
-                "Bad parameter name (\"%s\").", name);
+            "Bad parameter name (\"%s\").", name);
 #endif
         return 1;
     }
 
-    if (group_kind < 0) {
+    if (group_kind < 0)
+    {
         /* Just ignore groups we don't know about (or "link", which is not
          * a group, but which could appear here too). */
         return 0;
@@ -644,14 +680,16 @@ int hl_groups_parse_config(hl_groups_ptr hl_groups)
     /* At the end of each key/value(s) pair, "token" will be set to the *next*
      * token.  That's because we have to deal with comma-separated lists. */
     token = yylex();
-    while (1) {
+    while (1)
+    {
         /* Get the next key. */
         if (token == 0 || token == EOL)
             break;
-        if (token != IDENTIFIER) {
+        if (token != IDENTIFIER)
+        {
 #ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "Bad parameter name (\"%s\").", get_token());
+                "Bad parameter name (\"%s\").", get_token());
 #endif
             return 1;
         }
@@ -670,123 +708,137 @@ int hl_groups_parse_config(hl_groups_ptr hl_groups)
             key = IGNORE;
 
         /* A '=' must come next. */
-        if (yylex() != '=') {
+        if (yylex() != '=')
+        {
 #ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "Missing '=' in \"highlight\" command.");
+                "Missing '=' in \"highlight\" command.");
 #endif
             return 1;
         }
 
         /* Process the settings. */
         token = yylex();
-        switch (key) {
-            case TERM:
-            case CTERM:
-                attrs = 0;
-                while (1) {
-                    /* Add in the attribute. */
-                    if (token != IDENTIFIER) {
+        switch (key)
+        {
+        case TERM:
+        case CTERM:
+            attrs = 0;
+            while (1)
+            {
+                /* Add in the attribute. */
+                if (token != IDENTIFIER)
+                {
 #ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
-                        logger_write_pos(logger, __FILE__, __LINE__,
-                                "Bad attribute name: \"%s\".", get_token());
+                    logger_write_pos(logger, __FILE__, __LINE__,
+                        "Bad attribute name: \"%s\".", get_token());
 #endif
-                        return 1;
-                    }
-                    name = get_token();
-
-                    pair = lookup_attr_pair_by_name(name);
-                    if (!pair) {
-#ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
-                        logger_write_pos(logger, __FILE__, __LINE__,
-                                "Unknown attribute name");
-#endif
-                        return 1;
-                    }
-                    if (pair->value == -1) {
-#ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
-                        logger_write_pos(logger, __FILE__, __LINE__,
-                                "Unknown attribute name: \"%s\".", name);
-#endif
-                        return 1;
-                    }
-                    attrs |= pair->value;
-
-                    /* Are there more attributes? */
-                    token = yylex();
-                    if (token != ',')
-                        break;
-                    token = yylex();
+                    return 1;
                 }
-                if (key == TERM) {
-                    if (mono_attrs == UNSPECIFIED_COLOR)
-                        mono_attrs = attrs;
-                    else
-                        mono_attrs |= attrs;
-                } else {
-                    if (color_attrs == UNSPECIFIED_COLOR)
-                        color_attrs = attrs;
-                    else
-                        color_attrs |= attrs;
-                }
-                break;
+                name = get_token();
 
-            case FG:
-            case BG:
-                attrs = 0;
-                switch (token) {
-                    case NUMBER:
-                        color = atoi(get_token());
-                        break;
-
-                    case IDENTIFIER:
-                        name = get_token();
-                        color_spec = color_spec_for_name(name);
-                        if (color_spec == NULL) {
+                pair = lookup_attr_pair_by_name(name);
+                if (!pair)
+                {
 #ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
-                            logger_write_pos(logger, __FILE__, __LINE__,
-                                    "Unknown color: \"%s\".", name);
+                    logger_write_pos(logger, __FILE__, __LINE__,
+                        "Unknown attribute name");
 #endif
-                            return 1;
-                        }
-                        color = color_spec->nr8Color;
-                        if (color_spec->nr8ForegroundBold) {
-                            if (color_attrs == UNSPECIFIED_COLOR)
-                                color_attrs = A_BOLD;
-                            else
-                                color_attrs |= A_BOLD;
-                        }
-                        break;
-
-                    default:
-#ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
-                        logger_write_pos(logger, __FILE__, __LINE__,
-                                "Bad token for color (\"%s\").", get_token());
-#endif
-                        return 1;
+                    return 1;
                 }
-                if (key == FG)
-                    fg_color = color;
-                else
-                    bg_color = color;
+                if (pair->value == -1)
+                {
+#ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
+                    logger_write_pos(logger, __FILE__, __LINE__,
+                        "Unknown attribute name: \"%s\".", name);
+#endif
+                    return 1;
+                }
+                attrs |= pair->value;
+
+                /* Are there more attributes? */
                 token = yylex();
+                if (token != ',')
+                    break;
+                token = yylex();
+            }
+            if (key == TERM)
+            {
+                if (mono_attrs == UNSPECIFIED_COLOR)
+                    mono_attrs = attrs;
+                else
+                    mono_attrs |= attrs;
+            }
+            else
+            {
+                if (color_attrs == UNSPECIFIED_COLOR)
+                    color_attrs = attrs;
+                else
+                    color_attrs |= attrs;
+            }
+            break;
+
+        case FG:
+        case BG:
+            attrs = 0;
+            switch (token)
+            {
+            case NUMBER:
+                color = atoi(get_token());
                 break;
 
-            case IGNORE:
-            default:
-                /* Ignore the value(s) (potentially a comma-separated list). */
-                while (1) {
-                    if (token != IDENTIFIER && token != NUMBER)
-                        return 1;
-                    token = yylex();
-                    if (token != ',')
-                        break;
+            case IDENTIFIER:
+                name = get_token();
+                color_spec = color_spec_for_name(name);
+                if (color_spec == NULL)
+                {
+#ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
+                    logger_write_pos(logger, __FILE__, __LINE__,
+                        "Unknown color: \"%s\".", name);
+#endif
+                    return 1;
+                }
+                color = color_spec->nr8Color;
+                if (color_spec->nr8ForegroundBold)
+                {
+                    if (color_attrs == UNSPECIFIED_COLOR)
+                        color_attrs = A_BOLD;
+                    else
+                        color_attrs |= A_BOLD;
                 }
                 break;
+
+            default:
+#ifdef LOG_HIGHLIGHT_COMMAND_ERRORS
+                logger_write_pos(logger, __FILE__, __LINE__,
+                    "Bad token for color (\"%s\").", get_token());
+#endif
+                return 1;
+            }
+            if (key == FG)
+                fg_color = color;
+            else
+                bg_color = color;
+            token = yylex();
+            break;
+
+        case IGNORE:
+        default:
+            /* Ignore the value(s) (potentially a comma-separated list). */
+            while (1)
+            {
+                if (token != IDENTIFIER && token != NUMBER)
+                    return 1;
+                token = yylex();
+                if (token != ',')
+                    break;
+            }
+            break;
         }
     }
 
-    if (!hl_groups) {
+    if (!hl_groups)
+    {
         /* We haven't had our group initialized yet, so this is coming in when reading
            the cgdb rc file. Store this information and set it in hl_gruops_setup().
          */
@@ -799,10 +851,13 @@ int hl_groups_parse_config(hl_groups_ptr hl_groups)
         group_info.bg_color = bg_color;
 
         sbpush(setup_group_infos, group_info);
-    } else {
+    }
+    else
+    {
         val = setup_group(hl_groups, group_kind, mono_attrs, color_attrs, fg_color,
-                bg_color);
-        if (val == -1) {
+            bg_color);
+        if (val == -1)
+        {
             return 1;
         }
     }
@@ -817,24 +872,24 @@ static int ansi_get_closest_color_value(int r, int g, int b)
     {
         int r, g, b;
     } standard_ansi_colors[] = {
-      // standard colors
-      {   0,   0,   0 }, // COLOR_BLACK
-      { 224,   0,   0 }, // COLOR_RED
-      {   0, 224,   0 }, // COLOR_GREEN
-      { 224, 224,   0 }, // COLOR_YELLOW
-      {   0,   0, 224 }, // COLOR_BLUE
-      { 224,   0, 224 }, // COLOR_MAGENTA
-      {   0, 224, 224 }, // COLOR_CYAN
-      { 224, 224, 224 }, // COLOR_WHITE
-      // High intensity colors
-      { 128, 128, 128 }, // COLOR_BLACK
-      { 255,  64,  64 }, // COLOR_RED
-      {  64, 255,  64 }, // COLOR_GREEN
-      { 255, 255,  64 }, // COLOR_YELLOW
-      {  64,  64, 255 }, // COLOR_BLUE
-      { 255,  64, 255 }, // COLOR_MAGENTA
-      {  64, 255, 255 }, // COLOR_CYAN
-      { 255, 255, 255 }, // COLOR_WHITE
+        // standard colors
+        { 0, 0, 0 },       // COLOR_BLACK
+        { 224, 0, 0 },     // COLOR_RED
+        { 0, 224, 0 },     // COLOR_GREEN
+        { 224, 224, 0 },   // COLOR_YELLOW
+        { 0, 0, 224 },     // COLOR_BLUE
+        { 224, 0, 224 },   // COLOR_MAGENTA
+        { 0, 224, 224 },   // COLOR_CYAN
+        { 224, 224, 224 }, // COLOR_WHITE
+        // High intensity colors
+        { 128, 128, 128 }, // COLOR_BLACK
+        { 255, 64, 64 },   // COLOR_RED
+        { 64, 255, 64 },   // COLOR_GREEN
+        { 255, 255, 64 },  // COLOR_YELLOW
+        { 64, 64, 255 },   // COLOR_BLUE
+        { 255, 64, 255 },  // COLOR_MAGENTA
+        { 64, 255, 255 },  // COLOR_CYAN
+        { 255, 255, 255 }, // COLOR_WHITE
     };
     int i;
     int index = 0;
@@ -846,7 +901,7 @@ static int ansi_get_closest_color_value(int r, int g, int b)
         int g2 = standard_ansi_colors[i].g;
         int b2 = standard_ansi_colors[i].b;
         /* Distance in rgb space. Not all that accurate, but should work for this. */
-        int d = (r2-r)*(r2-r) + (g2-g)*(g2-g) + (b2-b)*(b2-b);
+        int d = (r2 - r) * (r2 - r) + (g2 - g) * (g2 - g) + (b2 - b) * (b2 - b);
 
         if ((distance == -1) || (d < distance))
         {
@@ -873,7 +928,7 @@ static int ansi_get_color_code_index(const char *buf, int *index)
 {
     int i = 0;
 
-    if (buf[i] == ';' && buf[i+1] == '5' && buf[i+2] == ';')
+    if (buf[i] == ';' && buf[i + 1] == '5' && buf[i + 2] == ';')
     {
         int num = 0;
 
@@ -884,16 +939,19 @@ static int ansi_get_color_code_index(const char *buf, int *index)
             i++;
         }
 
-        if (num >= 232) {
+        if (num >= 232)
+        {
             /* Convert grayscale 232 - 255 value to 0 - 255 rgb value */
             int gray = 255 * (MIN(num, 255) - 232) / (255 - 232);
-            num = ansi_get_closest_color_value( gray, gray, gray );
-        } else if (num >= 16) {
+            num = ansi_get_closest_color_value(gray, gray, gray);
+        }
+        else if (num >= 16)
+        {
             /* Convert 0-6 component values to 0 - 255 rgb values */
             int red = ((num - 16) / 36);
             int green = (((num - 16) - red * 36) / 6);
             int blue = ((num - 16) % 6);
-            num = ansi_get_closest_color_value( red * 255 / 6, green * 255 / 6, blue * 255 / 6 );
+            num = ansi_get_closest_color_value(red * 255 / 6, green * 255 / 6, blue * 255 / 6);
         }
 
         *index = num;
@@ -919,12 +977,13 @@ int hl_ansi_get_color_attrs(hl_groups_ptr hl_groups, const char *buf, int *attr,
     if (!hl_groups->ansi_esc_parsing && !force_esc_parsing)
         return 0;
 
-    if ((buf[i++] == '\033') && (buf[i++] == '[')) {
+    if ((buf[i++] == '\033') && (buf[i++] == '['))
+    {
 
         /* Check for reset attributes. Ie: \033[m or \033[0m */
         if (buf[i] == 'm')
             return 3;
-        else if (buf[i] == '0' && buf[i+1] == 'm')
+        else if (buf[i] == '0' && buf[i + 1] == 'm')
             return 4;
 
         /* Parse number;number;number;m sequences */
@@ -943,7 +1002,7 @@ int hl_ansi_get_color_attrs(hl_groups_ptr hl_groups, const char *buf, int *attr,
             }
 
             /* https://conemu.github.io/en/AnsiEscapeCodes.html#SGR_Select_Graphic_Rendition_parameters */
-            switch(num)
+            switch (num)
             {
             case 0: /* Reset current attributes */
                 a = A_NORMAL;
@@ -953,7 +1012,7 @@ int hl_ansi_get_color_attrs(hl_groups_ptr hl_groups, const char *buf, int *attr,
             case 1: /* Set BrightOrBold */
                 a |= A_BOLD;
                 break;
-            case 2: /* Unset BrightOrBold */
+            case 2:  /* Unset BrightOrBold */
             case 22: /* Unset BrightOrBold */
                 a &= ~A_BOLD;
                 break;
@@ -982,39 +1041,72 @@ int hl_ansi_get_color_attrs(hl_groups_ptr hl_groups, const char *buf, int *attr,
             case 38:
                 /* Foreground xterm color code index */
                 i += ansi_get_color_code_index(buf + i, &num);
-                if (num >= 0 && num < 16) {
+                if (num >= 0 && num < 16)
+                {
                     fg = num & 7;
                     a |= ((num & 0x8) ? A_BOLD : 0);
-                } else {
+                }
+                else
+                {
                     a |= A_REVERSE | A_BOLD;
                 }
                 break;
             case 48:
                 /* Background xterm color code index */
                 i += ansi_get_color_code_index(buf + i, &num);
-                if (num >= 0 && num < 16) {
+                if (num >= 0 && num < 16)
+                {
                     bg = num & 7;
                     a |= ((num & 0x8) ? A_BOLD : 0);
                 }
-                else {
+                else
+                {
                     a |= A_REVERSE | A_BOLD;
                 }
                 break;
-                /* Set ANSI text color */
-            case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37:
+            /* Set ANSI text color */
+            case 30:
+            case 31:
+            case 32:
+            case 33:
+            case 34:
+            case 35:
+            case 36:
+            case 37:
                 fg = num - 30;
                 break;
-                /* Set ANSI background color */
-            case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
+            /* Set ANSI background color */
+            case 40:
+            case 41:
+            case 42:
+            case 43:
+            case 44:
+            case 45:
+            case 46:
+            case 47:
                 bg = num - 40;
                 break;
-                /* Set bright ANSI text color */
-            case 90: case 91: case 92: case 93: case 94: case 95: case 96: case 97:
+            /* Set bright ANSI text color */
+            case 90:
+            case 91:
+            case 92:
+            case 93:
+            case 94:
+            case 95:
+            case 96:
+            case 97:
                 fg = num - 90;
                 a |= A_BOLD;
                 break;
-                /* Set bright ANSI background color */
-            case 100: case 101: case 102: case 103: case 104: case 105: case 106: case 107:
+            /* Set bright ANSI background color */
+            case 100:
+            case 101:
+            case 102:
+            case 103:
+            case 104:
+            case 105:
+            case 106:
+            case 107:
                 bg = num - 100;
                 a |= A_BOLD;
                 break;
@@ -1045,16 +1137,18 @@ static void hl_printspan(WINDOW *win, const char *line, int line_len, int attr)
 }
 
 void hl_printline(WINDOW *win, const char *line, int line_len,
-        const hl_line_attr *attrs, int x, int y, int col, int width)
+    const hl_line_attr *attrs, int x, int y, int col, int width)
 {
     int count;
     int attr = 0;
     int use_current_pos = (x == -1) && (y == -1);
 
-    if (!use_current_pos) {
+    if (!use_current_pos)
+    {
         if (y < 0)
             return;
-        else if (x < 0) {
+        else if (x < 0)
+        {
             col -= x;
             x = 0;
         }
@@ -1063,19 +1157,24 @@ void hl_printline(WINDOW *win, const char *line, int line_len,
     }
 
     count = MIN(line_len - col, width);
-    if (count <= 0) {
+    if (count <= 0)
+    {
         wclrtoeol(win);
         return;
     }
 
-    if (attrs) {
+    if (attrs)
+    {
         int i;
 
-        for (i = 0; i < sbcount(attrs); i++) {
-            if (attrs[i].col <= col) {
+        for (i = 0; i < sbcount(attrs); i++)
+        {
+            if (attrs[i].col <= col)
+            {
                 attr = attrs[i].attr;
             }
-            else if (attrs[i].col < col + count) {
+            else if (attrs[i].col < col + count)
+            {
                 int len = attrs[i].col - col;
 
                 hl_printspan(win, line + col, len, attr);
@@ -1085,7 +1184,9 @@ void hl_printline(WINDOW *win, const char *line, int line_len,
                 width -= len;
 
                 attr = attrs[i].attr;
-            } else {
+            }
+            else
+            {
                 hl_printspan(win, line + col, count, attr);
 
                 width -= count;
@@ -1094,7 +1195,8 @@ void hl_printline(WINDOW *win, const char *line, int line_len,
         }
     }
 
-    if (count) {
+    if (count)
+    {
         hl_printspan(win, line + col, count, attr);
         width -= count;
     }
@@ -1104,16 +1206,18 @@ void hl_printline(WINDOW *win, const char *line, int line_len,
 }
 
 void hl_printline_highlight(WINDOW *win, const char *line, int line_len,
-        const hl_line_attr *attrs, int x, int y, int col, int width)
+    const hl_line_attr *attrs, int x, int y, int col, int width)
 {
     int count;
     int attr = 0;
     int use_current_pos = (x == -1) && (y == -1);
 
-    if (!use_current_pos) {
+    if (!use_current_pos)
+    {
         if (y < 0)
             return;
-        else if (x < 0) {
+        else if (x < 0)
+        {
             col -= x;
             x = 0;
         }
@@ -1125,14 +1229,18 @@ void hl_printline_highlight(WINDOW *win, const char *line, int line_len,
     if (count <= 0)
         return;
 
-    if (attrs) {
+    if (attrs)
+    {
         int i;
 
-        for (i = 0; i < sbcount(attrs); i++) {
-            if (attrs[i].col <= col) {
+        for (i = 0; i < sbcount(attrs); i++)
+        {
+            if (attrs[i].col <= col)
+            {
                 attr = attrs[i].attr;
             }
-            else if (attrs[i].col < col + count) {
+            else if (attrs[i].col < col + count)
+            {
                 int len = attrs[i].col - col;
 
                 if (attr)
@@ -1145,7 +1253,9 @@ void hl_printline_highlight(WINDOW *win, const char *line, int line_len,
                 width -= len;
 
                 attr = attrs[i].attr;
-            } else {
+            }
+            else
+            {
                 if (attr)
                     hl_printspan(win, line + col, count, attr);
                 else

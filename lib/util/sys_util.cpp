@@ -72,7 +72,7 @@ int cgdb_close(int fd)
 {
     int ret;
 
-  cgdb_close_start:
+cgdb_close_start:
     if ((ret = close(fd)) == -1 && errno == EINTR)
         goto cgdb_close_start;
     else if (ret == -1)
@@ -81,7 +81,7 @@ int cgdb_close(int fd)
     return 0;
 }
 
-#if defined( __APPLE__ )
+#if defined(__APPLE__)
 
 // https://developer.apple.com/library/mac/qa/qa1361/_index.html
 
@@ -92,15 +92,15 @@ int cgdb_close(int fd)
 #include <sys/sysctl.h>
 
 static bool AmIBeingDebugged(void)
-    // Returns true if the current process is being debugged (either 
-    // running under the debugger or has a debugger attached post facto).
+// Returns true if the current process is being debugged (either
+// running under the debugger or has a debugger attached post facto).
 {
-    int                 junk;
-    int                 mib[4];
-    struct kinfo_proc   info;
-    size_t              size;
+    int junk;
+    int mib[4];
+    struct kinfo_proc info;
+    size_t size;
 
-    // Initialize the flags so that, if sysctl fails for some bizarre 
+    // Initialize the flags so that, if sysctl fails for some bizarre
     // reason, we get a predictable result.
 
     info.kp_proc.p_flag = 0;
@@ -121,7 +121,7 @@ static bool AmIBeingDebugged(void)
 
     // We're being debugged if the P_TRACED flag is set.
 
-    return ( (info.kp_proc.p_flag & P_TRACED) != 0 );
+    return ((info.kp_proc.p_flag & P_TRACED) != 0);
 }
 
 #endif // __APPLE__
@@ -133,15 +133,18 @@ int cgdb_is_debugger_attached()
     static const char TracerPid[] = "TracerPid:";
 
     FILE *fp = fopen("/proc/self/status", "r");
-    if ( fp ) {
+    if (fp)
+    {
         ssize_t chars_read;
         size_t line_len = 0;
         char *line = NULL;
 
-        while ((chars_read = getline(&line, &line_len, fp)) != -1) {
+        while ((chars_read = getline(&line, &line_len, fp)) != -1)
+        {
             char *tracer_pid = strstr(line, TracerPid);
 
-            if (tracer_pid) {
+            if (tracer_pid)
+            {
                 debugger_attached = !!atoi(tracer_pid + sizeof(TracerPid) - 1);
                 break;
             }
@@ -152,7 +155,7 @@ int cgdb_is_debugger_attached()
     }
 
     return debugger_attached;
-#elif defined( __APPLE__ )
+#elif defined(__APPLE__)
     return AmIBeingDebugged();
 #else
     //$ TODO
@@ -162,30 +165,39 @@ int cgdb_is_debugger_attached()
 
 int log10_uint(unsigned int val)
 {
-    if (val >= 1000000000u) return 9;
-    if (val >= 100000000u) return 8;
-    if (val >= 10000000u) return 7;
-    if (val >= 1000000u) return 6;
-    if (val >= 100000u) return 5;
-    if (val >= 10000u) return 4;
-    if (val >= 1000u) return 3;
-    if (val >= 100u) return 2;
-    if (val >= 10u) return 1;
+    if (val >= 1000000000u)
+        return 9;
+    if (val >= 100000000u)
+        return 8;
+    if (val >= 10000000u)
+        return 7;
+    if (val >= 1000000u)
+        return 6;
+    if (val >= 100000u)
+        return 5;
+    if (val >= 10000u)
+        return 4;
+    if (val >= 1000u)
+        return 3;
+    if (val >= 100u)
+        return 2;
+    if (val >= 10u)
+        return 1;
     return 0;
 }
 
 /* stb__sbgrowf: internal stretchy buffer grow function.
  */
-int stb__sbgrowf( void **arr, int increment, int itemsize )
+int stb__sbgrowf(void **arr, int increment, int itemsize)
 {
-    int m = *arr ? 2 * stb__sbm( *arr ) + increment : increment + 1;
-    void *p = cgdb_realloc( *arr ? stb__sbraw( *arr ) : 0,
-                            itemsize * m + sizeof( int ) * 2 );
+    int m = *arr ? 2 * stb__sbm(*arr) + increment : increment + 1;
+    void *p = cgdb_realloc(*arr ? stb__sbraw(*arr) : 0,
+        itemsize * m + sizeof(int) * 2);
 
-    if ( !*arr )
-        ( ( int * )p )[ 1 ] = 0;
-    *arr = ( void * )( ( int * )p + 2 );
-    stb__sbm( *arr ) = m;
+    if (!*arr)
+        ((int *)p)[1] = 0;
+    *arr = (void *)((int *)p + 2);
+    stb__sbm(*arr) = m;
 
     return 0;
 }
@@ -199,7 +211,8 @@ char *sys_aprintf(const char *fmt, ...)
     n = vsnprintf(NULL, 0, fmt, ap) + 1;
     va_end(ap);
 
-    if (n > 0 ) {
+    if (n > 0)
+    {
         char *str = (char *)cgdb_malloc(n);
 
         va_start(ap, fmt);

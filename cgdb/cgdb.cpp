@@ -101,7 +101,7 @@
 /* Constants */
 /* --------- */
 
-#define GDB_MAXBUF 4096         /* GDB input buffer size */
+#define GDB_MAXBUF 4096 /* GDB input buffer size */
 
 const char *readline_history_filename = "readline_history.txt";
 
@@ -109,19 +109,19 @@ const char *readline_history_filename = "readline_history.txt";
 /* Local Variables */
 /* --------------- */
 
-struct tgdb *tgdb;              /* The main TGDB context */
+struct tgdb *tgdb; /* The main TGDB context */
 
-char cgdb_home_dir[MAXLINE];    /* Path to home directory with trailing slash */
-char *readline_history_path;    /* After readline init is called, this will 
+char cgdb_home_dir[MAXLINE]; /* Path to home directory with trailing slash */
+char *readline_history_path; /* After readline init is called, this will 
                                  * contain the path to the readline history 
                                  * file. */
 
-static int gdb_fd = -1;         /* File descriptor for GDB communication */
+static int gdb_fd = -1; /* File descriptor for GDB communication */
 
 /** Master/Slave PTY used to keep readline off of stdin/stdout. */
 static pty_pair_ptr pty_pair;
 
-static char *debugger_path = NULL;  /* Path to debugger to use */
+static char *debugger_path = NULL; /* Path to debugger to use */
 
 static int wait_for_debugger_to_attach = 0;
 
@@ -221,16 +221,17 @@ static char *rline_last_prompt = NULL;
  * Represents all the different states that can be reached while displaying
  * the tab completion information to the user.
  */
-enum tab_completion_state {
-  /** Nothing has been done yet */
+enum tab_completion_state
+{
+    /** Nothing has been done yet */
     TAB_COMPLETION_START,
-  /** The query possibilities message was issued, and waiting for response */
+    /** The query possibilities message was issued, and waiting for response */
     TAB_COMPLETION_QUERY_POSSIBILITIES,
-  /** Displaying the tab completion */
+    /** Displaying the tab completion */
     TAB_COMPLETION_COMPLETION_DISPLAY,
-  /** Query the user to continue tab completion, and waiting for response */
+    /** Query the user to continue tab completion, and waiting for response */
     TAB_COMPLETION_QUERY_PAGER,
-  /** All done */
+    /** All done */
     TAB_COMPLETION_DONE
 };
 
@@ -242,23 +243,24 @@ enum tab_completion_state {
  * context keeps track of what has been displayed to the user, and what needs
  * to be displayed while CGDB get's input from the user.
  */
-typedef struct tab_completion_ctx {
-  /** All of the possible completion matches, valid from [0,num_matches]. */
+typedef struct tab_completion_ctx
+{
+    /** All of the possible completion matches, valid from [0,num_matches]. */
     char **matches;
-  /** The number of completion matches in the 'matches' field. */
+    /** The number of completion matches in the 'matches' field. */
     int num_matches;
-  /** The longest line in the 'matches' field */
+    /** The longest line in the 'matches' field */
     int max_length;
 
-  /** These variables changed based on the state of this object */
+    /** These variables changed based on the state of this object */
 
-  /** Total number of lines printed so far. */
+    /** Total number of lines printed so far. */
     int total;
-  /** Total number of lines printed so far since last pager. */
+    /** Total number of lines printed so far since last pager. */
     int lines;
-  /** The current tab completion state */
+    /** The current tab completion state */
     enum tab_completion_state state;
-} *tab_completion_ptr;
+} * tab_completion_ptr;
 
 /** 
  * The current tab completion display context. 
@@ -268,35 +270,36 @@ static tab_completion_ptr completion_ptr = NULL;
 /* Original terminal attributes */
 static struct termios term_attributes;
 
-static int is_gdb_tui_command(const char* line)
+static int is_gdb_tui_command(const char *line)
 {
     size_t i;
     static const char *tui_commands[] =
-    {
-        "wh",
-        "wi",
-        "win",
-        "winh",
-        "winhe",
-        "winhei",
-        "winheig",
-        "winheigh",
-        "winheight",
-        "foc",
-        "focu",
-        "focus",
-        "la",
-        "lay",
-        "layo",
-        "layou",
-        "layout",
-        "tui" /* tui enable */
-    };
+        {
+          "wh",
+          "wi",
+          "win",
+          "winh",
+          "winhe",
+          "winhei",
+          "winheig",
+          "winheigh",
+          "winheight",
+          "foc",
+          "focu",
+          "focus",
+          "la",
+          "lay",
+          "layo",
+          "layou",
+          "layout",
+          "tui" /* tui enable */
+        };
 
     /* Skip leading white space */
     while (isspace(*line))
         line++;
-    if (*line) {
+    if (*line)
+    {
         const char *cmd_end = line + 1;
 
         /* Find end of command */
@@ -337,25 +340,32 @@ int run_shell_command(const char *command)
     tty_set_attributes(STDIN_FILENO, &term_attributes);
 
     /* NULL or empty string means invoke user's shell */
-    if (command == NULL || strlen(command) == 0) {
+    if (command == NULL || strlen(command) == 0)
+    {
 
         /* Check for SHELL environment variable */
         char *shell = getenv("SHELL");
 
-        if (shell == NULL) {
+        if (shell == NULL)
+        {
             /* Run /bin/sh instead */
             rv = system("/bin/sh");
-        } else {
+        }
+        else
+        {
             rv = system(shell);
         }
-    } else {
+    }
+    else
+    {
         /* Execute the command passed in via system() */
         rv = system(command);
     }
 
     /* Press any key to continue... */
     fprintf(stderr, "Hit ENTER to continue...");
-    while (fgetc(stdin) != '\n') {
+    while (fgetc(stdin) != '\n')
+    {
     }
 
     /* Turn off echo and put the terminal back into raw mode */
@@ -384,10 +394,13 @@ void rlctx_send_user_command(char *line)
     int length;
     char *rline_prompt;
 
-    if (line == NULL) {
+    if (line == NULL)
+    {
         /* NULL line means rl_callback_read_char received EOF */
         ibuf_add(current_line, "quit");
-    } else {
+    }
+    else
+    {
         /* Add the line passed in to the current line */
         ibuf_add(current_line, line);
     }
@@ -403,7 +416,8 @@ void rlctx_send_user_command(char *line)
      *
      * Also, notice the length > 0 condition. (length == 0) can happen 
      * when the user simply hits Enter on the keyboard. */
-    if (length > 0 && cline[length - 1] == '\\') {
+    if (length > 0 && cline[length - 1] == '\\')
+    {
         /* The \ char is for continuation only, it is not meant to be sent
          * to GDB as a character. */
         ibuf_delchar(current_line);
@@ -412,7 +426,8 @@ void rlctx_send_user_command(char *line)
          * Doing it a second time would erase the real rline_last_prompt,
          * since the prompt has already been set to "".
          */
-        if (!rline_last_prompt) {
+        if (!rline_last_prompt)
+        {
             rline_get_prompt(rline, &rline_prompt);
             rline_last_prompt = strdup(rline_prompt);
             /* GDB set's the prompt to nothing when doing continuation.
@@ -425,7 +440,8 @@ void rlctx_send_user_command(char *line)
     }
 
     /* If here, a full command has been sent. Restore the prompt. */
-    if (rline_last_prompt) {
+    if (rline_last_prompt)
+    {
         rline_set_prompt(rline, rline_last_prompt);
         free(rline_last_prompt);
         rline_last_prompt = NULL;
@@ -455,7 +471,7 @@ static int tab_completion(int a, int b)
     ret = rline_get_current_line(rline, &cur_line);
     if (ret == -1)
         logger_write_pos(logger, __FILE__, __LINE__,
-                "rline_get_current_line error\n");
+            "rline_get_current_line error\n");
 
     tgdb_request_complete(tgdb, cur_line);
     return 0;
@@ -482,10 +498,10 @@ tab_completion_create(char **matches, int num_matches, int max_length)
     int i;
     tab_completion_ptr comptr;
 
-    comptr = (tab_completion_ptr) cgdb_malloc(sizeof (struct
-                    tab_completion_ctx));
+    comptr = (tab_completion_ptr)cgdb_malloc(sizeof(struct
+        tab_completion_ctx));
 
-    comptr->matches = (char **)cgdb_malloc(sizeof (char *) * (num_matches + 1));
+    comptr->matches = (char **)cgdb_malloc(sizeof(char *) * (num_matches + 1));
     for (i = 0; i <= num_matches; ++i)
         comptr->matches[i] = cgdb_strdup(matches[i]);
 
@@ -514,7 +530,8 @@ static void tab_completion_destroy(tab_completion_ptr comptr)
     if (comptr->matches == 0)
         return;
 
-    for (i = 0; i <= comptr->num_matches; ++i) {
+    for (i = 0; i <= comptr->num_matches; ++i)
+    {
         free(comptr->matches[i]);
         comptr->matches[i] = NULL;
     }
@@ -588,12 +605,14 @@ static int handle_tab_completion_request(tab_completion_ptr comptr, int key)
     query_items = rline_get_rl_completion_query_items(rline);
     gdb_window_size = get_gdb_height();
 
-    if (comptr->state == TAB_COMPLETION_START) {
+    if (comptr->state == TAB_COMPLETION_START)
+    {
         if_print("\n", GDB);
 
-        if (query_items > 0 && comptr->num_matches >= query_items) {
+        if (query_items > 0 && comptr->num_matches >= query_items)
+        {
             if_print_message("Display all %d possibilities? (y or n)\n",
-                    comptr->num_matches);
+                comptr->num_matches);
             comptr->state = TAB_COMPLETION_QUERY_POSSIBILITIES;
             return 0;
         }
@@ -601,7 +620,8 @@ static int handle_tab_completion_request(tab_completion_ptr comptr, int key)
         comptr->state = TAB_COMPLETION_COMPLETION_DISPLAY;
     }
 
-    if (comptr->state == TAB_COMPLETION_QUERY_POSSIBILITIES) {
+    if (comptr->state == TAB_COMPLETION_QUERY_POSSIBILITIES)
+    {
         int val = cgdb_get_y_or_n(key, 0);
 
         if (val == 1)
@@ -609,32 +629,39 @@ static int handle_tab_completion_request(tab_completion_ptr comptr, int key)
         else if (val == 0)
             comptr->state = TAB_COMPLETION_DONE;
         else
-            return 0;           /* stay at the same state */
+            return 0; /* stay at the same state */
     }
 
-    if (comptr->state == TAB_COMPLETION_QUERY_PAGER) {
+    if (comptr->state == TAB_COMPLETION_QUERY_PAGER)
+    {
         int i = cgdb_get_y_or_n(key, 1);
 
-        if_clear_line();        /* Clear the --More-- */
+        if_clear_line(); /* Clear the --More-- */
         if (i == 0)
             comptr->state = TAB_COMPLETION_DONE;
-        else if (i == 2) {
+        else if (i == 2)
+        {
             comptr->lines--;
             comptr->state = TAB_COMPLETION_COMPLETION_DISPLAY;
-        } else {
+        }
+        else
+        {
             comptr->lines = 0;
             comptr->state = TAB_COMPLETION_COMPLETION_DISPLAY;
         }
     }
 
-    if (comptr->state == TAB_COMPLETION_COMPLETION_DISPLAY) {
-        for (; comptr->total <= comptr->num_matches; comptr->total++) {
+    if (comptr->state == TAB_COMPLETION_COMPLETION_DISPLAY)
+    {
+        for (; comptr->total <= comptr->num_matches; comptr->total++)
+        {
             if_print(comptr->matches[comptr->total], GDB);
             if_print("\n", GDB);
 
             comptr->lines++;
             if (comptr->lines >= (gdb_window_size - 1) &&
-                    comptr->total < comptr->num_matches) {
+                comptr->total < comptr->num_matches)
+            {
                 if_print("--More--", GDB);
                 comptr->state = TAB_COMPLETION_QUERY_PAGER;
                 comptr->total++;
@@ -645,7 +672,8 @@ static int handle_tab_completion_request(tab_completion_ptr comptr, int key)
         comptr->state = TAB_COMPLETION_DONE;
     }
 
-    if (comptr->state == TAB_COMPLETION_DONE) {
+    if (comptr->state == TAB_COMPLETION_DONE)
+    {
         tab_completion_destroy(completion_ptr);
         completion_ptr = NULL;
         is_tab_completing = 0;
@@ -661,28 +689,29 @@ static int handle_tab_completion_request(tab_completion_ptr comptr, int key)
  */
 static void
 readline_completion_display_func(char **matches, int num_matches,
-        int max_length)
+    int max_length)
 {
     /* Create the tab completion item, and attempt to display it to the user */
     completion_ptr = tab_completion_create(matches, num_matches, max_length);
     if (!completion_ptr)
         logger_write_pos(logger, __FILE__, __LINE__,
-                "tab_completion_create error\n");
+            "tab_completion_create error\n");
 
     if (handle_tab_completion_request(completion_ptr, -1) == -1)
         logger_write_pos(logger, __FILE__, __LINE__,
-                "handle_tab_completion_request error\n");
+            "handle_tab_completion_request error\n");
 }
 
 int do_tab_completion(struct tgdb_list *list)
 {
-    if (rline_rl_complete(rline, list, &readline_completion_display_func) == -1) {
+    if (rline_rl_complete(rline, list, &readline_completion_display_func) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "rline_rl_complete error\n");
+            "rline_rl_complete error\n");
         return -1;
     }
 
-  /** 
+    /** 
    * If completion_ptr is non-null, then this means CGDB still has to display
    * the completion to the user. is_tab_completing can not be turned off until
    * the completions are displayed to the user. */
@@ -724,10 +753,10 @@ static char *version_info(void)
     static char buf[MAXLINE];
 
     snprintf(buf, sizeof(buf), "%s %s\r\n%s", "CGDB", VERSION,
-            "Copyright 2002-2010 Bob Rossi and Mike Mueller.\n"
-            "CGDB is free software, covered by the GNU General Public License, and you are\n"
-            "welcome to change it and/or distribute copies of it under certain conditions.\n"
-            "There is absolutely no warranty for CGDB.\n");
+        "Copyright 2002-2010 Bob Rossi and Mike Mueller.\n"
+        "CGDB is free software, covered by the GNU General Public License, and you are\n"
+        "welcome to change it and/or distribute copies of it under certain conditions.\n"
+        "There is absolutely no warranty for CGDB.\n");
     return buf;
 }
 
@@ -738,13 +767,14 @@ static void parse_long_options(int *argc, char ***argv)
 
 #ifdef HAVE_GETOPT_H
     static struct option long_options[] = {
-        {"version", 0, 0, 0},
-        {"help", 0, 0, 0},
-        {0, 0, 0, 0}
+        { "version", 0, 0, 0 },
+        { "help", 0, 0, 0 },
+        { 0, 0, 0, 0 }
     };
 #endif
 
-    while (1) {
+    while (1)
+    {
         opterr = 0;
 #ifdef HAVE_GETOPT_H
         c = getopt_long(*argc, *argv, args, long_options, &option_index);
@@ -754,51 +784,57 @@ static void parse_long_options(int *argc, char ***argv)
         if (c == -1)
             break;
 
-        if (((char) c) == '?')
+        if (((char)c) == '?')
             break;
 
-        switch (c) {
+        switch (c)
+        {
+        case 0:
+            switch (option_index)
+            {
             case 0:
-                switch (option_index) {
-                    case 0:
-                        printf("%s", version_info());
-                        exit(0);
-                    case 1:
-                        usage();
-                        exit(0);
-                    default:
-                        break;
-                }
-                break;
-            case 'v':
                 printf("%s", version_info());
                 exit(0);
-            case 'w':
-                wait_for_debugger_to_attach = 1;
-                n++;
-                break;
-            case 'd':
-                debugger_path = strdup(optarg);
-                if (optarg == (*argv)[n + 1]) {
-                    /* optarg is in next argv (-d foo) */
-                    n += 2;
-                } else {
-                    /* optarg is in this argv (-dfoo) */
-                    n++;
-                }
-                break;
-            case 'h':
+            case 1:
                 usage();
                 exit(0);
             default:
                 break;
+            }
+            break;
+        case 'v':
+            printf("%s", version_info());
+            exit(0);
+        case 'w':
+            wait_for_debugger_to_attach = 1;
+            n++;
+            break;
+        case 'd':
+            debugger_path = strdup(optarg);
+            if (optarg == (*argv)[n + 1])
+            {
+                /* optarg is in next argv (-d foo) */
+                n += 2;
+            }
+            else
+            {
+                /* optarg is in this argv (-dfoo) */
+                n++;
+            }
+            break;
+        case 'h':
+            usage();
+            exit(0);
+        default:
+            break;
         }
     }
 
     *argc -= n;
     *argv += n;
 
-    if (**argv && strcmp(**argv, "--") == 0) {
+    if (**argv && strcmp(**argv, "--") == 0)
+    {
         (*argc)--;
         (*argv)++;
     }
@@ -817,9 +853,10 @@ static int init_home_dir(void)
     const char *cgdb_dir = ".cgdb";
 
     /* Create the config directory */
-    if (!fs_util_create_dir_in_base(home_dir, cgdb_dir)) {
+    if (!fs_util_create_dir_in_base(home_dir, cgdb_dir))
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "fs_util_create_dir_in_base error");
+            "fs_util_create_dir_in_base error");
         return -1;
     }
 
@@ -846,17 +883,20 @@ static int start_gdb(int argc, char *argv[])
 
 static void send_key(int focus, char key)
 {
-    if (focus == 1) {
+    if (focus == 1)
+    {
         int size;
         int masterfd;
 
         masterfd = pty_pair_get_masterfd(pty_pair);
         if (masterfd == -1)
             logger_write_pos(logger, __FILE__, __LINE__, "send_key error");
-        size = write(masterfd, &key, sizeof (char));
+        size = write(masterfd, &key, sizeof(char));
         if (size != 1)
             logger_write_pos(logger, __FILE__, __LINE__, "send_key error");
-    } else if (focus == 2) {
+    }
+    else if (focus == 2)
+    {
         tgdb_send_inferior_char(tgdb, key);
     }
 }
@@ -873,7 +913,8 @@ static int user_input(void)
      * that should be used with the current focus.
      */
     val = kui_manager_clear_map_sets(kui_ctx);
-    if (val == -1) {
+    if (val == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "user_input error");
         return -1;
     }
@@ -884,38 +925,46 @@ static int user_input(void)
         val = kui_manager_add_map_set(kui_ctx, kui_imap);
 
     key = kui_manager_getkey(kui_ctx);
-    if (key == -1) {
+    if (key == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "kui_manager_getkey error");
+            "kui_manager_getkey error");
         return -1;
     }
 
     val = if_input(key);
 
-    if (val == -1) {
+    if (val == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "if_input error");
         return -1;
-    } else if (val != 1 && val != 2)
+    }
+    else if (val != 1 && val != 2)
         return 0;
 
     if (val == 1 && completion_ptr)
         return handle_tab_completion_request(completion_ptr, key);
 
     /* Process the key */
-    if (kui_term_is_cgdb_key(key)) {
+    if (kui_term_is_cgdb_key(key))
+    {
         const char *seqbuf = kui_term_get_ascii_char_sequence_from_key(key);
 
-        if (seqbuf == NULL) {
+        if (seqbuf == NULL)
+        {
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "kui_term_get_ascii_char_sequence_from_key error %d", key);
+                "kui_term_get_ascii_char_sequence_from_key error %d", key);
             return -1;
-        } else {
+        }
+        else
+        {
             int length = strlen(seqbuf), i;
 
             for (i = 0; i < length; i++)
                 send_key(val, seqbuf[i]);
         }
-    } else
+    }
+    else
         send_key(val, key);
 
     return 0;
@@ -935,15 +984,17 @@ static int user_input(void)
  */
 static int user_input_loop()
 {
-    do {
+    do
+    {
         /* There are reasons that CGDB should wait to get more info from the kui.
          * See the documentation for kui_input_acceptable */
         if (!kui_input_acceptable)
             return 0;
 
-        if (user_input() == -1) {
+        if (user_input() == -1)
+        {
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "user_input_loop failed");
+                "user_input_loop failed");
             return -1;
         }
     } while (kui_manager_cangetkey(kui_ctx));
@@ -955,98 +1006,112 @@ static void process_commands(struct tgdb *tgdb_in)
 {
     struct tgdb_response *item;
 
-    while ((item = tgdb_get_response(tgdb_in)) != NULL) {
-        switch (item->header) {
-                /* This updates all the breakpoints */
-            case TGDB_UPDATE_BREAKPOINTS:
+    while ((item = tgdb_get_response(tgdb_in)) != NULL)
+    {
+        switch (item->header)
+        {
+        /* This updates all the breakpoints */
+        case TGDB_UPDATE_BREAKPOINTS:
+        {
+            int i;
+            struct sviewer *sview = if_get_sview();
+
+            source_clear_breaks(if_get_sview());
+
+            for (i = 0; i < sbcount(item->choice.update_breakpoints.breakpoints); i++)
+            {
+                /* For each breakpoint */
+                struct tgdb_breakpoint *tb = &item->choice.update_breakpoints.breakpoints[i];
+
+                source_enable_break(sview, tb->file, tb->line, tb->enabled);
+            }
+
+            if_show_file(NULL, 0, 0);
+            break;
+        }
+
+        /* This means a source file or line number changed */
+        case TGDB_UPDATE_FILE_POSITION:
+        {
+            struct tgdb_file_position *tfp;
+            struct sviewer *sview = if_get_sview();
+
+            tfp = item->choice.update_file_position.file_position;
+
+            sview->addr_frame = tfp->addr;
+
+            if (tfp->absolute_path)
+            {
+                /* Update the file */
+                source_reload(sview, tfp->absolute_path, 0);
+
+                if_show_file(tfp->absolute_path, tfp->line_number, tfp->line_number);
+            }
+            else
+            {
+                /* Try to show the disasm for ths function */
+                int ret = source_set_exec_addr(sview, NULL, 0);
+
+                if (!ret)
+                {
+                    if_draw();
+                }
+                else if (sview->addr_frame)
+                {
+                    /* No disasm found - request it */
+                    tgdb_request_disassemble_func(tgdb,
+                        DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL, tfp);
+                    item->choice.update_file_position.file_position = NULL;
+                }
+            }
+            break;
+        }
+
+        /* This is a list of all the source files */
+        case TGDB_UPDATE_SOURCE_FILES:
+        {
+            char **source_files = item->choice.update_source_files.source_files;
+            sviewer *sview = if_get_sview();
+            struct list_node *cur;
+            int added_disasm = 0;
+
+            if_clear_filedlg();
+
+            /* Search for a node which contains this address */
+            for (cur = sview->list_head; cur != NULL; cur = cur->next)
+            {
+                if (cur->path[0] == '*')
+                {
+                    added_disasm = 1;
+                    if_add_filedlg_choice(cur->path);
+                }
+            }
+
+            if (!sbcount(source_files) && !added_disasm)
+            {
+                /* No files returned? */
+                if_display_message("Error:", WIN_REFRESH, 0,
+                    " No sources available! Was the program compiled with debug?");
+            }
+            else
             {
                 int i;
-                struct sviewer *sview = if_get_sview();
 
-                source_clear_breaks(if_get_sview());
-
-                for (i = 0; i < sbcount(item->choice.update_breakpoints.breakpoints); i++) {
-                    /* For each breakpoint */
-                    struct tgdb_breakpoint *tb = &item->choice.update_breakpoints.breakpoints[i];
-
-                    source_enable_break(sview, tb->file, tb->line, tb->enabled);
+                for (i = 0; i < sbcount(source_files); i++)
+                {
+                    if_add_filedlg_choice(source_files[i]);
                 }
 
-                if_show_file(NULL, 0, 0);
-                break;
+                if_set_focus(FILE_DLG);
             }
 
-                /* This means a source file or line number changed */
-            case TGDB_UPDATE_FILE_POSITION:
-            {
-                struct tgdb_file_position *tfp;
-                struct sviewer *sview = if_get_sview();
+            kui_input_acceptable = 1;
+            break;
+        }
 
-                tfp = item->choice.update_file_position.file_position;
-
-                sview->addr_frame = tfp->addr;
-
-                if (tfp->absolute_path) {
-                    /* Update the file */
-                    source_reload(sview, tfp->absolute_path, 0);
-
-                    if_show_file(tfp->absolute_path, tfp->line_number, tfp->line_number);
-                } else {
-                    /* Try to show the disasm for ths function */
-                    int ret = source_set_exec_addr(sview, NULL, 0);
-
-                    if (!ret) {
-                        if_draw();
-                    } else if (sview->addr_frame) {
-                        /* No disasm found - request it */
-                        tgdb_request_disassemble_func(tgdb,
-                            DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL, tfp);
-                        item->choice.update_file_position.file_position = NULL;
-                    }
-                }
-                break;
-            }
-
-                /* This is a list of all the source files */
-            case TGDB_UPDATE_SOURCE_FILES:
-            {
-                char **source_files = item->choice.update_source_files.source_files;
-                sviewer *sview = if_get_sview();
-                struct list_node *cur;
-                int added_disasm = 0;
-
-                if_clear_filedlg();
-
-                /* Search for a node which contains this address */
-                for (cur = sview->list_head; cur != NULL; cur = cur->next) {
-                    if (cur->path[0] == '*')
-                    {
-                        added_disasm = 1;
-                        if_add_filedlg_choice(cur->path);
-                    }
-                }
-
-                if (!sbcount(source_files) && !added_disasm) {
-                    /* No files returned? */
-                    if_display_message("Error:", WIN_REFRESH, 0,
-                                       " No sources available! Was the program compiled with debug?");
-                } else {
-                    int i;
-
-                    for (i = 0; i < sbcount(source_files); i++) {
-                        if_add_filedlg_choice(source_files[i]);
-                    }
-
-                    if_set_focus(FILE_DLG);
-                }
-
-                kui_input_acceptable = 1;
-                break;
-            }
-
-            case TGDB_INFERIOR_EXITED:
-            {
-                /*
+        case TGDB_INFERIOR_EXITED:
+        {
+            /*
                  * int *status = item->data;
                  * This could eventually go here, but for now, the update breakpoint 
                  * display function makes the status bar go back to the name of the file.
@@ -1054,114 +1119,125 @@ static void process_commands(struct tgdb *tgdb_in)
                  * if_display_message ( "Program exited with value", WIN_REFRESH, 0, " %d", *status );
                  */
 
-                /* Clear the cache */
-                break;
-            }
-            case TGDB_UPDATE_COMPLETIONS:
+            /* Clear the cache */
+            break;
+        }
+        case TGDB_UPDATE_COMPLETIONS:
+        {
+            struct tgdb_list *list =
+                item->choice.update_completions.completion_list;
+            do_tab_completion(list);
+            break;
+        }
+        case TGDB_DISASSEMBLE:
+        case TGDB_DISASSEMBLE_FUNC:
+        {
+            if ((item->header == TGDB_DISASSEMBLE_FUNC) &&
+                item->choice.disassemble.error)
             {
-                struct tgdb_list *list =
-                        item->choice.update_completions.completion_list;
-                do_tab_completion(list);
-                break;
-            }
-            case TGDB_DISASSEMBLE:
-            case TGDB_DISASSEMBLE_FUNC:
-            {
-                if ((item->header == TGDB_DISASSEMBLE_FUNC) &&
-                        item->choice.disassemble.error) {
-                    struct tgdb_file_position *tfp = NULL;
+                struct tgdb_file_position *tfp = NULL;
 
-                    if (item->request) {
-                        if (item->request->header == TGDB_REQUEST_DISASSEMBLE) {
-                            tfp = item->request->choice.disassemble.tfp;
-                            item->request->choice.disassemble.tfp = NULL;
-                        }
-                        else if (item->request->header == TGDB_REQUEST_DISASSEMBLE_FUNC) {
-                            tfp = item->request->choice.disassemble_func.tfp;
-                            item->request->choice.disassemble_func.tfp = NULL;
-                        }
+                if (item->request)
+                {
+                    if (item->request->header == TGDB_REQUEST_DISASSEMBLE)
+                    {
+                        tfp = item->request->choice.disassemble.tfp;
+                        item->request->choice.disassemble.tfp = NULL;
                     }
-
-                    /* Spew out a warning about disassemble failing and disasm next 100 instructions. */
-                    if_print_message("\nWarning: %s\n", item->choice.disassemble.disasm[0]);
-                    tgdb_request_disassemble(tgdb, tfp ? tfp->func : NULL, 100, tfp);
-                } else {
-                    struct tgdb_file_position *tfp = NULL;
-                    uint64_t addr_start = item->choice.disassemble.addr_start;
-                    uint64_t addr_end = item->choice.disassemble.addr_end;
-                    char **disasm = item->choice.disassemble.disasm;
-
-                    if (item->request) {
-                        tfp = (item->request->header == TGDB_REQUEST_DISASSEMBLE) ?
-                                    item->request->choice.disassemble.tfp :
-                                    item->request->choice.disassemble_func.tfp;
-                    }
-
-                    //$ TODO mikesart: If addr_start is equal to addr_end of some other
-                    // buffer, then append it to that buffer?
-
-                    //$ TODO mikesart: If there is a disassembly view, update the location
-                    // even if we don't display it? Useful with global marks, etc.
-
-                    if (disasm && disasm[0]) {
-                        int i;
-                        char *path;
-                        struct list_node *node;
-                        sviewer *sview = if_get_sview();
-                        const char *func = (tfp && tfp->func) ? tfp->func : disasm[0];
-                        const char *from = (tfp && tfp->from) ? tfp->from : "??";
-                        const char *from_module = strrchr(from, '/');
-                        const char *sep = from_module ? ", " : "";
-
-                        from_module = from_module ? from_module + 1 : "";
-
-                        path = sys_aprintf("** %s%s%s (%" PRIx64 " - %" PRIx64 ") **",
-                                           func, sep, from_module, addr_start, addr_end);
-
-                        node = source_get_node(sview, path);
-                        if (!node) {
-                            node = source_add(sview, path);
-
-                            node->language = TOKENIZER_LANGUAGE_ASM;
-                            node->addr_start = addr_start;
-                            node->addr_end = addr_end;
-
-                            if (tfp) {
-                                if (tfp->func)
-                                    source_add_disasm_line(node, tfp->func);
-                                if (tfp->from)
-                                    source_add_disasm_line(node, tfp->from);
-                            }
-
-                            for (i = 0; i < sbcount(disasm); i++) {
-                                source_add_disasm_line(node, disasm[i]);
-                            }
-
-                            source_highlight(node);
-                        }
-
-                        source_set_exec_addr(sview, path, 0);
-                        if_draw();
-
-                        free(path);
+                    else if (item->request->header == TGDB_REQUEST_DISASSEMBLE_FUNC)
+                    {
+                        tfp = item->request->choice.disassemble_func.tfp;
+                        item->request->choice.disassemble_func.tfp = NULL;
                     }
                 }
-                break;
+
+                /* Spew out a warning about disassemble failing and disasm next 100 instructions. */
+                if_print_message("\nWarning: %s\n", item->choice.disassemble.disasm[0]);
+                tgdb_request_disassemble(tgdb, tfp ? tfp->func : NULL, 100, tfp);
             }
-            case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
+            else
             {
-                const char *new_prompt =
-                        item->choice.update_console_prompt_value.prompt_value;
-                change_prompt(new_prompt);
-                break;
+                struct tgdb_file_position *tfp = NULL;
+                uint64_t addr_start = item->choice.disassemble.addr_start;
+                uint64_t addr_end = item->choice.disassemble.addr_end;
+                char **disasm = item->choice.disassemble.disasm;
+
+                if (item->request)
+                {
+                    tfp = (item->request->header == TGDB_REQUEST_DISASSEMBLE) ?
+                        item->request->choice.disassemble.tfp :
+                        item->request->choice.disassemble_func.tfp;
+                }
+
+                //$ TODO mikesart: If addr_start is equal to addr_end of some other
+                // buffer, then append it to that buffer?
+
+                //$ TODO mikesart: If there is a disassembly view, update the location
+                // even if we don't display it? Useful with global marks, etc.
+
+                if (disasm && disasm[0])
+                {
+                    int i;
+                    char *path;
+                    struct list_node *node;
+                    sviewer *sview = if_get_sview();
+                    const char *func = (tfp && tfp->func) ? tfp->func : disasm[0];
+                    const char *from = (tfp && tfp->from) ? tfp->from : "??";
+                    const char *from_module = strrchr(from, '/');
+                    const char *sep = from_module ? ", " : "";
+
+                    from_module = from_module ? from_module + 1 : "";
+
+                    path = sys_aprintf("** %s%s%s (%" PRIx64 " - %" PRIx64 ") **",
+                        func, sep, from_module, addr_start, addr_end);
+
+                    node = source_get_node(sview, path);
+                    if (!node)
+                    {
+                        node = source_add(sview, path);
+
+                        node->language = TOKENIZER_LANGUAGE_ASM;
+                        node->addr_start = addr_start;
+                        node->addr_end = addr_end;
+
+                        if (tfp)
+                        {
+                            if (tfp->func)
+                                source_add_disasm_line(node, tfp->func);
+                            if (tfp->from)
+                                source_add_disasm_line(node, tfp->from);
+                        }
+
+                        for (i = 0; i < sbcount(disasm); i++)
+                        {
+                            source_add_disasm_line(node, disasm[i]);
+                        }
+
+                        source_highlight(node);
+                    }
+
+                    source_set_exec_addr(sview, path, 0);
+                    if_draw();
+
+                    free(path);
+                }
             }
-            case TGDB_QUIT:
-                cleanup();
-                exit(0);
-                break;
-                /* Default */
-            default:
-                break;
+            break;
+        }
+        case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
+        {
+            const char *new_prompt =
+                item->choice.update_console_prompt_value.prompt_value;
+            change_prompt(new_prompt);
+            break;
+        }
+        case TGDB_QUIT:
+            cleanup();
+            exit(0);
+            break;
+        /* Default */
+        default:
+            break;
         }
     }
 }
@@ -1178,9 +1254,10 @@ static int gdb_input()
 
     /* Read from GDB */
     size = tgdb_process(tgdb, buf, GDB_MAXBUF, &is_finished);
-    if (size == -1) {
+    if (size == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "tgdb_recv_debugger_data error");
+            "tgdb_recv_debugger_data error");
         return -1;
     }
 
@@ -1213,19 +1290,22 @@ static int gdb_input()
      * readline data and the data from the TGDB command being sent. This could
      * result in a race condition.
      */
-    if (is_finished) {
+    if (is_finished)
+    {
 
         size = tgdb_queue_size(tgdb);
 
         /* This is the second case, this command was queued. */
-        if (size > 0) {
+        if (size > 0)
+        {
             struct tgdb_request *request = tgdb_queue_pop(tgdb);
             char *prompt;
 
             rline_get_prompt(rline, &prompt);
             if_print(prompt, GDB);
 
-            if (request->header == TGDB_REQUEST_CONSOLE_COMMAND) {
+            if (request->header == TGDB_REQUEST_CONSOLE_COMMAND)
+            {
                 if_print(request->choice.console_command.command, GDB);
                 if_print("\n", GDB);
             }
@@ -1234,8 +1314,9 @@ static int gdb_input()
 
             /* This is the first case */
         }
-      /** If the user is currently completing, do not update the prompt */
-        else if (!completion_ptr) {
+        /** If the user is currently completing, do not update the prompt */
+        else if (!completion_ptr)
+        {
             int last_update = tgdb_last_request_requires_update();
             int update = (last_update == -1) ? 1 : last_update;
 
@@ -1256,14 +1337,16 @@ static int readline_input()
 
     int masterfd = pty_pair_get_masterfd(pty_pair);
 
-    if (masterfd == -1) {
+    if (masterfd == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "pty_pair_get_masterfd error");
+            "pty_pair_get_masterfd error");
         return -1;
     }
 
     size = read(masterfd, buf, GDB_MAXBUF);
-    if (size == -1) {
+    if (size == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "read error");
         return -1;
     }
@@ -1292,9 +1375,10 @@ static ssize_t child_input()
 
     /* Read from GDB */
     size = tgdb_recv_inferior_data(tgdb, buf, GDB_MAXBUF);
-    if (size == -1) {
+    if (size == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "tgdb_recv_inferior_data error ");
+            "tgdb_recv_inferior_data error ");
         return -1;
     }
     buf[size] = 0;
@@ -1308,7 +1392,8 @@ static int cgdb_resize_term(int fd)
 {
     int c, result;
 
-    if (read(fd, &c, sizeof (int)) < sizeof (int)) {
+    if (read(fd, &c, sizeof(int)) < sizeof(int))
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "read from resize pipe");
         return -1;
     }
@@ -1318,7 +1403,8 @@ static int cgdb_resize_term(int fd)
      * one and only handle the next one.
      */
     result = io_data_ready(fd, 0);
-    if (result == -1) {
+    if (result == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "io_data_ready");
         return -1;
     }
@@ -1326,7 +1412,8 @@ static int cgdb_resize_term(int fd)
     if (result)
         return 0;
 
-    if (if_resize_term() == -1) {
+    if (if_resize_term() == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "if_resize_term error");
         return -1;
     }
@@ -1351,12 +1438,14 @@ static int cgdb_handle_signal_in_main_loop(int fd)
 {
     int signo;
 
-    if (read(fd, &signo, sizeof(int)) < sizeof(int)) {
+    if (read(fd, &signo, sizeof(int)) < sizeof(int))
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "read from signal pipe");
         return -1;
     }
 
-    if (signo == SIGINT) {
+    if (signo == SIGINT)
+    {
         rl_sigint_recved();
     }
 
@@ -1372,19 +1461,20 @@ static int main_loop(void)
     int masterfd, slavefd;
 
     masterfd = pty_pair_get_masterfd(pty_pair);
-    if (masterfd == -1) {
+    if (masterfd == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "pty_pair_get_masterfd error");
+            "pty_pair_get_masterfd error");
         return -1;
     }
 
     slavefd = pty_pair_get_slavefd(pty_pair);
-    if (slavefd == -1) {
+    if (slavefd == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "pty_pair_get_slavefd error");
+            "pty_pair_get_slavefd error");
         return -1;
     }
-
 
     /* Main (infinite) loop:
      *   Sits and waits for input on either stdin (user input) or the
@@ -1392,7 +1482,8 @@ static int main_loop(void)
      *   are called to process the input, and handle it appropriately.
      *   This will result in calls to the curses interface, typically. */
 
-    for (;;) {
+    for (;;)
+    {
         /**
          * tty_fd can vary during the program. Some GDB variants, or perhaps
          * OS's allow the inferior to close the terminal descriptor.
@@ -1421,18 +1512,21 @@ static int main_loop(void)
         FD_SET(signal_pipe[0], &rset);
 
         /* No readline activity allowed while displaying tab completion */
-        if (!is_tab_completing) {
+        if (!is_tab_completing)
+        {
             FD_SET(slavefd, &rset);
             FD_SET(masterfd, &rset);
         }
 
         /* Wait for input */
-        if (select(max + 1, &rset, NULL, NULL, NULL) == -1) {
+        if (select(max + 1, &rset, NULL, NULL, NULL) == -1)
+        {
             if (errno == EINTR)
                 continue;
-            else {
+            else
+            {
                 logger_write_pos(logger, __FILE__, __LINE__,
-                        "select failed: %s", strerror(errno));
+                    "select failed: %s", strerror(errno));
                 return -1;
             }
         }
@@ -1460,7 +1554,8 @@ static int main_loop(void)
                 return -1;
 
         /* Input received:  Handle it */
-        if (FD_ISSET(STDIN_FILENO, &rset)) {
+        if (FD_ISSET(STDIN_FILENO, &rset))
+        {
             int val = user_input_loop();
 
             /* The below condition happens on cygwin when user types ctrl-z
@@ -1488,22 +1583,31 @@ static int main_loop(void)
          * activated on EOF). Instead fall through and let the remaining
          * file descriptors get handled.
          */
-        if (FD_ISSET(tty_fd, &rset)) {
+        if (FD_ISSET(tty_fd, &rset))
+        {
             ssize_t result = child_input();
-            if (result == -1) {
+            if (result == -1)
+            {
                 return -1;
-            } else if (result == 0) {
-                if (tgdb_tty_new(tgdb) == -1) {
+            }
+            else if (result == 0)
+            {
+                if (tgdb_tty_new(tgdb) == -1)
+                {
                     return -1;
                 }
-            } else {
+            }
+            else
+            {
                 continue;
             }
         }
 
         /* gdb's output -> stdout */
-        if (FD_ISSET(gdb_fd, &rset)) {
-            if (gdb_input() == -1) {
+        if (FD_ISSET(gdb_fd, &rset))
+        {
+            if (gdb_input() == -1)
+            {
                 return -1;
             }
 
@@ -1513,7 +1617,8 @@ static int main_loop(void)
              * input. So, if we are in the file dialog, and are no longer
              * waiting for the gdb command, then read the input.
              */
-            if (kui_manager_cangetkey(kui_ctx)) {
+            if (kui_manager_cangetkey(kui_ctx))
+            {
                 user_input_loop();
             }
         }
@@ -1570,7 +1675,7 @@ void cleanup()
 
     if (has_recv_data)
         fprintf(stderr, "CGDB had unexpected results, see %s for details.\n",
-                log_file);
+            log_file);
 
     free(log_file);
     log_file = NULL;
@@ -1578,7 +1683,8 @@ void cleanup()
 
 int init_resize_pipe(void)
 {
-    if (pipe(resize_pipe) == -1) {
+    if (pipe(resize_pipe) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "pipe error");
         return -1;
     }
@@ -1590,7 +1696,8 @@ int init_signal_pipe(void)
 {
     int result = pipe(signal_pipe);
 
-    if (result == -1) {
+    if (result == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "pipe error");
     }
 
@@ -1616,11 +1723,11 @@ int init_readline(void)
     /* The 16 is because I don't know how many char's the directory separator 
      * is going to be, I expect it to be 1, but who knows. */
     length = strlen(cgdb_home_dir) + strlen(readline_history_filename) + 16;
-    readline_history_path = (char *) cgdb_malloc(sizeof (char) * length);
+    readline_history_path = (char *)cgdb_malloc(sizeof(char) * length);
     fs_util_get_path(cgdb_home_dir, readline_history_filename,
-            readline_history_path);
+        readline_history_path);
     rline = rline_initialize(slavefd, rlctx_send_user_command, tab_completion,
-            "dumb");
+        "dumb");
     rline_read_history(rline, readline_history_path);
     return 0;
 }
@@ -1631,15 +1738,17 @@ int create_and_init_pair()
     int slavefd;
 
     pty_pair = pty_pair_create();
-    if (!pty_pair) {
+    if (!pty_pair)
+    {
         fprintf(stderr, "%s:%d Unable to create PTY pair", __FILE__, __LINE__);
         return -1;
     }
 
     slavefd = pty_pair_get_slavefd(pty_pair);
-    if (slavefd == -1) {
+    if (slavefd == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "pty_pair_get_slavefd error");
+            "pty_pair_get_slavefd error");
         return -1;
     }
 
@@ -1656,16 +1765,16 @@ int create_and_init_pair()
 int update_kui(cgdbrc_config_option_ptr option)
 {
     kui_manager_set_terminal_escape_sequence_timeout(kui_ctx,
-            cgdbrc_get_key_code_timeoutlen());
+        cgdbrc_get_key_code_timeoutlen());
     kui_manager_set_key_mapping_timeout(kui_ctx,
-            cgdbrc_get_mapped_key_timeoutlen());
+        cgdbrc_get_mapped_key_timeoutlen());
 
     return 0;
 }
 
 static int destroyReadlineKeySeq(void *data)
 {
-    char *keyseq = (char *) data;
+    char *keyseq = (char *)data;
 
     free(keyseq);
     return 0;
@@ -1678,13 +1787,15 @@ int add_readline_key_sequence(const char *readline_str, enum cgdb_key key)
     std_list_ptr keyseq_list = std_list_create(destroyReadlineKeySeq);
 
     ret_val = rline_get_keyseq(rline, readline_str, keyseq_list);
-    if (ret_val == -1) {
+    if (ret_val == -1)
+    {
         std_list_destroy(keyseq_list);
         return -1;
     }
 
     ret_val = kui_manager_get_terminal_keys_kui_map(kui_ctx, key, keyseq_list);
-    if (ret_val == -1) {
+    if (ret_val == -1)
+    {
         std_list_destroy(keyseq_list);
         return -1;
     }
@@ -1696,33 +1807,37 @@ int add_readline_key_sequence(const char *readline_str, enum cgdb_key key)
 int init_kui(void)
 {
     kui_ctx = kui_manager_create(STDIN_FILENO, cgdbrc_get_key_code_timeoutlen(),
-            cgdbrc_get_mapped_key_timeoutlen());
-    if (!kui_ctx) {
+        cgdbrc_get_mapped_key_timeoutlen());
+    if (!kui_ctx)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "Unable to initialize input library");
+            "Unable to initialize input library");
         cleanup();
         exit(-1);
     }
 
     kui_map = kui_ms_create();
-    if (!kui_map) {
+    if (!kui_map)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "Unable to initialize input library");
+            "Unable to initialize input library");
         cleanup();
         exit(-1);
     }
 
     kui_imap = kui_ms_create();
-    if (!kui_imap) {
+    if (!kui_imap)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "Unable to initialize input library");
+            "Unable to initialize input library");
         cleanup();
         exit(-1);
     }
 
-    if (kui_manager_add_map_set(kui_ctx, kui_map) == -1) {
+    if (kui_manager_add_map_set(kui_ctx, kui_map) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "Unable to initialize input library");
+            "Unable to initialize input library");
         cleanup();
         exit(-1);
     }
@@ -1770,57 +1885,65 @@ int main(int argc, char *argv[])
     parse_long_options(&argc, &argv);
 
     /* Debugging helper - wait for debugger to attach to us before continuing */
-    if (wait_for_debugger_to_attach) {
+    if (wait_for_debugger_to_attach)
+    {
         int count = 0;
 
-        fprintf( stdout, "Waiting 30 seconds for debugger to attach...\n" );
-        while ( ( count++ < 30 ) && ( cgdb_is_debugger_attached() == 0 ) ) {
+        fprintf(stdout, "Waiting 30 seconds for debugger to attach...\n");
+        while ((count++ < 30) && (cgdb_is_debugger_attached() == 0))
+        {
             sleep(1);
         }
 
-        fprintf( stdout, "Debugger attached: %d\n", cgdb_is_debugger_attached() );
+        fprintf(stdout, "Debugger attached: %d\n", cgdb_is_debugger_attached());
     }
 
     current_line = ibuf_init();
 
     cgdbrc_init();
 
-    if (create_and_init_pair() == -1) {
+    if (create_and_init_pair() == -1)
+    {
         fprintf(stderr, "%s:%d Unable to create PTY pair\n",
-                __FILE__, __LINE__);
+            __FILE__, __LINE__);
         exit(-1);
     }
 
     /* First create tgdb, because it has the error log */
-    if (start_gdb(argc, argv) == -1) {
+    if (start_gdb(argc, argv) == -1)
+    {
         fprintf(stderr, "%s:%d Unable to invoke debugger: %s\n",
-                __FILE__, __LINE__, debugger_path ? debugger_path : "gdb");
+            __FILE__, __LINE__, debugger_path ? debugger_path : "gdb");
         exit(-1);
     }
 
     /* From here on, the logger is initialized */
 
     /* Create the home directory */
-    if (init_home_dir() == -1) {
+    if (init_home_dir() == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "Unable to create home dir ~/.cgdb");
+            "Unable to create home dir ~/.cgdb");
         cleanup();
         exit(-1);
     }
 
-    if (init_readline() == -1) {
+    if (init_readline() == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "Unable to init readline");
         cleanup();
         exit(-1);
     }
 
-    if (tty_cbreak(STDIN_FILENO, &term_attributes) == -1) {
+    if (tty_cbreak(STDIN_FILENO, &term_attributes) == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "tty_cbreak error");
         cleanup();
         exit(-1);
     }
 
-    if (init_kui() == -1) {
+    if (init_kui() == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "init_kui error");
         cleanup();
         exit(-1);
@@ -1834,38 +1957,41 @@ int main(int argc, char *argv[])
     parse_cgdbrc_file();
 
     /* Initialize the display */
-    switch (if_init()) {
-        case 1:
-            logger_write_pos(logger, __FILE__, __LINE__,
-                    "Unable to initialize the curses library");
-            cleanup();
-            exit(-1);
-        case 2:
-            logger_write_pos(logger, __FILE__, __LINE__,
-                    "Unable to handle signal: SIGWINCH");
-            cleanup();
-            exit(-1);
-        case 3:
-            logger_write_pos(logger, __FILE__, __LINE__,
-                    "Unable to setup highlighting groups");
-            cleanup();
-            exit(-1);
-        case 4:
-            logger_write_pos(logger, __FILE__, __LINE__,
-                    "New GDB window failed -- out of memory?");
-            cleanup();
-            exit(-1);
+    switch (if_init())
+    {
+    case 1:
+        logger_write_pos(logger, __FILE__, __LINE__,
+            "Unable to initialize the curses library");
+        cleanup();
+        exit(-1);
+    case 2:
+        logger_write_pos(logger, __FILE__, __LINE__,
+            "Unable to handle signal: SIGWINCH");
+        cleanup();
+        exit(-1);
+    case 3:
+        logger_write_pos(logger, __FILE__, __LINE__,
+            "Unable to setup highlighting groups");
+        cleanup();
+        exit(-1);
+    case 4:
+        logger_write_pos(logger, __FILE__, __LINE__,
+            "New GDB window failed -- out of memory?");
+        cleanup();
+        exit(-1);
     }
 
     /* Initialize the pipe that is used for resize */
-    if (init_resize_pipe() == -1) {
+    if (init_resize_pipe() == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "init_resize_pipe error");
         cleanup();
         exit(-1);
     }
 
     /* Initialize the pipe that is used for signals */
-    if (init_signal_pipe() == -1) {
+    if (init_signal_pipe() == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "init_signal_pipe error");
         cleanup();
         exit(-1);

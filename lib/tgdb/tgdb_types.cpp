@@ -29,99 +29,104 @@
 
 static int tgdb_types_print_item(void *command)
 {
-    struct tgdb_response *com = (struct tgdb_response *) command;
+    struct tgdb_response *com = (struct tgdb_response *)command;
     FILE *fd = stderr;
 
-    if (!com) {
+    if (!com)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "item is null");
         return -1;
     }
 
-    switch (com->header) {
-        case TGDB_UPDATE_BREAKPOINTS:
+    switch (com->header)
+    {
+    case TGDB_UPDATE_BREAKPOINTS:
+    {
+        int i;
+
+        fprintf(fd, "Breakpoint start\n");
+
+        for (i = 0; i < sbcount(com->choice.update_breakpoints.breakpoints); i++)
         {
-            int i;
-
-            fprintf(fd, "Breakpoint start\n");
-
-            for (i = 0; i < sbcount(com->choice.update_breakpoints.breakpoints); i++) {
-                struct tgdb_breakpoint *tb = &com->choice.update_breakpoints.breakpoints[i];
-
-                fprintf(fd,
-                        "\tFILE(%s) FUNCNAME(%s) LINE(%d) ENABLED(%d)\n",
-                        tb->file, tb->funcname, tb->line, tb->enabled);
-            }
-
-            fprintf(fd, "Breakpoint end\n");
-            break;
-        }
-        case TGDB_UPDATE_FILE_POSITION:
-        {
-            struct tgdb_file_position *tfp =
-                    com->choice.update_file_position.file_position;
+            struct tgdb_breakpoint *tb = &com->choice.update_breakpoints.breakpoints[i];
 
             fprintf(fd,
-                    "TGDB_UPDATE_FILE_POSITION ABSOLUTE(%s) LINE(%d)\n",
-                    tfp->absolute_path, tfp->line_number);
-            break;
+                "\tFILE(%s) FUNCNAME(%s) LINE(%d) ENABLED(%d)\n",
+                tb->file, tb->funcname, tb->line, tb->enabled);
         }
-        case TGDB_UPDATE_SOURCE_FILES:
-        {
-            int i;
-            char **source_files = com->choice.update_source_files.source_files;
 
-            fprintf(fd, "Inferior source files start\n");
+        fprintf(fd, "Breakpoint end\n");
+        break;
+    }
+    case TGDB_UPDATE_FILE_POSITION:
+    {
+        struct tgdb_file_position *tfp =
+            com->choice.update_file_position.file_position;
 
-            for (i = 0; i < sbcount(source_files); i++) {
-                fprintf(fd, "TGDB_SOURCE_FILE (%s)\n", source_files[i]);
-            }
-            fprintf(fd, "Inferior source files end\n");
-            break;
-        }
-        case TGDB_INFERIOR_EXITED:
-        {
-            int status = com->choice.inferior_exited.exit_status;
+        fprintf(fd,
+            "TGDB_UPDATE_FILE_POSITION ABSOLUTE(%s) LINE(%d)\n",
+            tfp->absolute_path, tfp->line_number);
+        break;
+    }
+    case TGDB_UPDATE_SOURCE_FILES:
+    {
+        int i;
+        char **source_files = com->choice.update_source_files.source_files;
 
-            fprintf(fd, "TGDB_INFERIOR_EXITED(%d)\n", status);
-            break;
-        }
-        case TGDB_UPDATE_COMPLETIONS:
-        {
-            struct tgdb_list *list =
-                    com->choice.update_completions.completion_list;
-            tgdb_list_iterator *i;
-            char *s;
+        fprintf(fd, "Inferior source files start\n");
 
-            fprintf(fd, "completions start\n");
-            i = tgdb_list_get_first(list);
+        for (i = 0; i < sbcount(source_files); i++)
+        {
+            fprintf(fd, "TGDB_SOURCE_FILE (%s)\n", source_files[i]);
+        }
+        fprintf(fd, "Inferior source files end\n");
+        break;
+    }
+    case TGDB_INFERIOR_EXITED:
+    {
+        int status = com->choice.inferior_exited.exit_status;
 
-            while (i) {
-                s = (char *) tgdb_list_get_item(i);
-                fprintf(fd, "TGDB_UPDATE_COMPLETION (%s)\n", s);
-                i = tgdb_list_next(i);
-            }
-            fprintf(fd, "completions end\n");
-            break;
-        }
-        case TGDB_DISASSEMBLE:
-        case TGDB_DISASSEMBLE_FUNC:
-            //$ TODO
-            break;
-        case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
+        fprintf(fd, "TGDB_INFERIOR_EXITED(%d)\n", status);
+        break;
+    }
+    case TGDB_UPDATE_COMPLETIONS:
+    {
+        struct tgdb_list *list =
+            com->choice.update_completions.completion_list;
+        tgdb_list_iterator *i;
+        char *s;
+
+        fprintf(fd, "completions start\n");
+        i = tgdb_list_get_first(list);
+
+        while (i)
         {
-            const char *value =
-                    com->choice.update_console_prompt_value.prompt_value;
-            fprintf(fd, "TGDB_UPDATE_CONSOLE_PROMPT_VALUE(%s)\n", value);
-            break;
+            s = (char *)tgdb_list_get_item(i);
+            fprintf(fd, "TGDB_UPDATE_COMPLETION (%s)\n", s);
+            i = tgdb_list_next(i);
         }
-        case TGDB_QUIT:
-        {
-            struct tgdb_debugger_exit_status *status =
-                    com->choice.quit.exit_status;
-            fprintf(fd, "TGDB_QUIT EXIT_STATUS(%d)RETURN_VALUE(%d)\n",
-                    status->exit_status, status->return_value);
-            break;
-        }
+        fprintf(fd, "completions end\n");
+        break;
+    }
+    case TGDB_DISASSEMBLE:
+    case TGDB_DISASSEMBLE_FUNC:
+        //$ TODO
+        break;
+    case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
+    {
+        const char *value =
+            com->choice.update_console_prompt_value.prompt_value;
+        fprintf(fd, "TGDB_UPDATE_CONSOLE_PROMPT_VALUE(%s)\n", value);
+        break;
+    }
+    case TGDB_QUIT:
+    {
+        struct tgdb_debugger_exit_status *status =
+            com->choice.quit.exit_status;
+        fprintf(fd, "TGDB_QUIT EXIT_STATUS(%d)RETURN_VALUE(%d)\n",
+            status->exit_status, status->return_value);
+        break;
+    }
     }
 
     return 0;
@@ -131,12 +136,12 @@ static int tgdb_types_breakpoint_free(void *data)
 {
     struct tgdb_breakpoint *tb;
 
-    tb = (struct tgdb_breakpoint *) data;
+    tb = (struct tgdb_breakpoint *)data;
 
     /* Free the structure */
-    free((char *) tb->file);
+    free((char *)tb->file);
     tb->file = NULL;
-    free((char *) tb->funcname);
+    free((char *)tb->funcname);
     tb->funcname = NULL;
     free(tb);
     tb = NULL;
@@ -145,7 +150,7 @@ static int tgdb_types_breakpoint_free(void *data)
 
 static int tgdb_types_source_files_free(void *data)
 {
-    char *s = (char *) data;
+    char *s = (char *)data;
 
     free(s);
     s = NULL;
@@ -154,105 +159,111 @@ static int tgdb_types_source_files_free(void *data)
 
 static int tgdb_types_delete_item(void *command)
 {
-    struct tgdb_response *com = (struct tgdb_response *) command;
+    struct tgdb_response *com = (struct tgdb_response *)command;
 
     if (!com)
         return -1;
 
-    if (com->request) {
+    if (com->request)
+    {
         tgdb_request_destroy(com->request);
         com->request = NULL;
     }
 
-    switch (com->header) {
-        case TGDB_UPDATE_BREAKPOINTS:
+    switch (com->header)
+    {
+    case TGDB_UPDATE_BREAKPOINTS:
+    {
+        int i;
+
+        for (i = 0; i < sbcount(com->choice.update_breakpoints.breakpoints); i++)
         {
-            int i;
 
-            for (i = 0; i < sbcount(com->choice.update_breakpoints.breakpoints); i++) {
+            struct tgdb_breakpoint *tb = &com->choice.update_breakpoints.breakpoints[i];
 
-                struct tgdb_breakpoint *tb = &com->choice.update_breakpoints.breakpoints[i];
-
-                free(tb->file);
-                free(tb->funcname);
-            }
-
-            sbfree(com->choice.update_breakpoints.breakpoints);
-            com->choice.update_breakpoints.breakpoints = NULL;
-            break;
+            free(tb->file);
+            free(tb->funcname);
         }
-        case TGDB_UPDATE_FILE_POSITION:
+
+        sbfree(com->choice.update_breakpoints.breakpoints);
+        com->choice.update_breakpoints.breakpoints = NULL;
+        break;
+    }
+    case TGDB_UPDATE_FILE_POSITION:
+    {
+        struct tgdb_file_position *tfp =
+            com->choice.update_file_position.file_position;
+
+        if (tfp)
         {
-            struct tgdb_file_position *tfp =
-                    com->choice.update_file_position.file_position;
+            free(tfp->absolute_path);
+            free(tfp->from);
+            free(tfp->func);
 
-            if (tfp) {
-                free(tfp->absolute_path);
-                free(tfp->from);
-                free(tfp->func);
+            free(tfp);
 
-                free(tfp);
-
-                com->choice.update_file_position.file_position = NULL;
-            }
-            break;
+            com->choice.update_file_position.file_position = NULL;
         }
-        case TGDB_UPDATE_SOURCE_FILES:
+        break;
+    }
+    case TGDB_UPDATE_SOURCE_FILES:
+    {
+        int i;
+        char **source_files = com->choice.update_source_files.source_files;
+
+        for (i = 0; i < sbcount(source_files); i++)
         {
-            int i;
-            char **source_files = com->choice.update_source_files.source_files;
-
-            for (i = 0; i < sbcount(source_files); i++) {
-                free(source_files[i]);
-            }
-            sbfree(source_files);
-
-            com->choice.update_source_files.source_files = NULL;
-            break;
+            free(source_files[i]);
         }
-        case TGDB_INFERIOR_EXITED:
-            break;
-        case TGDB_UPDATE_COMPLETIONS:
+        sbfree(source_files);
+
+        com->choice.update_source_files.source_files = NULL;
+        break;
+    }
+    case TGDB_INFERIOR_EXITED:
+        break;
+    case TGDB_UPDATE_COMPLETIONS:
+    {
+        struct tgdb_list *list =
+            com->choice.update_completions.completion_list;
+
+        tgdb_list_free(list, tgdb_types_source_files_free);
+        tgdb_list_destroy(list);
+
+        com->choice.update_completions.completion_list = NULL;
+        break;
+    }
+    case TGDB_DISASSEMBLE:
+    case TGDB_DISASSEMBLE_FUNC:
+    {
+        int i;
+        char **disasm = com->choice.disassemble.disasm;
+
+        for (i = 0; i < sbcount(disasm); i++)
         {
-            struct tgdb_list *list =
-                    com->choice.update_completions.completion_list;
-
-            tgdb_list_free(list, tgdb_types_source_files_free);
-            tgdb_list_destroy(list);
-
-            com->choice.update_completions.completion_list = NULL;
-            break;
+            free(disasm[i]);
         }
-        case TGDB_DISASSEMBLE:
-        case TGDB_DISASSEMBLE_FUNC:
-        {
-            int i;
-            char **disasm = com->choice.disassemble.disasm;
+        sbfree(disasm);
+        break;
+    }
+    case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
+    {
+        const char *value =
+            com->choice.update_console_prompt_value.prompt_value;
 
-            for (i = 0; i < sbcount(disasm); i++) {
-                free(disasm[i]);
-            }
-            sbfree(disasm);
-            break;
-        }
-        case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
-        {
-            const char *value =
-                    com->choice.update_console_prompt_value.prompt_value;
+        free((char *)value);
+        com->choice.update_console_prompt_value.prompt_value = NULL;
+        break;
+    }
+    case TGDB_QUIT:
+    {
+        struct tgdb_debugger_exit_status *status =
+            com->choice.quit.exit_status;
 
-            free((char *) value);
-            com->choice.update_console_prompt_value.prompt_value = NULL;
-            break;
-        }
-        case TGDB_QUIT:
-        {
-            struct tgdb_debugger_exit_status *status =
-                    com->choice.quit.exit_status;
-
-            free(status);
-            com->choice.quit.exit_status = NULL;
-            break;
-        }
+        free(status);
+        com->choice.quit.exit_status = NULL;
+        break;
+    }
     }
 
     free(com);
@@ -262,17 +273,16 @@ static int tgdb_types_delete_item(void *command)
 
 int tgdb_types_print_command(void *command)
 {
-    return tgdb_types_print_item((void *) command);
+    return tgdb_types_print_item((void *)command);
 }
 
 int tgdb_types_free_command(void *command)
 {
-    return tgdb_types_delete_item((void *) command);
+    return tgdb_types_delete_item((void *)command);
 }
 
-void
-tgdb_types_append_command(struct tgdb_list *command_list,
-        struct tgdb_response *response)
+void tgdb_types_append_command(struct tgdb_list *command_list,
+    struct tgdb_response *response)
 {
     tgdb_list_append(command_list, response);
 }

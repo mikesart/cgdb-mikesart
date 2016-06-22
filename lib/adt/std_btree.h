@@ -45,7 +45,11 @@ typedef struct std_btree_node *std_btree_node_ptr, *std_btree_iterator;
 /**
  * Enumeration used to identify left/right children in accessor methods.
  */
-enum std_btree_child { STD_BTREE_LEFT, STD_BTREE_RIGHT };
+enum std_btree_child
+{
+    STD_BTREE_LEFT,
+    STD_BTREE_RIGHT
+};
 
 /**
  * Standard binary tree constructor.
@@ -113,7 +117,7 @@ int std_btree_get_data(std_btree_iterator iter, void *data);
  * An iterator pointing to the specified child node, NULL if no child exists.
  */
 std_btree_iterator std_btree_child(const std_btree_iterator iter,
-        enum std_btree_child child);
+    enum std_btree_child child);
 
 /**
  * Access the parent of the current node.
@@ -147,7 +151,7 @@ std_btree_iterator std_btree_parent(const std_btree_iterator iter);
  * Zero on success, non-zero on failure.
  */
 int std_btree_add(std_btree_ptr tree,
-        std_btree_iterator iter, enum std_btree_child child, void *data);
+    std_btree_iterator iter, enum std_btree_child child, void *data);
 
 /**
  * Removes a subtree from the tree.

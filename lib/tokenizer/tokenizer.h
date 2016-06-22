@@ -7,7 +7,8 @@ struct tokenizer;
 
 #define TOKENIZER_ENUM_START_POS 255
 
-enum tokenizer_type {
+enum tokenizer_type
+{
     TOKENIZER_KEYWORD = TOKENIZER_ENUM_START_POS,
     TOKENIZER_TYPE,
     TOKENIZER_LITERAL,
@@ -30,7 +31,8 @@ enum tokenizer_type {
     TOKENIZER_COLOR,
 };
 
-enum tokenizer_language_support {
+enum tokenizer_language_support
+{
     TOKENIZER_LANGUAGE_C = TOKENIZER_ENUM_START_POS,
     TOKENIZER_LANGUAGE_ASM,
     TOKENIZER_LANGUAGE_D,
@@ -71,7 +73,7 @@ void tokenizer_destroy(struct tokenizer *t);
  *  Return: -1 on error. 0 on success
  */
 int tokenizer_set_buffer(struct tokenizer *t, const char *buffer,
-                         enum tokenizer_language_support l);
+    enum tokenizer_language_support l);
 
 /* tokenizer_get_token
  * -------------------
@@ -82,7 +84,8 @@ int tokenizer_set_buffer(struct tokenizer *t, const char *buffer,
  *
  *  Return: -1 on error, 0 on end of file, 1 on success
  */
-struct token_data {
+struct token_data
+{
     enum tokenizer_type e;
     const char *data;
 };

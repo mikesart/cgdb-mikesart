@@ -50,7 +50,8 @@
  * <A-...>			alt-key
  */
 
-enum cgdb_key {
+enum cgdb_key
+{
     CGDB_KEY_ESC = 10000,
     CGDB_KEY_UP,
     CGDB_KEY_DOWN,

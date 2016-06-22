@@ -54,12 +54,12 @@ static void my_hash_callback(void *key, void *value, void *user_data)
 
 static unsigned int my_hash(const void *key)
 {
-    return (unsigned int) *((const int *) key);
+    return (unsigned int)*((const int *)key);
 }
 
 static int my_hash_equal(const void *a, const void *b)
 {
-    return *((const int *) a) == *((const int *) b);
+    return *((const int *)a) == *((const int *)b);
 }
 
 /*
@@ -86,7 +86,7 @@ static int my_hash_equal(const void *a, const void *b)
  *	   4   8   0   0   0   0   0   0
  */
 
-#define POLY 0x48000000L        /* 31-bit polynomial (avoids sign problems) */
+#define POLY 0x48000000L /* 31-bit polynomial (avoids sign problems) */
 
 static unsigned int CrcTable[128];
 
@@ -98,7 +98,8 @@ static void crcinit(void)
     int i, j;
     unsigned int sum;
 
-    for (i = 0; i < 128; ++i) {
+    for (i = 0; i < 128; ++i)
+    {
         sum = 0L;
         for (j = 7 - 1; j >= 0; --j)
             if (i & (1 << j))
@@ -112,7 +113,7 @@ static void crcinit(void)
  */
 static unsigned int honeyman_hash(const void *key)
 {
-    const char *name = (const char *) key;
+    const char *name = (const char *)key;
     int size;
     unsigned int sum = 0;
 
@@ -121,7 +122,8 @@ static unsigned int honeyman_hash(const void *key)
 
     size = strlen(name);
 
-    while (size--) {
+    while (size--)
+    {
         sum = (sum >> 7) ^ CrcTable[(sum ^ (*name++)) & 0x7f];
     }
 
@@ -140,8 +142,8 @@ static unsigned int one_hash(const void *key)
 
 static void not_even_foreach(void *key, void *value, void *user_data)
 {
-    const char *_key = (const char *) key;
-    const char *_value = (const char *) value;
+    const char *_key = (const char *)key;
+    const char *_value = (const char *)value;
     int i;
     char val[20];
 
@@ -161,8 +163,8 @@ static void not_even_foreach(void *key, void *value, void *user_data)
 
 static int remove_even_foreach(void *key, void *value, void *user_data)
 {
-    const char *_key = (const char *) key;
-    const char *_value = (const char *) value;
+    const char *_key = (const char *)key;
+    const char *_value = (const char *)value;
     int i;
     char val[20];
 
@@ -189,9 +191,10 @@ static void second_hash_test(int simple_hash)
     crcinit();
 
     h = std_hash_table_new(simple_hash ? one_hash : honeyman_hash,
-            second_hash_cmp);
+        second_hash_cmp);
     assert(h != NULL);
-    for (i = 0; i < 20; i++) {
+    for (i = 0; i < 20; i++)
+    {
         sprintf(key, "%d", i);
         assert(atoi(key) == i);
 
@@ -203,11 +206,12 @@ static void second_hash_test(int simple_hash)
 
     assert(std_hash_table_size(h) == 20);
 
-    for (i = 0; i < 20; i++) {
+    for (i = 0; i < 20; i++)
+    {
         sprintf(key, "%d", i);
         assert(atoi(key) == i);
 
-        v = (char *) std_hash_table_lookup(h, key);
+        v = (char *)std_hash_table_lookup(h, key);
 
         assert(v != NULL);
         assert(*v != 0);
@@ -219,7 +223,8 @@ static void second_hash_test(int simple_hash)
     std_hash_table_foreach_remove(h, remove_even_foreach, NULL);
     std_hash_table_foreach(h, not_even_foreach, NULL);
 
-    for (i = 0; i < 20; i++) {
+    for (i = 0; i < 20; i++)
+    {
         if ((i % 2) == 0 || i == 3)
             continue;
 
@@ -231,7 +236,7 @@ static void second_hash_test(int simple_hash)
 
         orig_key = orig_val = NULL;
         found = std_hash_table_lookup_extended(h, key,
-                (void **) &orig_key, (void **) &orig_val);
+            (void **)&orig_key, (void **)&orig_val);
         assert(found);
 
         std_hash_table_remove(h, key);
@@ -263,14 +268,16 @@ static void direct_hash_test(void)
 
     h = std_hash_table_new(NULL, NULL);
     assert(h != NULL);
-    for (i = 1; i <= 20; i++) {
-        std_hash_table_insert(h, ((void *) (i)), (void *) (i + 42));
+    for (i = 1; i <= 20; i++)
+    {
+        std_hash_table_insert(h, ((void *)(i)), (void *)(i + 42));
     }
 
     assert(std_hash_table_size(h) == 20);
 
-    for (i = 1; i <= 20; i++) {
-        rc = ((long) (std_hash_table_lookup(h, ((void *) (i)))));
+    for (i = 1; i <= 20; i++)
+    {
+        rc = ((long)(std_hash_table_lookup(h, ((void *)(i)))));
 
         assert(rc != 0);
         assert((rc - 42) == i);
@@ -287,7 +294,8 @@ int main(int argc, char *argv[])
     int *pvalue;
 
     hash_table = std_hash_table_new(my_hash, my_hash_equal);
-    for (i = 0; i < 10000; i++) {
+    for (i = 0; i < 10000; i++)
+    {
         array[i] = i;
         std_hash_table_insert(hash_table, &array[i], &array[i]);
     }
@@ -300,18 +308,20 @@ int main(int argc, char *argv[])
     for (i = 0; i < 10000; i++)
         if (array[i] == 0)
             fprintf(stderr, "%s:%d should not be reached\n", __FILE__,
-                    __LINE__);
+                __LINE__);
 
     for (i = 0; i < 10000; i++)
         std_hash_table_remove(hash_table, &array[i]);
 
-    for (i = 0; i < 10000; i++) {
+    for (i = 0; i < 10000; i++)
+    {
         array[i] = i;
         std_hash_table_insert(hash_table, &array[i], &array[i]);
     }
 
     if (std_hash_table_foreach_remove(hash_table, my_hash_callback_remove,
-                    NULL) != 5000 || std_hash_table_size(hash_table) != 5000)
+            NULL) != 5000 ||
+        std_hash_table_size(hash_table) != 5000)
         fprintf(stderr, "%s:%d should not be reached\n", __FILE__, __LINE__);
 
     std_hash_table_foreach(hash_table, my_hash_callback_remove_test, NULL);
@@ -325,5 +335,4 @@ int main(int argc, char *argv[])
     printf("PASSED\n");
 
     return 0;
-
 }

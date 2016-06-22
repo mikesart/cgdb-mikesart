@@ -1,19 +1,21 @@
 #include "queue.h"
 #include "sys_util.h"
 
-struct node {
+struct node
+{
     void *data;
     struct node *next;
 };
 
-struct queue {
+struct queue
+{
     int size;
     struct node *head;
 };
 
 struct queue *queue_init(void)
 {
-    struct queue *q = (struct queue *) cgdb_malloc(sizeof (struct queue));
+    struct queue *q = (struct queue *)cgdb_malloc(sizeof(struct queue));
 
     q->size = 0;
     q->head = NULL;
@@ -25,13 +27,14 @@ void queue_append(struct queue *q, void *item)
     struct node *cur = q->head, *node;
 
     /* Allocate the new node */
-    node = (struct node *) cgdb_malloc(sizeof (struct node));
+    node = (struct node *)cgdb_malloc(sizeof(struct node));
     node->data = item;
     node->next = NULL;
 
     if (q->head == NULL)
         q->head = node;
-    else {
+    else
+    {
         while (cur->next != NULL)
             cur = cur->next;
 
@@ -46,11 +49,11 @@ void *queue_pop(struct queue *q)
     void *d;
 
     if (!q)
-        return (void *) NULL;
+        return (void *)NULL;
 
     cur = q->head;
     if (cur == NULL)
-        return (void *) NULL;
+        return (void *)NULL;
 
     /* Move the head of the queue forward */
     q->head = q->head->next;
@@ -73,7 +76,8 @@ void queue_free_list(struct queue *q, item_func func)
     if (cur == NULL || (!func))
         return;
 
-    while (cur != NULL) {
+    while (cur != NULL)
+    {
         prev = cur;
         cur = cur->next;
         /* Remove the previous node */
@@ -93,7 +97,8 @@ void queue_traverse_list(struct queue *q, item_func func)
     if (!func)
         return;
 
-    while (cur != NULL) {
+    while (cur != NULL)
+    {
         func(cur->data);
         cur = cur->next;
     }

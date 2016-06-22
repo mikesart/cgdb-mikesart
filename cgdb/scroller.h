@@ -24,26 +24,29 @@
 /* Data Structures */
 /* --------------- */
 
-struct scroller_line {
+struct scroller_line
+{
     char *line;
     int line_len;
     int tty;
     struct hl_line_attr *attrs;
 };
 
-struct scroller {
+struct scroller
+{
     struct scroller_line *lines;
 
-    char *last_tty_line;        /* Partial tty line - without \n */
-    int last_tty_attr;          /* ansi attribute we got for last tty line */
-    int in_scroll_mode;         /* Currently in scroll mode? */
-    int clear_row;              /* Row where clear (ctrl+L) was hit */
-    struct {
-        int r;                  /* Current line (row) number */
-        int c;                  /* Current column number */
-        int pos;                /* Cursor position in last line */
+    char *last_tty_line; /* Partial tty line - without \n */
+    int last_tty_attr;   /* ansi attribute we got for last tty line */
+    int in_scroll_mode;  /* Currently in scroll mode? */
+    int clear_row;       /* Row where clear (ctrl+L) was hit */
+    struct
+    {
+        int r;   /* Current line (row) number */
+        int c;   /* Current column number */
+        int pos; /* Cursor position in last line */
     } current;
-    WINDOW *win;                /* The scoller's own window */
+    WINDOW *win; /* The scoller's own window */
 };
 
 /* --------- */
@@ -117,7 +120,7 @@ void scr_add(struct scroller *scr, const char *buf, int tty);
  *   width:   Width of the scroller on the screen (columns)
  */
 void scr_move(struct scroller *scr,
-        int pos_r, int pos_c, int height, int width);
+    int pos_r, int pos_c, int height, int width);
 
 /* scr_refresh: Refreshes the scroller on the screen, in case the caller
  * ------------ damages the screen area where the scroller is written (or,

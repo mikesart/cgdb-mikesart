@@ -17,7 +17,8 @@
  * This is a node in the ku_tree.
  * It represents a single key. Many nodes could make up a single map.
  */
-struct kui_tree_node {
+struct kui_tree_node
+{
     /**
 	 * The key this node represents.
 	 */
@@ -57,7 +58,8 @@ int kui_tree_node_destroy(struct kui_tree_node *ktnode)
     if (!ktnode)
         return -1;
 
-    if (ktnode->children) {
+    if (ktnode->children)
+    {
         if (std_list_destroy(ktnode->children) == -1)
             retval = -1;
         ktnode->children = NULL;
@@ -71,7 +73,7 @@ int kui_tree_node_destroy(struct kui_tree_node *ktnode)
 
 static int destroy_kui_tree_node_callback(void *data)
 {
-    struct kui_tree_node *ktnode = (struct kui_tree_node *) data;
+    struct kui_tree_node *ktnode = (struct kui_tree_node *)data;
 
     if (!ktnode)
         return -1;
@@ -89,7 +91,7 @@ struct kui_tree_node *kui_tree_node_create(void)
 {
     struct kui_tree_node *ktnode;
 
-    ktnode = (struct kui_tree_node *) malloc(sizeof (struct kui_tree_node));
+    ktnode = (struct kui_tree_node *)malloc(sizeof(struct kui_tree_node));
 
     if (!ktnode)
         return NULL;
@@ -100,7 +102,8 @@ struct kui_tree_node *kui_tree_node_create(void)
     /* Allocate children */
     ktnode->children = std_list_create(destroy_kui_tree_node_callback);
 
-    if (!ktnode->children) {
+    if (!ktnode->children)
+    {
         kui_tree_node_destroy(ktnode);
         return NULL;
     }
@@ -127,7 +130,7 @@ struct kui_tree_node *kui_tree_node_create(void)
  * 0 on success, or -1 on error.
  */
 static int kui_tree_find(int key,
-        std_list_ptr children, int *found, struct kui_tree_node **ktnode)
+    std_list_ptr children, int *found, struct kui_tree_node **ktnode)
 {
     struct kui_tree_node *node;
     std_list_iterator iter;
@@ -137,19 +140,22 @@ static int kui_tree_find(int key,
 
     /* Look for the key in the children */
     for (iter = std_list_begin(children);
-            iter != std_list_end(children); iter = std_list_next(iter)) {
+         iter != std_list_end(children); iter = std_list_next(iter))
+    {
         void *data;
 
         if (std_list_get_data(iter, &data) == -1)
             return -1;
 
-        node = (struct kui_tree_node *) data;
+        node = (struct kui_tree_node *)data;
 
-        if (node->key == key) {
+        if (node->key == key)
+        {
             *found = 1;
             *ktnode = node;
             break;
-        } else if (node->key > key)
+        }
+        else if (node->key > key)
             break;
     }
 
@@ -158,8 +164,8 @@ static int kui_tree_find(int key,
 
 static int kui_tree_node_compare_callback(const void *a, const void *b)
 {
-    struct kui_tree_node *one = (struct kui_tree_node *) a;
-    struct kui_tree_node *two = (struct kui_tree_node *) b;
+    struct kui_tree_node *one = (struct kui_tree_node *)a;
+    struct kui_tree_node *two = (struct kui_tree_node *)b;
 
     if (one->key == two->key)
         return 0;
@@ -171,8 +177,8 @@ static int kui_tree_node_compare_callback(const void *a, const void *b)
 
 static int kui_tree_node_key_compare_callback(const void *a, const void *b)
 {
-    struct kui_tree_node *one = (struct kui_tree_node *) a;
-    int two = *(int *) b;
+    struct kui_tree_node *one = (struct kui_tree_node *)a;
+    int two = *(int *)b;
 
     if (one->key == two)
         return 0;
@@ -183,7 +189,7 @@ static int kui_tree_node_key_compare_callback(const void *a, const void *b)
 }
 
 static int kui_tree_node_insert(struct kui_tree_node *ktnode,
-        int *klist, void *data)
+    int *klist, void *data)
 {
     struct kui_tree_node *node;
     int found;
@@ -191,7 +197,8 @@ static int kui_tree_node_insert(struct kui_tree_node *ktnode,
     if (!ktnode)
         return -1;
 
-    if (klist[0] == 0) {
+    if (klist[0] == 0)
+    {
         ktnode->macro_value = data;
         return 0;
     }
@@ -200,7 +207,8 @@ static int kui_tree_node_insert(struct kui_tree_node *ktnode,
         return -1;
 
     /* If the node was found, use it, otherwise create a new one */
-    if (!found) {
+    if (!found)
+    {
         node = kui_tree_node_create();
 
         if (!node)
@@ -209,7 +217,7 @@ static int kui_tree_node_insert(struct kui_tree_node *ktnode,
         node->key = klist[0];
 
         if (std_list_insert_sorted(ktnode->children, node,
-                        kui_tree_node_compare_callback) == -1)
+                kui_tree_node_compare_callback) == -1)
             return -1;
     }
 
@@ -217,7 +225,7 @@ static int kui_tree_node_insert(struct kui_tree_node *ktnode,
 }
 
 static int kui_tree_node_delete(struct kui_tree_node *ktnode,
-        struct kui_tree_node **from, int *klist)
+    struct kui_tree_node **from, int *klist)
 {
 
     struct kui_tree_node *node;
@@ -233,14 +241,15 @@ static int kui_tree_node_delete(struct kui_tree_node *ktnode,
     if (kui_tree_find(klist[0], ktnode->children, &found, &node) == -1)
         return -1;
 
-    if (!found)                 /* The key must be found */
+    if (!found) /* The key must be found */
         return -1;
 
     if (kui_tree_node_delete(node, from, &klist[1]) == -1)
         return -1;
 
     /* No need to mess with the bottom node on the way out */
-    if (klist[1] == 0) {
+    if (klist[1] == 0)
+    {
         *from = node;
         return 0;
     }
@@ -249,11 +258,12 @@ static int kui_tree_node_delete(struct kui_tree_node *ktnode,
      * and then delete it. 
      * If it has children, leave it alone.
      */
-    if (std_list_length((*from)->children) == 0) {
+    if (std_list_length((*from)->children) == 0)
+    {
         std_list_iterator iter;
 
         iter = std_list_find(node->children, &(*from)->key,
-                kui_tree_node_key_compare_callback);
+            kui_tree_node_key_compare_callback);
 
         if (!iter)
             return -1;
@@ -279,7 +289,8 @@ static int kui_tree_node_delete(struct kui_tree_node *ktnode,
  *
  * Also, it can determine what mapping was reached if one was found.
  */
-struct kui_tree {
+struct kui_tree
+{
     /* The root of the tree */
     struct kui_tree_node *root;
     /* The current position pointing into the tree ( while looking for a map ) */
@@ -313,14 +324,15 @@ struct kui_tree *kui_tree_create(void)
 {
     struct kui_tree *ktree;
 
-    ktree = (struct kui_tree *) malloc(sizeof (struct kui_tree));
+    ktree = (struct kui_tree *)malloc(sizeof(struct kui_tree));
 
     if (!ktree)
         return NULL;
 
     ktree->root = kui_tree_node_create();
 
-    if (!ktree->root) {
+    if (!ktree->root)
+    {
         kui_tree_destroy(ktree);
         return NULL;
     }
@@ -340,11 +352,12 @@ int kui_tree_delete(struct kui_tree *ktree, int *klist)
     if (kui_tree_node_delete(ktree->root, &from, klist) == -1)
         return -1;
 
-    if (std_list_length(from->children) == 0) {
+    if (std_list_length(from->children) == 0)
+    {
         std_list_iterator iter;
 
         iter = std_list_find(ktree->root->children, &from->key,
-                kui_tree_node_key_compare_callback);
+            kui_tree_node_key_compare_callback);
 
         if (!iter)
             return -1;
@@ -399,7 +412,7 @@ int kui_tree_get_data(struct kui_tree *ktree, void *data)
     if (!ktree->found)
         return -1;
 
-    memcpy(data, &ktree->found_node->macro_value, sizeof (void *));
+    memcpy(data, &ktree->found_node->macro_value, sizeof(void *));
 
     return 0;
 }
@@ -419,19 +432,22 @@ int kui_tree_push_key(struct kui_tree *ktree, int key, int *map_found)
         return -1;
 
     /* Not found */
-    if (!found) {
+    if (!found)
+    {
         ktree->state = KUI_TREE_NOT_FOUND;
         ktree->cur = NULL;
         return 0;
     }
 
-    if (found) {
+    if (found)
+    {
         ktree->cur = ktnode;
 
         if (std_list_length(ktnode->children) == 0)
             ktree->state = KUI_TREE_FOUND;
 
-        if (ktnode->macro_value) {
+        if (ktnode->macro_value)
+        {
             ktree->found = 1;
             ktree->found_node = ktnode;
             *map_found = 1;

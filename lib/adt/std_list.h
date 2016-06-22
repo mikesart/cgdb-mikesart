@@ -101,7 +101,7 @@ int std_list_prepend(struct std_list *list, void *data);
  * 0 on success, or -1 on error.
  */
 int std_list_insert(struct std_list *list,
-        const std_list_iterator iter, void *data);
+    const std_list_iterator iter, void *data);
 
 /**
  * Inserts a new element into the list, using the given comparison 
@@ -122,7 +122,7 @@ int std_list_insert(struct std_list *list,
  * 0 on success, or -1 on error.
  */
 int std_list_insert_sorted(struct std_list *list,
-        void *data, const STDCompareFunc func);
+    void *data, const STDCompareFunc func);
 
 /**
  * Like std_list_sort(), but the comparison function accepts a user data argument.
@@ -162,7 +162,7 @@ int std_list_insert_sorted(struct std_list *list,
  * The iterator after the one being removed, or NULL on error.
  */
 std_list_iterator std_list_remove(struct std_list *list,
-        std_list_iterator iter);
+    std_list_iterator iter);
 
 /**
  * Removes all the elements from a list. 
@@ -198,7 +198,7 @@ int std_list_remove_all(struct std_list *list);
  * NULL on error
  */
 std_list_iterator std_list_find(const struct std_list *list,
-        const void *data, const STDCompareFunc func);
+    const void *data, const STDCompareFunc func);
 
 /**
  * Gets the first element in a list.
@@ -272,7 +272,7 @@ int std_list_length(struct std_list *list);
  * 0 on success, or -1 on error.
  */
 int std_list_foreach(const struct std_list *list,
-        const STDFunc func, void *user_data);
+    const STDFunc func, void *user_data);
 
 /**
  * Get's the data at the specified list position.

@@ -31,12 +31,14 @@ void long_func(void)
 
 #define SIZE 100000
 
-struct test {
+struct test
+{
     int a;
     int b;
     int c;
 } a = {
-1, 2, 3};
+    1, 2, 3
+};
 
 int main(int argc, char **argv)
 {

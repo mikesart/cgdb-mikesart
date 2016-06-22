@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     else
         usage();
 
-    //$ TODO: 
+//$ TODO:
 #if 0
     if (tokenizer_set_file(t, argv[1], l) == -1) {
         printf("%s:%d tokenizer_set_file error\n", __FILE__, __LINE__);
@@ -41,7 +41,8 @@ int main(int argc, char **argv)
     }
 #endif
 
-    while ((ret = tokenizer_get_token(t, &tok_data)) > 0) {
+    while ((ret = tokenizer_get_token(t, &tok_data)) > 0)
+    {
 
         printf("Token:\n");
         printf("\tNumber: %d\n", tok_data.e);

@@ -46,8 +46,9 @@ int main(int argc, char *argv[])
 
     /* Create a tree */
     debug("Creating tree... ");
-    tree = std_btree_create((STDDestroyNotify) destructor);
-    if (tree == NULL) {
+    tree = std_btree_create((STDDestroyNotify)destructor);
+    if (tree == NULL)
+    {
         printf("FAILED\n");
         return 1;
     }
@@ -63,7 +64,8 @@ int main(int argc, char *argv[])
     debug("Destroying tree...\n");
     result |= std_btree_destroy(tree);
 
-    if (result) {
+    if (result)
+    {
         printf("FAILED\n");
         return 2;
     }
@@ -86,30 +88,35 @@ static int test_add(std_btree_ptr tree)
 
     debug("Test starting: Add\n");
 
-    if (std_btree_add(tree, NULL, STD_BTREE_LEFT, data_first)) {
+    if (std_btree_add(tree, NULL, STD_BTREE_LEFT, data_first))
+    {
         debug("Add \"First string\" as root node failed\n");
         return 1;
     }
 
     i = std_btree_root(tree);
-    if (i == NULL) {
+    if (i == NULL)
+    {
         debug("Added root node, but root came back as NULL\n");
         return 2;
     }
 
-    if (std_btree_add(tree, i, STD_BTREE_RIGHT, data_right)) {
+    if (std_btree_add(tree, i, STD_BTREE_RIGHT, data_right))
+    {
         debug("Add \"Right of root\" failed\n");
         return 3;
     }
 
     if (std_btree_add(tree, std_btree_child(i, STD_BTREE_RIGHT),
-                    STD_BTREE_LEFT, data_left)) {
+            STD_BTREE_LEFT, data_left))
+    {
         debug("Add \"Left of 2nd node\" failed\n");
         return 4;
     }
 
     /* Child already exists, expect to fail */
-    if (std_btree_add(tree, i, STD_BTREE_RIGHT, data_newright) == 0) {
+    if (std_btree_add(tree, i, STD_BTREE_RIGHT, data_newright) == 0)
+    {
         debug("Add \"New right of root\" didn't fail, but it should have\n");
         return 5;
     }
@@ -133,12 +140,14 @@ static int test_remove(std_btree_ptr tree)
     std_btree_add(tree, i, STD_BTREE_LEFT, data_lleft);
     std_btree_add(tree, i, STD_BTREE_RIGHT, data_right);
 
-    if (std_btree_remove(std_btree_child(i, STD_BTREE_LEFT))) {
+    if (std_btree_remove(std_btree_child(i, STD_BTREE_LEFT)))
+    {
         debug("Remove \"Left of left of roof\" failed\n");
         return 1;
     }
 
-    if (std_btree_remove(i)) {
+    if (std_btree_remove(i))
+    {
         debug("Remove \"Left of root\" (and its right child) failed\n");
         return 2;
     }
@@ -154,7 +163,8 @@ static int test_replace(std_btree_ptr tree)
 
     debug("Test starting: Replace\n");
 
-    if (std_btree_replace(i, data)) {
+    if (std_btree_replace(i, data))
+    {
         debug("Replace root node with new data failed\n");
         return 1;
     }
@@ -169,12 +179,14 @@ static int test_isroot(std_btree_ptr tree)
 
     debug("Test starting: Isroot\n");
 
-    if (!std_btree_isroot(i)) {
+    if (!std_btree_isroot(i))
+    {
         debug("Isroot returned false when it's clearly true\n");
         return 1;
     }
 
-    if (std_btree_isroot(std_btree_child(i, STD_BTREE_RIGHT))) {
+    if (std_btree_isroot(std_btree_child(i, STD_BTREE_RIGHT)))
+    {
         debug("Isroot returned true when it's clearly false\n");
         return 2;
     }
@@ -189,7 +201,8 @@ static int test_isleaf(std_btree_ptr tree)
 
     debug("Test starting: Isleaf\n");
 
-    if (std_btree_isleaf(i)) {
+    if (std_btree_isleaf(i))
+    {
         debug("Isleaf returned true when it's clearly false\n");
         return 1;
     }
@@ -198,7 +211,8 @@ static int test_isleaf(std_btree_ptr tree)
     i = std_btree_child(i, STD_BTREE_RIGHT);
     i = std_btree_child(i, STD_BTREE_LEFT);
 
-    if (!std_btree_isleaf(i)) {
+    if (!std_btree_isleaf(i))
+    {
         debug("Isleaf returned false when it's clearly true\n");
         return 2;
     }

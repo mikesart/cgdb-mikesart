@@ -88,9 +88,10 @@ int io_debug_init(const char *filename)
 
     strcpy(config_dir, filename);
 
-    if ((dfd = fopen(config_dir, "w")) == NULL) {
+    if ((dfd = fopen(config_dir, "w")) == NULL)
+    {
         logger_write_pos(logger, __FILE__, __LINE__,
-                "could not open debug file");
+            "could not open debug file");
         return -1;
     }
 
@@ -114,10 +115,10 @@ void io_debug_write_fmt(const char *fmt, ...)
     char va_buf[MAXLINE];
 
     va_start(ap, fmt);
-#ifdef   HAVE_VSNPRINTF
-    vsnprintf(va_buf, sizeof (va_buf), fmt, ap);    /* this is safe */
+#ifdef HAVE_VSNPRINTF
+    vsnprintf(va_buf, sizeof(va_buf), fmt, ap); /* this is safe */
 #else
-    vsprintf(va_buf, fmt, ap);  /* this is not safe */
+    vsprintf(va_buf, fmt, ap); /* this is not safe */
 #endif
     va_end(ap);
 
@@ -129,9 +130,12 @@ int io_read_byte(char *c, int source)
 {
     int ret_val = 0;
 
-    if ((ret_val = read(source, c, 1)) == 0) {
+    if ((ret_val = read(source, c, 1)) == 0)
+    {
         return -1;
-    } else if (ret_val == -1) {
+    }
+    else if (ret_val == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "I/O error");
         process_error();
         return -1;
@@ -152,13 +156,15 @@ int io_rw_byte(int source, int dest)
 {
     char c;
 
-    if (read(source, &c, 1) != 1) {
+    if (read(source, &c, 1) != 1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "I/O error");
         process_error();
         return -1;
     }
 
-    if (write(dest, &c, 1) != 1) {
+    if (write(dest, &c, 1) != 1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "I/O error");
         return -1;
     }
@@ -170,46 +176,54 @@ ssize_t io_read(int fd, void *buf, size_t count)
 {
     ssize_t amountRead;
 
-  tgdb_read:
+tgdb_read:
 
-    if ((amountRead = read(fd, buf, count)) == -1) {    /* error */
+    if ((amountRead = read(fd, buf, count)) == -1)
+    { /* error */
         if (errno == EINTR)
             goto tgdb_read;
-        else if (errno != EIO) {
+        else if (errno != EIO)
+        {
             logger_write_pos(logger, __FILE__, __LINE__,
-                    "error reading from fd");
+                "error reading from fd");
             return -1;
-        } else {
-            return 0;           /* Happens on EOF for some reason */
         }
-
-    } else if (amountRead == 0) {   /* EOF */
+        else
+        {
+            return 0; /* Happens on EOF for some reason */
+        }
+    }
+    else if (amountRead == 0)
+    { /* EOF */
         return 0;
-    } else {
-        char *tmp = (char *) buf;
+    }
+    else
+    {
+        char *tmp = (char *)buf;
 
         tmp[amountRead] = '\0';
-        if (debug_on == 1) {
+        if (debug_on == 1)
+        {
             int i;
 
             fprintf(dfd, "%s", debug_begin);
-            for (i = 0; i < amountRead; ++i) {
-                if (((char *) buf)[i] == '\r')
+            for (i = 0; i < amountRead; ++i)
+            {
+                if (((char *)buf)[i] == '\r')
                     fprintf(dfd, "(%s)", "\\r");
-                else if (((char *) buf)[i] == '\n')
+                else if (((char *)buf)[i] == '\n')
                     fprintf(dfd, "(%s)\n", "\\n");
-                else if (((char *) buf)[i] == '\032')
+                else if (((char *)buf)[i] == '\032')
                     fprintf(dfd, "(%s)", "\\032");
-                else if (((char *) buf)[i] == '\b')
+                else if (((char *)buf)[i] == '\b')
                     fprintf(dfd, "(%s)", "\\b");
                 else
-                    fprintf(dfd, "%c", ((char *) buf)[i]);
+                    fprintf(dfd, "%c", ((char *)buf)[i]);
             }
             fprintf(dfd, "%s", debug_end);
             fflush(dfd);
         }
         return amountRead;
-
     }
 }
 
@@ -217,10 +231,12 @@ ssize_t io_writen(int fd, const void *vptr, size_t n)
 {
     ssize_t nwritten;
     size_t nleft = n;
-    const char *ptr = (const char *) vptr;
+    const char *ptr = (const char *)vptr;
 
-    while (nleft > 0) {
-        if ((nwritten = write(fd, ptr, nleft)) <= 0) {
+    while (nleft > 0)
+    {
+        if ((nwritten = write(fd, ptr, nleft)) <= 0)
+        {
             if (errno == EINTR)
                 nwritten = 0;
             else
@@ -233,7 +249,7 @@ ssize_t io_writen(int fd, const void *vptr, size_t n)
     return (n);
 }
 
-void io_display_char(FILE * fd, char c)
+void io_display_char(FILE *fd, char c)
 {
     if (c == '\r')
         fprintf(fd, "(%s)", "\\r");
@@ -270,14 +286,15 @@ int io_data_ready(int fd, int ms)
     if (ms == -1)
         timeout_ptr = NULL;
 
-    ret = select(fd + 1, &readfds, (fd_set *) NULL, &exceptfds, timeout_ptr);
-    if (ret == -1) {
+    ret = select(fd + 1, &readfds, (fd_set *)NULL, &exceptfds, timeout_ptr);
+    if (ret == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "Errno(%d)\n", errno);
         return -1;
     }
 
     if (ret <= 0)
-        return 0;               /* Nothing to read. */
+        return 0; /* Nothing to read. */
     else
         return 1;
 #endif
@@ -294,31 +311,35 @@ int io_getchar(int fd, unsigned int ms, int *key)
         return -1;
 
     val = io_data_ready(fd, ms);
-    if (val == -1) {
+    if (val == -1)
+    {
         logger_write_pos(logger, __FILE__, __LINE__, "Errno(%d)\n", errno);
         return -1;
     }
 
     if (val == 0)
-        return 0;               /* Nothing to read. */
+        return 0; /* Nothing to read. */
 
     /* Set nonblocking */
     flag = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flag | O_NONBLOCK);
 
-  read_again:
+read_again:
 
     /* Read a char */
     ret = read(fd, &c, 1);
 
     if (ret == -1 && errno == EAGAIN)
-        c = 0;                  /* No data available */
+        c = 0; /* No data available */
     else if (ret == -1 && errno == EINTR)
         goto read_again;
-    else if (ret == -1) {
+    else if (ret == -1)
+    {
         c = 0;
         logger_write_pos(logger, __FILE__, __LINE__, "Errno(%d)\n", errno);
-    } else if (ret == 0) {
+    }
+    else if (ret == 0)
+    {
         c = 0;
         ret = -1;
         logger_write_pos(logger, __FILE__, __LINE__, "Read returned nothing\n");

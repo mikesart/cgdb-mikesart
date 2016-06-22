@@ -26,7 +26,8 @@
  *
  * If you modify this enumeration, update the manual!
  */
-enum hl_group_kind {
+enum hl_group_kind
+{
     HLG_KEYWORD = 1,
     HLG_TYPE,
     HLG_LITERAL,
@@ -153,7 +154,7 @@ int hl_groups_setup(hl_groups_ptr hl_groups);
  * 0 on success or -1 on error
  */
 int hl_groups_get_attr(hl_groups_ptr hl_groups, enum hl_group_kind kind,
-        int *attr);
+    int *attr);
 
 /**
  * Parse a particular command. This may move into the cgdbrc file later on.
@@ -201,14 +202,15 @@ enum hl_group_kind hl_get_color_group(hl_groups_ptr hl_groups, const char *color
 /**
  * Given a set of attributes and the column they start at, print the line.
  */
-struct hl_line_attr {
+struct hl_line_attr
+{
     int col;
     int attr;
 };
 void hl_printline(WINDOW *win, const char *line, int line_len,
-        const hl_line_attr *attrs, int x, int y, int col, int width);
+    const hl_line_attr *attrs, int x, int y, int col, int width);
 void hl_printline_highlight(WINDOW *win, const char *line, int line_len,
-        const hl_line_attr *attrs, int x, int y, int col, int width);
+    const hl_line_attr *attrs, int x, int y, int col, int width);
 
 /*@}*/
 /* }}}*/

@@ -29,7 +29,7 @@
  */
 struct std_hashtable;
 
-typedef int (*STDHRFunc) (void *key, void *value, void *user_data);
+typedef int (*STDHRFunc)(void *key, void *value, void *user_data);
 
 /**
  * Creates a new hash table.
@@ -55,7 +55,7 @@ typedef int (*STDHRFunc) (void *key, void *value, void *user_data);
  * A new hash table
  */
 struct std_hashtable *std_hash_table_new(STDHashFunc hash_func,
-        STDEqualFunc key_equal_func);
+    STDEqualFunc key_equal_func);
 
 /**
  * Creates a new hash table like std_hash_table_new() and allow specifying
@@ -82,8 +82,8 @@ struct std_hashtable *std_hash_table_new(STDHashFunc hash_func,
  * A new hash table
  */
 struct std_hashtable *std_hash_table_new_full(STDHashFunc hash_func,
-        STDEqualFunc key_equal_func,
-        STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func);
+    STDEqualFunc key_equal_func,
+    STDDestroyNotify key_destroy_func, STDDestroyNotify value_destroy_func);
 
 /**
  * Destroys the hash table. If keys and/or values are dynamically allocated, 
@@ -116,7 +116,7 @@ void std_hash_table_destroy(struct std_hashtable *hash_table);
  * The value to associate with the key.
  */
 void std_hash_table_insert(struct std_hashtable *hash_table,
-        void *key, void *value);
+    void *key, void *value);
 
 /**
  * Inserts a new key and value into a hash table similar to 
@@ -136,7 +136,7 @@ void std_hash_table_insert(struct std_hashtable *hash_table,
  * The value to associate with the key.
  */
 void std_hash_table_replace(struct std_hashtable *hash_table,
-        void *key, void *value);
+    void *key, void *value);
 
 /**
  * Removes a key and its associated value from a hash table.
@@ -207,7 +207,7 @@ void *std_hash_table_lookup(struct std_hashtable *hash_table, const void *key);
  * 1 if the key was found in the hash table.
  */
 int std_hash_table_lookup_extended(struct std_hashtable *hash_table,
-        const void *lookup_key, void **oristd_key, void **value);
+    const void *lookup_key, void **oristd_key, void **value);
 
 /**
  * Calls the given function for each of the key/value pairs in the hash table. 
@@ -227,7 +227,7 @@ int std_hash_table_lookup_extended(struct std_hashtable *hash_table,
  * user data to pass to the function.
  */
 void std_hash_table_foreach(struct std_hashtable *hash_table,
-        STDHFunc func, void *user_data);
+    STDHFunc func, void *user_data);
 
 /**
  * Calls the given function for key/value pairs in the hash table until 
@@ -250,7 +250,7 @@ void std_hash_table_foreach(struct std_hashtable *hash_table,
  * NULL is returned.
  */
 void *std_hash_table_find(struct std_hashtable *hash_table,
-        STDHRFunc predicate, void *user_data);
+    STDHRFunc predicate, void *user_data);
 
 /**
  * Calls the given function for each key/value pair in the hash table. If the 
@@ -271,7 +271,7 @@ void *std_hash_table_find(struct std_hashtable *hash_table,
  * The number of key/value pairs removed.
  */
 unsigned int std_hash_table_foreach_remove(struct std_hashtable *hash_table,
-        STDHRFunc func, void *user_data);
+    STDHRFunc func, void *user_data);
 
 /**
  * Calls the given function for each key/value pair in the hash table. If the 
@@ -291,7 +291,7 @@ unsigned int std_hash_table_foreach_remove(struct std_hashtable *hash_table,
  * the number of key/value pairs removed.
  */
 unsigned int std_hash_table_foreach_steal(struct std_hashtable *hash_table,
-        STDHRFunc func, void *user_data);
+    STDHRFunc func, void *user_data);
 
 /**
  * Returns the number of elements contained in the hash table.
