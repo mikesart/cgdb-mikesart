@@ -511,8 +511,6 @@ static const char *tgdb_get_client_command(struct tgdb *tgdb,
             return "up";
         case TGDB_DOWN:
             return "down";
-        case TGDB_ERROR:
-            break;
     }
 
     return NULL;

@@ -960,22 +960,16 @@ static void process_commands(struct tgdb *tgdb_in)
                 /* This updates all the breakpoints */
             case TGDB_UPDATE_BREAKPOINTS:
             {
+                int i;
                 struct sviewer *sview = if_get_sview();
-                struct tgdb_list *list =
-                        item->choice.update_breakpoints.breakpoint_list;
-                tgdb_list_iterator *iterator;
-                struct tgdb_breakpoint *tb;
 
                 source_clear_breaks(if_get_sview());
-                iterator = tgdb_list_get_first(list);
 
-                while (iterator) {
+                for (i = 0; i < sbcount(item->choice.update_breakpoints.breakpoints); i++) {
                     /* For each breakpoint */
-                    tb = (struct tgdb_breakpoint *)tgdb_list_get_item(iterator);
+                    struct tgdb_breakpoint *tb = &item->choice.update_breakpoints.breakpoints[i];
 
                     source_enable_break(sview, tb->file, tb->line, tb->enabled);
-
-                    iterator = tgdb_list_next(iterator);
                 }
 
                 if_show_file(NULL, 0, 0);

@@ -369,21 +369,20 @@ commands_process_breakpoints(struct annotate_two *a2, struct ibuf *buf,
     mi_output *miout = mi_parse_gdb_output(result_line, NULL);
 
     if (miout && (miout->type == MI_T_RESULT_RECORD)) {
-        struct tgdb_list *breakpoint_list = tgdb_list_init();
+        struct tgdb_breakpoint *breakpoints = NULL;
         mi_results *bplist = mi_find_var(miout->c, "bkpt", t_tuple);
 
         while (bplist) {
             mi_bkpt *bkpt = mi_get_bkpt(bplist->v.rs);
 
             if (bkpt && bkpt->fullname) {
-                struct tgdb_breakpoint *tb = (struct tgdb_breakpoint *) cgdb_malloc(
-                            sizeof (struct tgdb_breakpoint));
-                tb->funcname = bkpt->func;
-                tb->file = bkpt->fullname;
-                tb->line = bkpt->line;
-                tb->enabled = bkpt->enabled;
+                struct tgdb_breakpoint tb;
 
-                tgdb_list_append(breakpoint_list, tb);
+                tb.funcname = bkpt->func;
+                tb.file = bkpt->fullname;
+                tb.line = bkpt->line;
+                tb.enabled = bkpt->enabled;
+                sbpush(breakpoints, tb);
 
                 bkpt->func = NULL;
                 bkpt->fullname = NULL;
@@ -400,11 +399,10 @@ commands_process_breakpoints(struct annotate_two *a2, struct ibuf *buf,
         response->result_id = id;
         response->request = NULL;
         response->header = TGDB_UPDATE_BREAKPOINTS;
-        response->choice.update_breakpoints.breakpoint_list =
-                breakpoint_list;
+        response->choice.update_breakpoints.breakpoints = breakpoints;
 
         /* At this point, annotate needs to send the breakpoints to the gui.
-             * All of the valid breakpoints are stored in breakpoint_queue. */
+            All of the valid breakpoints are stored in breakpoint_queue. */
         tgdb_types_append_command(list, response);
     }
 
