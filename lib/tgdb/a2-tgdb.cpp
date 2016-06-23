@@ -251,16 +251,6 @@ pid_t a2_get_debugger_pid(struct annotate_two *a2)
     return a2->debugger_pid;
 }
 
-int a2_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com)
-{
-    io_debug_write_fmt("commands_prepare_for_command: <%s\n>", com->tgdb_command_data);
-
-    if (com->tgdb_client_private_data == ANNOTATE_USER_COMMAND)
-        data_set_state(a2, USER_COMMAND);
-
-    return 0;
-}
-
 int a2_is_misc_prompt(struct annotate_two *a2)
 {
     return globals_is_misc_prompt(a2->sm);

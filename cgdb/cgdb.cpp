@@ -1200,9 +1200,7 @@ static void update_disassemble(struct tgdb_request *request,
 
 static void update_prompt(struct tgdb_response_prompt_value *response)
 {
-    const char *new_prompt = response->prompt_value;
-
-    change_prompt(new_prompt);
+    change_prompt(response->prompt_value);
 }
 
 static void process_commands(struct tgdb *tgdb_in)

@@ -33,6 +33,7 @@
 #include "queue.h"
 #include "a2-tgdb.h"
 #include "annotate_two.h"
+#include "state_machine.h"
 
 #include "pseudo.h" /* SLAVE_SIZE constant */
 #include "fork_util.h"
@@ -794,8 +795,8 @@ tgdb_send(struct tgdb *tgdb, const char *command,
     /* Create the client command */
     tc = (struct tgdb_command *)cgdb_malloc(sizeof(struct tgdb_command));
     tc->command_choice = command_choice;
-    tc->tgdb_client_private_data = ANNOTATE_USER_COMMAND;
-    tc->tgdb_command_data = command_data;
+    tc->command = ANNOTATE_USER_COMMAND;
+    tc->gdb_command = command_data;
 
     if (tgdb_run_or_queue_command(tgdb, tc) == -1)
     {
@@ -876,24 +877,25 @@ static int tgdb_deliver_command(struct tgdb *tgdb, struct tgdb_command *command)
 {
     tgdb->IS_SUBSYSTEM_READY_FOR_NEXT_COMMAND = 0;
 
+    /* Send what we're doing to log file */
+    io_debug_write_fmt(" tgdb_deliver_command: <%s>", command->gdb_command);
+
     /* Here is where the command is actually given to the debugger.
      * Before this is done, if the command is a GUI command, we save it,
      * so that later, it can be printed to the client. Its for debugging
-     * purposes only, or for people who want to know the commands there
+     * purposes only, or for people who want to know the commands their
      * debugger is being given.
      */
     if (command->command_choice == TGDB_COMMAND_FRONT_END)
-        tgdb->last_gui_command = cgdb_strdup(command->tgdb_command_data);
+        tgdb->last_gui_command = cgdb_strdup(command->gdb_command);
 
-    /* A command for the debugger */
-    if (a2_prepare_for_command(tgdb->tcc, command) == -1)
-        return -1;
+    /* Set USER_COMMAND data state for user commands */
+    if (command->command == ANNOTATE_USER_COMMAND)
+        data_set_state(tgdb->tcc, USER_COMMAND);
 
-    /* A regular command from the client */
-    io_debug_write_fmt(" tgdb_deliver_command: <%s>", command->tgdb_command_data);
-
-    io_writen(tgdb->debugger_stdin, command->tgdb_command_data,
-        strlen(command->tgdb_command_data));
+    /* Send command to gdb */
+    io_writen(tgdb->debugger_stdin, command->gdb_command,
+        strlen(command->gdb_command));
 
 /* Uncomment this if you wish to see all of the commands, that are 
      * passed to GDB. */
@@ -901,8 +903,8 @@ static int tgdb_deliver_command(struct tgdb *tgdb, struct tgdb_command *command)
     {
         if (tgdb->print_message)
         {
-            char *s = command->tgdb_command_data;
-            int length = strlen(command->tgdb_command_data);
+            char *s = command->gdb_command;
+            int length = strlen(command->gdb_command);
 
             tgdb->print_message("tgdb:[%.*s]\n", length - 1, s);
         }
@@ -1211,8 +1213,7 @@ size_t tgdb_process(struct tgdb *tgdb, char *buf, size_t n, int *is_finished)
         size_t infbuf_size;
         int result;
 
-        result = a2_parse_io(tgdb->tcc,
-            local_buf, size,
+        result = a2_parse_io(tgdb->tcc, local_buf, size,
             buf, &buf_size, infbuf, &infbuf_size, tgdb->command_list);
 
         tgdb_process_client_commands(tgdb);

@@ -28,12 +28,8 @@ struct annotate_two;
  */
 enum annotate_commands
 {
-
-    /** Currently not used. */
-    ANNOTATE_VOID = 0,
-
     /** Get a list of breakpoints. */
-    ANNOTATE_INFO_BREAKPOINTS,
+    ANNOTATE_INFO_BREAKPOINTS = 1,
 
     /** Tell gdb where to send inferior's output */
     ANNOTATE_TTY,
@@ -157,20 +153,6 @@ int a2_shutdown(struct annotate_two *a2);
  * 1 if it is ready, 0 if it is not.
  */
 int a2_is_client_ready(struct annotate_two *a2);
-
-/**
- *  Prepare's the client for the command COM to be run.
- *
- * \param ctx
- * The annotate two context.
- *
- * \param com
- * The command to be run.
- *
- * @return
- * -1 on error, 0 on success
- */
-int a2_prepare_for_command(struct annotate_two *a2, struct tgdb_command *com);
 
 /**
  * This is a hack. It should be removed eventually.

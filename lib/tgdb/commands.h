@@ -13,7 +13,7 @@
  *  Returns -1 on error, 0 on success
  */
 int commands_issue_command(struct tgdb_list *client_command_list,
-    enum annotate_commands com, const char *data, int oob, int *id);
+    enum annotate_commands commmand, const char *data, int oob, int *id);
 
 /* commands_process: This function receives the output from gdb when gdb
  *                   is running a command on behalf of this package.
@@ -25,23 +25,6 @@ void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
     int result_record, char *result_line, int id,
     struct tgdb_list *command_list);
 
-/* This gives the gui all of the completions that were just read from gdb 
- * through a 'complete' command.
- *
- */
-void commands_send_gui_completions(struct commands *c, struct tgdb_list *list);
-
-/* The 3 functions below are for tgdb only.
- * These functions are responsible for keeping tgdb up to date with gdb.
- * If a particular piece of information is needed after each command the user
- * is allowed to give to gdb, then these are the functions that will find out
- * the missing info.
- * These functions should NOT be called for the gui to get work done, and they
- * should not be used for tgdb to get work done. 
- *
- * THEY ARE STRICTLY FOR KEEPING TGDB UP TO DATE WITH GDB
- */
-
 /**
  * The current command type. TGDB is capable of having any commands of this
  * type in it's queue.
@@ -50,20 +33,13 @@ void commands_send_gui_completions(struct commands *c, struct tgdb_list *list);
  */
 enum tgdb_command_choice
 {
-
-    /**
-     * A command from the front end
-     */
+    /** A command from the front end */
     TGDB_COMMAND_FRONT_END,
 
-    /**
-     * A command from the console
-     */
+    /** A command from the console */
     TGDB_COMMAND_CONSOLE,
 
-    /**
-     * A command from a client of TGDB
-     */
+    /** A command from a client of TGDB */
     TGDB_COMMAND_TGDB_CLIENT,
 
     /**
@@ -85,13 +61,13 @@ enum tgdb_command_choice
 struct tgdb_command
 {
     /** The actual command to give. */
-    char *tgdb_command_data;
+    char *gdb_command;
 
     /** The type of command this one is. */
     enum tgdb_command_choice command_choice;
 
     /** Private data the client context can use. */
-    enum annotate_commands tgdb_client_private_data;
+    enum annotate_commands command;
 };
 
 /**
@@ -104,6 +80,12 @@ struct tgdb_command
  */
 void tgdb_command_destroy(void *item);
 
+/**
+ * Get gdb version, major and minor numbers.
+ * Ie, major:7, minor:10
+ *
+ * Returns 1 on success, 0 on failure.
+ */
 int tgdb_get_gdb_version(int *major, int *minor);
 
 #endif

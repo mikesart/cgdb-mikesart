@@ -699,7 +699,7 @@ void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
  * A command ready to be run through the debugger or NULL on error.
  * The memory is malloc'd, and must be freed.
  */
-static char *commands_create_command(enum annotate_commands com,
+static char *create_gdb_command(enum annotate_commands com,
     const char *data, int command_id)
 {
     char *cmd = NULL;
@@ -750,8 +750,6 @@ static char *commands_create_command(enum annotate_commands com,
         name = "info_complete";
         cmd = sys_aprintf("complete %s", data);
         break;
-
-    case ANNOTATE_VOID:
     default:
         logger_write_pos(logger, __FILE__, __LINE__, "switch error");
         break;
@@ -774,7 +772,7 @@ void tgdb_command_destroy(void *item)
 {
     struct tgdb_command *tc = (struct tgdb_command *)item;
 
-    free(tc->tgdb_command_data);
+    free(tc->gdb_command);
     free(tc);
 }
 
@@ -794,20 +792,19 @@ static int command_get_next_id()
 }
 
 int commands_issue_command(struct tgdb_list *client_command_list,
-    enum annotate_commands com, const char *data, int oob, int *id)
+    enum annotate_commands command, const char *data, int oob, int *id)
 {
     struct tgdb_command *tc;
     int command_id = command_get_next_id();
-    char *command = commands_create_command(com, data, command_id);
+    char *gdb_command = create_gdb_command(command, data, command_id);
 
-    enum tgdb_command_choice choice = (oob == 1) ?
-        TGDB_COMMAND_TGDB_CLIENT_PRIORITY :
-        TGDB_COMMAND_TGDB_CLIENT;
+    enum tgdb_command_choice choice = oob ?
+        TGDB_COMMAND_TGDB_CLIENT_PRIORITY : TGDB_COMMAND_TGDB_CLIENT;
 
     tc = (struct tgdb_command *)cgdb_malloc(sizeof(struct tgdb_command));
     tc->command_choice = choice;
-    tc->tgdb_client_private_data = com;
-    tc->tgdb_command_data = command;
+    tc->command = command;
+    tc->gdb_command = gdb_command;
 
     /* Append to the command_container the commands */
     tgdb_list_append(client_command_list, tc);
