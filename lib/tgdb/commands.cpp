@@ -560,7 +560,7 @@ static uint64_t disassemble_parse_address(const char *line)
 static void
 commands_process_disassemble_func(struct annotate_two *a2, struct ibuf *buf,
     int result_record, char *result_line, int id,
-    struct tgdb_list *list)
+    struct tgdb_list *list, int disasm_function)
 
 {
     char **disasm = NULL;
@@ -639,11 +639,13 @@ commands_process_disassemble_func(struct annotate_two *a2, struct ibuf *buf,
     response = (struct tgdb_response *)cgdb_malloc(sizeof(struct tgdb_response));
     response->result_id = id;
     response->request = NULL;
-    response->header = TGDB_DISASSEMBLE_FUNC;
-    response->choice.disassemble.error = (result_record == MI_CL_ERROR);
-    response->choice.disassemble.disasm = disasm;
-    response->choice.disassemble.addr_start = addr_start;
-    response->choice.disassemble.addr_end = addr_end;
+    response->header = TGDB_DISASSEMBLE;
+    response->choice.update_disassemble.error = (result_record == MI_CL_ERROR);
+    response->choice.update_disassemble.disasm = disasm;
+    response->choice.update_disassemble.addr_start = addr_start;
+    response->choice.update_disassemble.addr_end = addr_end;
+    /* Was this the "disassemble" function command or "x/100i"? */
+    response->choice.update_disassemble.disasm_function = disasm_function;
     tgdb_types_append_command(list, response);
 }
 
@@ -668,9 +670,9 @@ void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
     else if (!strncmp(state, "info_frame", 10))
         commands_process_info_frame(a2, buf, result_record, result_line, id, list);
     else if (!strncmp(state, "info_disassemble", 16))
-        commands_process_disassemble_func(a2, buf, result_record, result_line, id, list);
+        commands_process_disassemble_func(a2, buf, result_record, result_line, id, list, 0);
     else if (!strncmp(state, "info_disassemble_func", 21))
-        commands_process_disassemble_func(a2, buf, result_record, result_line, id, list);
+        commands_process_disassemble_func(a2, buf, result_record, result_line, id, list, 1);
     else if (!strncmp(state, "info_breakpoints", 16))
         commands_process_breakpoints(a2, buf, result_record, result_line, id, list);
     else if (!strncmp(state, "info_complete", 13))

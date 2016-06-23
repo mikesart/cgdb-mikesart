@@ -121,5 +121,6 @@ int main(int argc, char **argv)
     }
     printf("\033[0m\n\n");
 
-    return 0;
+    /* Test cgdb exit_status */
+    return -10;
 }

@@ -1003,6 +1003,208 @@ static int user_input_loop()
     return 0;
 }
 
+/* This updates all the breakpoints */
+static void update_breakpoints(struct tgdb_response_breakpoints *response)
+{
+    source_clear_breakpoints(if_get_sview());
+    source_set_breakpoints(if_get_sview(), response->breakpoints);
+
+    if_show_file(NULL, 0, 0);
+}
+
+/* This means a source file or line number changed */
+static void update_file_position(struct tgdb_response_file_position *response)
+{
+    struct tgdb_file_position *tfp;
+    struct sviewer *sview = if_get_sview();
+
+    tfp = response->file_position;
+
+    sview->addr_frame = tfp->addr;
+
+    if (tfp->absolute_path)
+    {
+        /* Update the file */
+        source_reload(sview, tfp->absolute_path, 0);
+
+        if_show_file(tfp->absolute_path, tfp->line_number, tfp->line_number);
+    }
+    else
+    {
+        /* Try to show the disasm for ths function */
+        int ret = source_set_exec_addr(sview, 0);
+
+        if (!ret)
+        {
+            if_draw();
+        }
+        else if (sview->addr_frame)
+        {
+            /* No disasm found - request it */
+            tgdb_request_disassemble_func(tgdb,
+                                          DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL, tfp);
+            response->file_position = NULL;
+        }
+    }
+}
+
+/* This is a list of all the source files */
+static void update_source_files(struct tgdb_response_source_files *response)
+{
+    char **source_files = response->source_files;
+    sviewer *sview = if_get_sview();
+    struct list_node *cur;
+    int added_disasm = 0;
+
+    if_clear_filedlg();
+
+    /* Search for a node which contains this address */
+    for (cur = sview->list_head; cur != NULL; cur = cur->next)
+    {
+        if (cur->path[0] == '*')
+        {
+            added_disasm = 1;
+            if_add_filedlg_choice(cur->path);
+        }
+    }
+
+    if (!sbcount(source_files) && !added_disasm)
+    {
+        /* No files returned? */
+        if_display_message("Error:", WIN_REFRESH, 0,
+                           " No sources available! Was the program compiled with debug?");
+    }
+    else
+    {
+        int i;
+
+        for (i = 0; i < sbcount(source_files); i++)
+        {
+            if_add_filedlg_choice(source_files[i]);
+        }
+
+        if_set_focus(FILE_DLG);
+    }
+
+    kui_input_acceptable = 1;
+}
+
+static void update_quit(struct tgdb_response_exited *response)
+{
+    if_display_message("Program exited with value", WIN_REFRESH, 0, " %d",
+        (int8_t)response->exit_status);
+}
+
+static void update_completions(struct tgdb_response_completions *response)
+{
+    struct tgdb_list *list = response->completion_list;
+
+    do_tab_completion(list);
+}
+
+static void update_disassemble(struct tgdb_request *request,
+    struct tgdb_response_disassemble *response)
+{
+    if (response->error && response->disasm_function)
+    {
+        struct tgdb_file_position *tfp = NULL;
+
+        if (request)
+        {
+            if (request->header == TGDB_REQUEST_DISASSEMBLE)
+            {
+                tfp = request->choice.disassemble.tfp;
+                request->choice.disassemble.tfp = NULL;
+            }
+            else if (request->header == TGDB_REQUEST_DISASSEMBLE_FUNC)
+            {
+                tfp = request->choice.disassemble_func.tfp;
+                request->choice.disassemble_func.tfp = NULL;
+            }
+        }
+
+        /* Spew out a warning about disassemble failing and disasm next 100 instructions. */
+        if_print_message("\nWarning: %s\n", response->disasm[0]);
+        tgdb_request_disassemble(tgdb, tfp ? tfp->func : NULL, 100, tfp);
+    }
+    else
+    {
+        struct tgdb_file_position *tfp = NULL;
+        uint64_t addr_start = response->addr_start;
+        uint64_t addr_end = response->addr_end;
+        char **disasm = response->disasm;
+
+        if (request)
+        {
+            tfp = (request->header == TGDB_REQUEST_DISASSEMBLE) ?
+                request->choice.disassemble.tfp :
+                request->choice.disassemble_func.tfp;
+        }
+
+        //$ TODO mikesart: If addr_start is equal to addr_end of some other
+        // buffer, then append it to that buffer?
+
+        //$ TODO mikesart: If there is a disassembly view, update the location
+        // even if we don't display it? Useful with global marks, etc.
+
+        if (disasm && disasm[0])
+        {
+            int i;
+            char *path;
+            struct list_node *node;
+            sviewer *sview = if_get_sview();
+            const char *func = (tfp && tfp->func) ? tfp->func : disasm[0];
+            const char *from = (tfp && tfp->from) ? tfp->from : "??";
+            const char *from_module = strrchr(from, '/');
+            const char *sep = from_module ? ", " : "";
+
+            from_module = from_module ? from_module + 1 : "";
+
+            path = sys_aprintf("** %s%s%s (%" PRIx64 " - %" PRIx64 ") **",
+                func, sep, from_module, addr_start, addr_end);
+
+            node = source_get_node(sview, path);
+            if (!node)
+            {
+                node = source_add(sview, path);
+
+                node->language = TOKENIZER_LANGUAGE_ASM;
+                node->addr_start = addr_start;
+                node->addr_end = addr_end;
+
+                if (tfp)
+                {
+                    if (tfp->func)
+                        source_add_disasm_line(node, tfp->func);
+                    if (tfp->from)
+                        source_add_disasm_line(node, tfp->from);
+                }
+
+                for (i = 0; i < sbcount(disasm); i++)
+                {
+                    source_add_disasm_line(node, disasm[i]);
+                }
+
+                source_highlight(node);
+
+                tgdb_request_breakpoints(tgdb);
+            }
+
+            source_set_exec_addr(sview, 0);
+            if_draw();
+
+            free(path);
+        }
+    }
+}
+
+static void update_prompt(struct tgdb_response_prompt_value *response)
+{
+    const char *new_prompt = response->prompt_value;
+
+    change_prompt(new_prompt);
+}
+
 static void process_commands(struct tgdb *tgdb_in)
 {
     struct tgdb_response *item;
@@ -1011,223 +1213,31 @@ static void process_commands(struct tgdb *tgdb_in)
     {
         switch (item->header)
         {
-        /* This updates all the breakpoints */
         case TGDB_UPDATE_BREAKPOINTS:
-            source_clear_breakpoints(if_get_sview());
-            source_set_breakpoints(if_get_sview(), item->choice.update_breakpoints.breakpoints);
-
-            if_show_file(NULL, 0, 0);
+            update_breakpoints(&item->choice.update_breakpoints);
             break;
-
-        /* This means a source file or line number changed */
         case TGDB_UPDATE_FILE_POSITION:
-        {
-            struct tgdb_file_position *tfp;
-            struct sviewer *sview = if_get_sview();
-
-            tfp = item->choice.update_file_position.file_position;
-
-            sview->addr_frame = tfp->addr;
-
-            if (tfp->absolute_path)
-            {
-                /* Update the file */
-                source_reload(sview, tfp->absolute_path, 0);
-
-                if_show_file(tfp->absolute_path, tfp->line_number, tfp->line_number);
-            }
-            else
-            {
-                /* Try to show the disasm for ths function */
-                int ret = source_set_exec_addr(sview, 0);
-
-                if (!ret)
-                {
-                    if_draw();
-                }
-                else if (sview->addr_frame)
-                {
-                    /* No disasm found - request it */
-                    tgdb_request_disassemble_func(tgdb,
-                        DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL, tfp);
-                    item->choice.update_file_position.file_position = NULL;
-                }
-            }
+            update_file_position(&item->choice.update_file_position);
             break;
-        }
-
-        /* This is a list of all the source files */
         case TGDB_UPDATE_SOURCE_FILES:
-        {
-            char **source_files = item->choice.update_source_files.source_files;
-            sviewer *sview = if_get_sview();
-            struct list_node *cur;
-            int added_disasm = 0;
-
-            if_clear_filedlg();
-
-            /* Search for a node which contains this address */
-            for (cur = sview->list_head; cur != NULL; cur = cur->next)
-            {
-                if (cur->path[0] == '*')
-                {
-                    added_disasm = 1;
-                    if_add_filedlg_choice(cur->path);
-                }
-            }
-
-            if (!sbcount(source_files) && !added_disasm)
-            {
-                /* No files returned? */
-                if_display_message("Error:", WIN_REFRESH, 0,
-                    " No sources available! Was the program compiled with debug?");
-            }
-            else
-            {
-                int i;
-
-                for (i = 0; i < sbcount(source_files); i++)
-                {
-                    if_add_filedlg_choice(source_files[i]);
-                }
-
-                if_set_focus(FILE_DLG);
-            }
-
-            kui_input_acceptable = 1;
+            update_source_files(&item->choice.update_source_files);
             break;
-        }
-
         case TGDB_INFERIOR_EXITED:
-        {
-            /*
-             * int *status = item->data;
-             * This could eventually go here, but for now, the update breakpoint
-             * display function makes the status bar go back to the name of the file.
-             *
-             * if_display_message ( "Program exited with value", WIN_REFRESH, 0, " %d", *status );
-             */
-
-            /* Clear the cache */
+            update_quit(&item->choice.inferior_exited);
             break;
-        }
         case TGDB_UPDATE_COMPLETIONS:
-        {
-            struct tgdb_list *list =
-                item->choice.update_completions.completion_list;
-
-            do_tab_completion(list);
+            update_completions(&item->choice.update_completions);
             break;
-        }
         case TGDB_DISASSEMBLE:
-        case TGDB_DISASSEMBLE_FUNC:
-        {
-            if ((item->header == TGDB_DISASSEMBLE_FUNC) &&
-                item->choice.disassemble.error)
-            {
-                struct tgdb_file_position *tfp = NULL;
-
-                if (item->request)
-                {
-                    if (item->request->header == TGDB_REQUEST_DISASSEMBLE)
-                    {
-                        tfp = item->request->choice.disassemble.tfp;
-                        item->request->choice.disassemble.tfp = NULL;
-                    }
-                    else if (item->request->header == TGDB_REQUEST_DISASSEMBLE_FUNC)
-                    {
-                        tfp = item->request->choice.disassemble_func.tfp;
-                        item->request->choice.disassemble_func.tfp = NULL;
-                    }
-                }
-
-                /* Spew out a warning about disassemble failing and disasm next 100 instructions. */
-                if_print_message("\nWarning: %s\n", item->choice.disassemble.disasm[0]);
-                tgdb_request_disassemble(tgdb, tfp ? tfp->func : NULL, 100, tfp);
-            }
-            else
-            {
-                struct tgdb_file_position *tfp = NULL;
-                uint64_t addr_start = item->choice.disassemble.addr_start;
-                uint64_t addr_end = item->choice.disassemble.addr_end;
-                char **disasm = item->choice.disassemble.disasm;
-
-                if (item->request)
-                {
-                    tfp = (item->request->header == TGDB_REQUEST_DISASSEMBLE) ?
-                        item->request->choice.disassemble.tfp :
-                        item->request->choice.disassemble_func.tfp;
-                }
-
-                //$ TODO mikesart: If addr_start is equal to addr_end of some other
-                // buffer, then append it to that buffer?
-
-                //$ TODO mikesart: If there is a disassembly view, update the location
-                // even if we don't display it? Useful with global marks, etc.
-
-                if (disasm && disasm[0])
-                {
-                    int i;
-                    char *path;
-                    struct list_node *node;
-                    sviewer *sview = if_get_sview();
-                    const char *func = (tfp && tfp->func) ? tfp->func : disasm[0];
-                    const char *from = (tfp && tfp->from) ? tfp->from : "??";
-                    const char *from_module = strrchr(from, '/');
-                    const char *sep = from_module ? ", " : "";
-
-                    from_module = from_module ? from_module + 1 : "";
-
-                    path = sys_aprintf("** %s%s%s (%" PRIx64 " - %" PRIx64 ") **",
-                        func, sep, from_module, addr_start, addr_end);
-
-                    node = source_get_node(sview, path);
-                    if (!node)
-                    {
-                        node = source_add(sview, path);
-
-                        node->language = TOKENIZER_LANGUAGE_ASM;
-                        node->addr_start = addr_start;
-                        node->addr_end = addr_end;
-
-                        if (tfp)
-                        {
-                            if (tfp->func)
-                                source_add_disasm_line(node, tfp->func);
-                            if (tfp->from)
-                                source_add_disasm_line(node, tfp->from);
-                        }
-
-                        for (i = 0; i < sbcount(disasm); i++)
-                        {
-                            source_add_disasm_line(node, disasm[i]);
-                        }
-
-                        source_highlight(node);
-
-                        tgdb_request_breakpoints(tgdb);
-                    }
-
-                    source_set_exec_addr(sview, 0);
-                    if_draw();
-
-                    free(path);
-                }
-            }
+            update_disassemble(item->request, &item->choice.update_disassemble);
             break;
-        }
         case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
-        {
-            const char *new_prompt =
-                item->choice.update_console_prompt_value.prompt_value;
-            change_prompt(new_prompt);
+            update_prompt(&item->choice.update_console_prompt_value);
             break;
-        }
         case TGDB_QUIT:
             cleanup();
             exit(0);
             break;
-        /* Default */
         default:
             break;
         }

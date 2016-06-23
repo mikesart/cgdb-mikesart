@@ -109,7 +109,6 @@ static int tgdb_types_print_item(void *command)
         break;
     }
     case TGDB_DISASSEMBLE:
-    case TGDB_DISASSEMBLE_FUNC:
         //$ TODO
         break;
     case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
@@ -234,10 +233,9 @@ static int tgdb_types_delete_item(void *command)
         break;
     }
     case TGDB_DISASSEMBLE:
-    case TGDB_DISASSEMBLE_FUNC:
     {
         int i;
-        char **disasm = com->choice.disassemble.disasm;
+        char **disasm = com->choice.update_disassemble.disasm;
 
         for (i = 0; i < sbcount(disasm); i++)
         {

@@ -152,7 +152,6 @@ struct tgdb_file_position
   */
 struct tgdb_debugger_exit_status
 {
-
     /**
      * If this is 0, the debugger terminated normally and return_value is valid
      * If this is -1, the debugger terminated abnormally and return_value is 
@@ -254,7 +253,7 @@ typedef struct tgdb_request *tgdb_request_ptr;
   *  When TGDB is responding to a request or when an event is being generated
   *  the front end will find out about it through one of these enums.
   */
-enum INTERFACE_RESPONSE_COMMANDS
+enum tgdb_reponse_type
 {
     /** All breakpoints that are set.  */
     TGDB_UPDATE_BREAKPOINTS,
@@ -287,11 +286,10 @@ enum INTERFACE_RESPONSE_COMMANDS
     TGDB_UPDATE_COMPLETIONS,
 
     /**
-     * Disassemble function output
+     * Disassemble output
      *
      */
     TGDB_DISASSEMBLE,
-    TGDB_DISASSEMBLE_FUNC,
 
     /** The prompt has changed, here is the new value.  */
     TGDB_UPDATE_CONSOLE_PROMPT_VALUE,
@@ -305,6 +303,69 @@ enum INTERFACE_RESPONSE_COMMANDS
     TGDB_QUIT
 };
 
+/* header == TGDB_UPDATE_BREAKPOINTS */
+struct tgdb_response_breakpoints
+{
+    /* This list has elements of 'struct tgdb_breakpoint *'
+     * representing each breakpoint. */
+    struct tgdb_breakpoint *breakpoints;
+};
+
+/* header == TGDB_UPDATE_FILE_POSITION */
+struct tgdb_response_file_position
+{
+    struct tgdb_file_position *file_position;
+};
+
+/* header == TGDB_UPDATE_SOURCE_FILES */
+struct tgdb_response_source_files
+{
+    /* This list has elements of 'const char *' representing each
+     * filename. The filename may be relative or absolute. */
+    char **source_files;
+};
+
+/* header == TGDB_INFERIOR_EXITED */
+struct tgdb_response_exited
+{
+    int exit_status;
+};
+
+/* header == TGDB_UPDATE_COMPLETIONS */
+struct tgdb_response_completions
+{
+    /* This list has elements of 'const char *'
+         * representing each possible completion. */
+    struct tgdb_list *completion_list;
+};
+
+/* header == TGDB_DISASSEMBLE */
+struct tgdb_response_disassemble
+{
+    uint64_t addr_start;
+    uint64_t addr_end;
+    /* True if we got an error. Ie, no frame address.
+       Error string is in disasm[0] */
+    int error;
+    /* True if we tried to disassemble entire function using
+       gdb disassemble command */
+    int disasm_function;
+    char **disasm;
+};
+
+/* header == TGDB_UPDATE_CONSOLE_PROMPT_VALUE */
+struct tgdb_response_prompt_value
+{
+    /* The new prompt GDB has reported */
+    const char *prompt_value;
+};
+
+/* header == TGDB_QUIT */
+struct tgdb_response_quit
+{
+    struct tgdb_debugger_exit_status *exit_status;
+};
+
 /**
   * A single TGDB response for the front end.
   * This is the smallest unit of information that TGDB can return to the front 
@@ -316,67 +377,17 @@ struct tgdb_response
     struct tgdb_request *request;
 
     /** This is the type of response.  */
-    enum INTERFACE_RESPONSE_COMMANDS header;
+    enum tgdb_reponse_type header;
 
     union {
-        /* header == TGDB_UPDATE_BREAKPOINTS */
-        struct
-        {
-            /* This list has elements of 'struct tgdb_breakpoint *' 
-                 * representing each breakpoint. */
-            struct tgdb_breakpoint *breakpoints;
-        } update_breakpoints;
-
-        /* header == TGDB_UPDATE_FILE_POSITION */
-        struct
-        {
-            struct tgdb_file_position *file_position;
-        } update_file_position;
-
-        /* header == TGDB_UPDATE_SOURCE_FILES */
-        struct
-        {
-            /* This list has elements of 'const char *' representing each 
-                 * filename. The filename may be relative or absolute. */
-            char **source_files;
-        } update_source_files;
-
-        /* header == TGDB_INFERIOR_EXITED */
-        struct
-        {
-            int exit_status;
-        } inferior_exited;
-
-        /* header == TGDB_UPDATE_COMPLETIONS */
-        struct
-        {
-            /* This list has elements of 'const char *' 
-                 * representing each possible completion. */
-            struct tgdb_list *completion_list;
-        } update_completions;
-
-        /* header == TGDB_DISASSEMBLE_FUNC */
-        struct
-        {
-            uint64_t addr_start;
-            uint64_t addr_end;
-            int error;
-            char **disasm;
-        } disassemble;
-
-        /* header == TGDB_UPDATE_CONSOLE_PROMPT_VALUE */
-        struct
-        {
-            /* The new prompt GDB has reported */
-            const char *prompt_value;
-        } update_console_prompt_value;
-
-        /* header == TGDB_QUIT */
-        struct
-        {
-            struct tgdb_debugger_exit_status *exit_status;
-        } quit;
-
+        struct tgdb_response_breakpoints update_breakpoints;
+        struct tgdb_response_file_position update_file_position;
+        struct tgdb_response_source_files update_source_files;
+        struct tgdb_response_exited inferior_exited;
+        struct tgdb_response_completions update_completions;
+        struct tgdb_response_disassemble update_disassemble;
+        struct tgdb_response_prompt_value update_console_prompt_value;
+        struct tgdb_response_quit quit;
     } choice;
 };
 
