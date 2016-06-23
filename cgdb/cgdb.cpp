@@ -76,6 +76,7 @@
 #endif
 
 #include <inttypes.h>
+
 /* Local Includes */
 #include "cgdb.h"
 #include "logger.h"

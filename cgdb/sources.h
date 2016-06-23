@@ -90,7 +90,6 @@ struct line_flags
     unsigned char has_mark : 1;
 };
 
-struct list_node;
 struct list_node
 {
     char *path;             /* Full path to source file */

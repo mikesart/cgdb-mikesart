@@ -217,6 +217,8 @@ struct tgdb_request
             const char *file;
             /* The corresponding line number */
             int line;
+            /* The address to set breakpoint in (if file is null). */
+            uint64_t addr;
             /* The action to take */
             enum tgdb_breakpoint_action b;
         } modify_breakpoint;

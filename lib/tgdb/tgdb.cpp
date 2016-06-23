@@ -23,6 +23,8 @@
 #include <sys/wait.h>
 #endif
 
+#include <inttypes.h>
+
 #include "tgdb.h"
 #include "commands.h"
 #include "fs_util.h"
@@ -540,19 +542,28 @@ static const char *tgdb_get_client_command(struct tgdb *tgdb,
 }
 
 static char *tgdb_client_modify_breakpoint_call(struct tgdb *tgdb,
-    const char *file, int line, enum tgdb_breakpoint_action b)
+    const char *file, int line, uint64_t addr, enum tgdb_breakpoint_action b)
 {
+    const char *action;
+
     switch (b)
     {
+    default:
     case TGDB_BREAKPOINT_ADD:
-        return sys_aprintf("break \"%s\":%d", file, line);
+        action = "break";
+        break;
     case TGDB_BREAKPOINT_DELETE:
-        return sys_aprintf("clear \"%s\":%d", file, line);
+        action ="clear";
+        break;
     case TGDB_TBREAKPOINT_ADD:
-        return sys_aprintf("tbreak \"%s\":%d", file, line);
+        action = "tbreak";
+        break;
     }
 
-    return NULL;
+    if (file)
+        return sys_aprintf("%s \"%s\":%d", action, file, line);
+
+    return sys_aprintf("%s *0x%" PRIx64, action, addr);
 }
 
 static int tgdb_disassemble(struct annotate_two *a2, const char *func, int lines, int *id)
@@ -1354,7 +1365,7 @@ tgdb_request_run_debugger_command(struct tgdb *tgdb, enum tgdb_command_type c)
 
 tgdb_request_ptr
 tgdb_request_modify_breakpoint(struct tgdb *tgdb, const char *file, int line,
-    enum tgdb_breakpoint_action b)
+    uint64_t addr, enum tgdb_breakpoint_action b)
 {
     tgdb_request_ptr request_ptr;
 
@@ -1362,8 +1373,9 @@ tgdb_request_modify_breakpoint(struct tgdb *tgdb, const char *file, int line,
 
     request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_MODIFY_BREAKPOINT;
-    request_ptr->choice.modify_breakpoint.file = (const char *)cgdb_strdup(file);
+    request_ptr->choice.modify_breakpoint.file = file ? cgdb_strdup(file) : NULL;
     request_ptr->choice.modify_breakpoint.line = line;
+    request_ptr->choice.modify_breakpoint.addr = addr;
     request_ptr->choice.modify_breakpoint.b = b;
 
     handle_request(tgdb, request_ptr);
@@ -1464,6 +1476,7 @@ int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request)
         char *val = tgdb_client_modify_breakpoint_call(tgdb,
             request->choice.modify_breakpoint.file,
             request->choice.modify_breakpoint.line,
+            request->choice.modify_breakpoint.addr,
             request->choice.modify_breakpoint.b);
         if (val)
         {
