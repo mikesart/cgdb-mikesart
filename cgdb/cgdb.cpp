@@ -1105,27 +1105,33 @@ static void update_completions(struct tgdb_response_completions *response)
 static void update_disassemble(struct tgdb_request *request,
     struct tgdb_response_disassemble *response)
 {
-    if (response->error && response->disasm_function)
+    if (response->error)
     {
-        struct tgdb_file_position *tfp = NULL;
-
-        if (request)
+        /* If we got an error and this is the disassemble command,
+           try to disassemble 100 instructions at address $pc */
+        if (response->disasm_function)
         {
-            if (request->header == TGDB_REQUEST_DISASSEMBLE)
+            struct tgdb_file_position *tfp = NULL;
+
+            if (request)
             {
-                tfp = request->choice.disassemble.tfp;
-                request->choice.disassemble.tfp = NULL;
+                if (request->header == TGDB_REQUEST_DISASSEMBLE)
+                {
+                    tfp = request->choice.disassemble.tfp;
+                    request->choice.disassemble.tfp = NULL;
+                }
+                else if (request->header == TGDB_REQUEST_DISASSEMBLE_FUNC)
+                {
+                    tfp = request->choice.disassemble_func.tfp;
+                    request->choice.disassemble_func.tfp = NULL;
+                }
             }
-            else if (request->header == TGDB_REQUEST_DISASSEMBLE_FUNC)
-            {
-                tfp = request->choice.disassemble_func.tfp;
-                request->choice.disassemble_func.tfp = NULL;
-            }
+
+            tgdb_request_disassemble(tgdb, tfp ? tfp->func : NULL, 100, tfp);
         }
 
-        /* Spew out a warning about disassemble failing and disasm next 100 instructions. */
+        /* Spew out a warning about disassemble failing */
         if_print_message("\nWarning: %s\n", response->disasm[0]);
-        tgdb_request_disassemble(tgdb, tfp ? tfp->func : NULL, 100, tfp);
     }
     else
     {

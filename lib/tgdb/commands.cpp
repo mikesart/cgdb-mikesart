@@ -668,10 +668,10 @@ void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
         commands_process_info_source(a2, buf, result_record, result_line, id, list);
     else if (!strncmp(state, "info_frame", 10))
         commands_process_info_frame(a2, buf, result_record, result_line, id, list);
-    else if (!strncmp(state, "info_disassemble", 16))
-        commands_process_disassemble_func(a2, buf, result_record, result_line, id, list, 0);
     else if (!strncmp(state, "info_disassemble_func", 21))
         commands_process_disassemble_func(a2, buf, result_record, result_line, id, list, 1);
+    else if (!strncmp(state, "info_disassemble", 16))
+        commands_process_disassemble_func(a2, buf, result_record, result_line, id, list, 0);
     else if (!strncmp(state, "info_breakpoints", 16))
         commands_process_breakpoints(a2, buf, result_record, result_line, id, list);
     else if (!strncmp(state, "info_complete", 13))

@@ -175,11 +175,9 @@ struct tgdb
 /* }}} */
 
 /* Temporary prototypes {{{ */
-static int tgdb_deliver_command(struct tgdb *tgdb,
-    struct tgdb_command *command);
+static int tgdb_deliver_command(struct tgdb *tgdb, struct tgdb_command *command);
 static int tgdb_unqueue_and_deliver_command(struct tgdb *tgdb);
-static int tgdb_run_or_queue_command(struct tgdb *tgdb,
-    struct tgdb_command *com);
+static int tgdb_run_or_queue_command(struct tgdb *tgdb, struct tgdb_command *com);
 
 /* }}} */
 
