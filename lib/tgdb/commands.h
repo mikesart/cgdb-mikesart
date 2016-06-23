@@ -12,7 +12,7 @@
  *
  *  Returns -1 on error, 0 on success
  */
-int commands_issue_command(struct tgdb_list *client_command_list,
+int commands_issue_command(struct annotate_two *a2,
     enum annotate_commands commmand, const char *data, int oob, int *id);
 
 /* commands_process: This function receives the output from gdb when gdb

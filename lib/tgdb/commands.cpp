@@ -243,8 +243,7 @@ commands_process_info_frame(struct annotate_two *a2, struct ibuf *buf,
     if (!success)
     {
         /* We got nothing - try "info source" command. */
-        commands_issue_command(a2->client_command_list,
-            ANNOTATE_INFO_SOURCE, NULL, 1, NULL);
+        commands_issue_command(a2, ANNOTATE_INFO_SOURCE, NULL, 1, NULL);
     }
 
     mi_free_output(miout);
@@ -791,7 +790,7 @@ static int command_get_next_id()
     return command_id++;
 }
 
-int commands_issue_command(struct tgdb_list *client_command_list,
+int commands_issue_command(struct annotate_two *a2,
     enum annotate_commands command, const char *data, int oob, int *id)
 {
     struct tgdb_command *tc;
@@ -807,7 +806,7 @@ int commands_issue_command(struct tgdb_list *client_command_list,
     tc->gdb_command = gdb_command;
 
     /* Append to the command_container the commands */
-    tgdb_list_append(client_command_list, tc);
+    sbpush(a2->client_commands, tc);
 
     if (id)
         *id = command_id;
