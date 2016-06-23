@@ -248,19 +248,16 @@ void tgdb_set_last_request(struct tgdb_request *request)
         case TGDB_REQUEST_CURRENT_LOCATION:
         case TGDB_REQUEST_DISASSEMBLE:
         case TGDB_REQUEST_DISASSEMBLE_FUNC:
+        case TGDB_REQUEST_BREAKPOINTS:
         default:
             last_request_requires_update = 0;
             break;
         }
 
         if (request->id > 0)
-        {
             sbpush(requests_with_ids, request);
-        }
         else
-        {
             tgdb_request_destroy(request);
-        }
     }
     else
     {
@@ -683,10 +680,6 @@ void tgdb_request_destroy(tgdb_request_ptr request_ptr)
         free((char *)request_ptr->choice.console_command.command);
         request_ptr->choice.console_command.command = NULL;
         break;
-    case TGDB_REQUEST_INFO_SOURCES:
-        break;
-    case TGDB_REQUEST_DEBUGGER_COMMAND:
-        break;
     case TGDB_REQUEST_MODIFY_BREAKPOINT:
         free((char *)request_ptr->choice.modify_breakpoint.file);
         request_ptr->choice.modify_breakpoint.file = NULL;
@@ -696,12 +689,11 @@ void tgdb_request_destroy(tgdb_request_ptr request_ptr)
         request_ptr->choice.complete.line = NULL;
         break;
     case TGDB_REQUEST_DISASSEMBLE_FUNC:
-    {
-        struct tgdb_file_position *tfp =
-            request_ptr->choice.disassemble_func.tfp;
-
-        if (tfp)
+        if (request_ptr->choice.disassemble_func.tfp)
         {
+            struct tgdb_file_position *tfp =
+                request_ptr->choice.disassemble_func.tfp;
+
             free(tfp->absolute_path);
             free(tfp->from);
             free(tfp->func);
@@ -710,14 +702,12 @@ void tgdb_request_destroy(tgdb_request_ptr request_ptr)
             request_ptr->choice.disassemble_func.tfp = NULL;
         }
         break;
-    }
     case TGDB_REQUEST_DISASSEMBLE:
-    {
-        struct tgdb_file_position *tfp =
-            request_ptr->choice.disassemble.tfp;
-
-        if (tfp)
+        if (request_ptr->choice.disassemble.tfp)
         {
+            struct tgdb_file_position *tfp =
+                request_ptr->choice.disassemble.tfp;
+
             free(tfp->absolute_path);
             free(tfp->from);
             free(tfp->func);
@@ -726,7 +716,9 @@ void tgdb_request_destroy(tgdb_request_ptr request_ptr)
             request_ptr->choice.disassemble.tfp = NULL;
         }
         break;
-    }
+    case TGDB_REQUEST_BREAKPOINTS:
+    case TGDB_REQUEST_INFO_SOURCES:
+    case TGDB_REQUEST_DEBUGGER_COMMAND:
     default:
         break;
     }
@@ -1429,6 +1421,19 @@ tgdb_request_ptr tgdb_request_disassemble_func(struct tgdb *tgdb,
     return request_ptr;
 }
 
+tgdb_request_ptr tgdb_request_breakpoints(struct tgdb *tgdb)
+{
+    tgdb_request_ptr request_ptr;
+
+    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof(struct tgdb_request));
+
+    request_ptr->id = -1;
+    request_ptr->header = TGDB_REQUEST_BREAKPOINTS;
+
+    handle_request(tgdb, request_ptr);
+    return request_ptr;
+}
+
 /* }}}*/
 
 /* Process {{{*/
@@ -1468,7 +1473,12 @@ int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request)
     }
     else
     {
-        if (request->header == TGDB_REQUEST_INFO_SOURCES)
+        if (request->header == TGDB_REQUEST_BREAKPOINTS)
+        {
+            commands_issue_command(tgdb->tcc->client_command_list,
+                ANNOTATE_INFO_BREAKPOINTS, NULL, 0, NULL);
+        }
+        else if (request->header == TGDB_REQUEST_INFO_SOURCES)
         {
             ret = commands_issue_command(tgdb->tcc->client_command_list,
                 ANNOTATE_INFO_SOURCES, NULL, 0, &request->id);

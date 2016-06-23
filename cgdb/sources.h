@@ -76,8 +76,8 @@ struct source_line
 
 struct buffer
 {
-    struct source_line *lines; /* Stretch buffer array with line information */
-    uint64_t *addrs;
+    struct source_line *lines;                /* Stretch buffer array with line information */
+    uint64_t *addrs;                          /* Stretch buffer array of asm addresses */
     int max_width;                            /* Width of longest line in file */
     char *file_data;                          /* Entire file pointer if read in that way */
     int tabstop;                              /* Tabstop value used to load file */
@@ -238,7 +238,7 @@ void source_set_sel_line(struct sviewer *sview, int line);
  */
 int source_set_exec_line(struct sviewer *sview, const char *path, int sel_line, int exe_line);
 
-int source_set_exec_addr(struct sviewer *sview, const char *path, uint64_t addr);
+int source_set_exec_addr(struct sviewer *sview, uint64_t addr);
 
 /* source_search_regex_init: Should be called before source_search_regex
  * -------------------------
@@ -283,22 +283,21 @@ void source_free(struct sviewer *sview);
 /* Breakpoints */
 /* ----------- */
 
-/* source_enable_break:  Enable/Disable a given breakpoint.
+/* source_set_breakpoints:  Enable/Disable a given breakpoint.
  * --------------------
  *
  *   sview:  The source viewer object
- *   path:   Full path to the source file
- *   line:   Line number of breakpoint
- *   enable: 0 to disable, 1 to enable breakpoint
+ *   breakpoints: stretchy buffer array of breakpoints
  */
-void source_enable_break(struct sviewer *sview, const char *path, int line, int enable);
+void source_set_breakpoints(struct sviewer *sview,
+    struct tgdb_breakpoint *breakpoints);
 
-/* source_clear_breaks:  Clear all breakpoints from all files.
+/* source_clear_breakpoints:  Clear all breakpoints from all files.
  * --------------------
  *
  *   sview:  The source viewer object
  */
-void source_clear_breaks(struct sviewer *sview);
+void source_clear_breakpoints(struct sviewer *sview);
 
 /**
  * Check's to see if the current source file has changed. If it has it loads

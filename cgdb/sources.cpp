@@ -57,6 +57,7 @@
 #include "fs_util.h"
 #include "cgdbrc.h"
 #include "highlight_groups.h"
+#include "tgdb_types.h"
 #include "interface.h"
 #include "logger.h"
 
@@ -77,7 +78,7 @@ int sources_syntax_on = 1;
  */
 struct list_node *source_get_node(struct sviewer *sview, const char *path)
 {
-    if (sview && path)
+    if (sview && path && path[0])
     {
         struct list_node *cur;
 
@@ -89,6 +90,37 @@ struct list_node *source_get_node(struct sviewer *sview, const char *path)
     }
 
     return NULL;
+}
+
+struct list_node *source_get_asmnode(struct sviewer *sview, uint64_t addr, int *line)
+{
+    struct list_node *node = NULL;
+
+    if (addr)
+    {
+        /* Search for a node which contains this address */
+        for (node = sview->list_head; node; node = node->next)
+        {
+            if (addr >= node->addr_start && addr <= node->addr_end)
+                break;
+        }
+    }
+
+    if (node && line)
+    {
+        int i;
+
+        for (i = 0; i < sbcount(node->file_buf.addrs); i++)
+        {
+            if (node->file_buf.addrs[i] == addr)
+            {
+                *line = i;
+                break;
+            }
+        }
+    }
+
+    return node;
 }
 
 /**
@@ -1157,50 +1189,21 @@ int source_set_exec_line(struct sviewer *sview, const char *path, int sel_line, 
     return 0;
 }
 
-int source_set_exec_addr(struct sviewer *sview, const char *path, uint64_t addr)
+int source_set_exec_addr(struct sviewer *sview, uint64_t addr)
 {
+    int line = -1;
+
     if (!addr)
         addr = sview->addr_frame;
 
-    if (path)
-    {
-        /* If we were given a specific path, use it */
-        sview->cur = source_get_node(sview, path);
-    }
-    else
-    {
-        struct list_node *cur;
-
-        /* Search for a node which contains this address */
-        for (cur = sview->list_head; cur != NULL; cur = cur->next)
-        {
-            if (addr >= cur->addr_start && addr <= cur->addr_end)
-            {
-                sview->cur = cur;
-                break;
-            }
-        }
-    }
-
+    /* Search for a node which contains this address */
+    sview->cur = source_get_asmnode(sview, addr, &line);
     if (!sview->cur)
         return -1;
 
-    if (addr >= sview->cur->addr_start && addr <= sview->cur->addr_end)
-    {
-        int i;
-
-        for (i = 0; i < sbcount(sview->cur->file_buf.addrs); i++)
-        {
-            if (sview->cur->file_buf.addrs[i] == addr)
-            {
-                sview->cur->sel_line = clamp_line(sview, i);
-                sview->cur->exe_line = clamp_line(sview, i);
-                return 0;
-            }
-        }
-    }
-
-    return -1;
+    sview->cur->sel_line = clamp_line(sview, line);
+    sview->cur->exe_line = clamp_line(sview, line);
+    return 0;
 }
 
 void source_free(struct sviewer *sview)
@@ -1297,22 +1300,43 @@ int source_search_regex(struct sviewer *sview,
     return 0;
 }
 
-void source_enable_break(struct sviewer *sview, const char *path, int line, int enabled)
+void source_set_breakpoints(struct sviewer *sview, struct tgdb_breakpoint *breakpoints)
 {
-    struct list_node *node;
+    int i;
 
-    node = source_get_node(sview, path);
-
-    if (!load_file(node))
+    for (i = 0; i < sbcount(breakpoints); i++)
     {
-        if (line > 0 && line <= sbcount(node->lflags))
+        if (breakpoints[i].addr)
         {
-            node->lflags[line - 1].breakpt = enabled ? 1 : 2;
+            int line = 0;
+            struct list_node *node = source_get_asmnode(sview,
+                breakpoints[i].addr, &line);
+
+            if (node)
+            {
+                node->lflags[line].breakpt = breakpoints[i].enabled ? 1 : 2;
+            }
+        }
+
+        if (breakpoints[i].file)
+        {
+            struct list_node *node = source_get_node(sview, breakpoints[i].file);
+
+            if (!load_file(node))
+            {
+                int line = breakpoints[i].line;
+                int enabled = breakpoints[i].enabled;
+
+                if (line > 0 && line <= sbcount(node->lflags))
+                {
+                    node->lflags[line - 1].breakpt = enabled ? 1 : 2;
+                }
+            }
         }
     }
 }
 
-void source_clear_breaks(struct sviewer *sview)
+void source_clear_breakpoints(struct sviewer *sview)
 {
     struct list_node *node;
 

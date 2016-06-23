@@ -387,6 +387,8 @@ tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb,
     const char *func, int lines,
     struct tgdb_file_position *tfp);
 
+tgdb_request_ptr tgdb_request_breakpoints(struct tgdb *tgdb);
+
 /**
    * Used to get disassembly for function.
    *

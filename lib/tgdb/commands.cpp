@@ -415,13 +415,14 @@ commands_process_breakpoints(struct annotate_two *a2, struct ibuf *buf,
         {
             mi_bkpt *bkpt = mi_get_bkpt(bplist->v.rs);
 
-            if (bkpt && bkpt->fullname)
+            if (bkpt && (bkpt->fullname || bkpt->addr))
             {
                 struct tgdb_breakpoint tb;
 
                 tb.funcname = bkpt->func;
                 tb.file = bkpt->fullname;
                 tb.line = bkpt->line;
+                tb.addr = (uint64_t)bkpt->addr;
                 tb.enabled = bkpt->enabled;
                 sbpush(breakpoints, tb);
 

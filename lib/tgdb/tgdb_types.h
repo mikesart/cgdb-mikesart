@@ -123,6 +123,8 @@ struct tgdb_breakpoint
     char *funcname;
     /** The line number where the breakpoint is set. */
     int line;
+    /** breakpoint address */
+    uint64_t addr;
     /** 0 if it is not enabled or 1 if it is enabled. */
     int enabled;
 };
@@ -183,7 +185,9 @@ enum INTERFACE_REQUEST_COMMANDS
     /** Ask GDB to disassemble a $pc */
     TGDB_REQUEST_DISASSEMBLE,
     /** Ask GDB to disassemble a function */
-    TGDB_REQUEST_DISASSEMBLE_FUNC
+    TGDB_REQUEST_DISASSEMBLE_FUNC,
+    /** Ask GDB to update breakpoints */
+    TGDB_REQUEST_BREAKPOINTS,
 };
 
 struct tgdb_request
@@ -250,7 +254,6 @@ typedef struct tgdb_request *tgdb_request_ptr;
   */
 enum INTERFACE_RESPONSE_COMMANDS
 {
-
     /** All breakpoints that are set.  */
     TGDB_UPDATE_BREAKPOINTS,
 

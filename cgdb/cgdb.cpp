@@ -1012,23 +1012,11 @@ static void process_commands(struct tgdb *tgdb_in)
         {
         /* This updates all the breakpoints */
         case TGDB_UPDATE_BREAKPOINTS:
-        {
-            int i;
-            struct sviewer *sview = if_get_sview();
-
-            source_clear_breaks(if_get_sview());
-
-            for (i = 0; i < sbcount(item->choice.update_breakpoints.breakpoints); i++)
-            {
-                /* For each breakpoint */
-                struct tgdb_breakpoint *tb = &item->choice.update_breakpoints.breakpoints[i];
-
-                source_enable_break(sview, tb->file, tb->line, tb->enabled);
-            }
+            source_clear_breakpoints(if_get_sview());
+            source_set_breakpoints(if_get_sview(), item->choice.update_breakpoints.breakpoints);
 
             if_show_file(NULL, 0, 0);
             break;
-        }
 
         /* This means a source file or line number changed */
         case TGDB_UPDATE_FILE_POSITION:
@@ -1050,7 +1038,7 @@ static void process_commands(struct tgdb *tgdb_in)
             else
             {
                 /* Try to show the disasm for ths function */
-                int ret = source_set_exec_addr(sview, NULL, 0);
+                int ret = source_set_exec_addr(sview, 0);
 
                 if (!ret)
                 {
@@ -1112,12 +1100,12 @@ static void process_commands(struct tgdb *tgdb_in)
         case TGDB_INFERIOR_EXITED:
         {
             /*
-                 * int *status = item->data;
-                 * This could eventually go here, but for now, the update breakpoint 
-                 * display function makes the status bar go back to the name of the file.
-                 *
-                 * if_display_message ( "Program exited with value", WIN_REFRESH, 0, " %d", *status );
-                 */
+             * int *status = item->data;
+             * This could eventually go here, but for now, the update breakpoint
+             * display function makes the status bar go back to the name of the file.
+             *
+             * if_display_message ( "Program exited with value", WIN_REFRESH, 0, " %d", *status );
+             */
 
             /* Clear the cache */
             break;
@@ -1126,6 +1114,7 @@ static void process_commands(struct tgdb *tgdb_in)
         {
             struct tgdb_list *list =
                 item->choice.update_completions.completion_list;
+
             do_tab_completion(list);
             break;
         }
@@ -1214,9 +1203,11 @@ static void process_commands(struct tgdb *tgdb_in)
                         }
 
                         source_highlight(node);
+
+                        tgdb_request_breakpoints(tgdb);
                     }
 
-                    source_set_exec_addr(sview, path, 0);
+                    source_set_exec_addr(sview, 0);
                     if_draw();
 
                     free(path);

@@ -109,6 +109,8 @@ static int tty_win_height_shift = 0;
 WIN_SPLIT_TYPE cur_win_split = WIN_SPLIT_EVEN;
 SPLIT_ORIENTATION_TYPE cur_split_orientation = SPLIT_HORIZONTAL;
 
+extern int kui_input_acceptable;
+
 /* --------------- */
 /* Local Variables */
 /* --------------- */
@@ -1288,28 +1290,15 @@ static void source_input(struct sviewer *sview, int key)
         break;
     case 'o':
         /* Causes file dialog to be opened */
-        {
-            extern int kui_input_acceptable;
-
-            kui_input_acceptable = 0;
-
-            tgdb_request_inferiors_source_files(tgdb);
-        }
+        kui_input_acceptable = 0;
+        tgdb_request_inferiors_source_files(tgdb);
         break;
     case ' ':
-    {
-        enum tgdb_breakpoint_action t = TGDB_BREAKPOINT_ADD;
-
-        toggle_breakpoint(sview, t);
-    }
-    break;
+        toggle_breakpoint(sview, TGDB_BREAKPOINT_ADD);
+        break;
     case 't':
-    {
-        enum tgdb_breakpoint_action t = TGDB_TBREAKPOINT_ADD;
-
-        toggle_breakpoint(sview, t);
-    }
-    break;
+        toggle_breakpoint(sview, TGDB_TBREAKPOINT_ADD);
+        break;
     default:
         break;
     }
