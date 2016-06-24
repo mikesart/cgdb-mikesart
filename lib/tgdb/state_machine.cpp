@@ -367,8 +367,17 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
 
                 if (result_record != -1)
                 {
-                    commands_process_cgdb_gdbmi(a2, sm->cgdb_gdbmi_buffer,
+                    int ret;
+
+                    ret = commands_process_cgdb_gdbmi(a2, sm->cgdb_gdbmi_buffer,
                         result_record, result_line, id, command_list);
+                    if (ret == 1)
+                    {
+                        /* These reponses print an extra prompt, so let's move
+                         * the cursor back to the beginning of the line */
+                        gui_data[counter++] = ' ';
+                        gui_data[counter++] = '\r';
+                    }
 
                     sm->tgdb_state = SM_NL_DATA;
                     ibuf_clear(sm->cgdb_gdbmi_buffer);
@@ -480,9 +489,7 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
                 for (end = i + 1; end < size; end++)
                 {
                     if ((data[end] == '\r') || (data[end] == '\n') || (data[end] == '\032'))
-                    {
                         break;
-                    }
                 }
 
                 ibuf_adddata(sm->tgdb_buffer, data + i, end - i);

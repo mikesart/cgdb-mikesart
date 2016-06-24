@@ -21,7 +21,7 @@ int commands_issue_command(struct annotate_two *a2,
  *    a     -> the character received from gdb.
  *    com   -> commands to give back to gdb.
  */
-void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
+int commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
     int result_record, char *result_line, int id,
     struct tgdb_list *command_list);
 

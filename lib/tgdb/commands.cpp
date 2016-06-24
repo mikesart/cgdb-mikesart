@@ -566,13 +566,14 @@ commands_process_disassemble_func(struct annotate_two *a2, struct ibuf *buf,
     uint64_t addr_start = 0;
     uint64_t addr_end = 0;
     struct tgdb_response *response;
+    char *error_msg = NULL;
 
     if (result_record == MI_CL_ERROR)
     {
         mi_output *miout = mi_parse_gdb_output(result_line, NULL);
 
         /* Grab the error message */
-        sbpush(disasm, miout->c->v.cstr);
+        error_msg = miout->c->v.cstr;
         miout->c->v.cstr = NULL;
 
         mi_free_output(miout);
@@ -639,7 +640,7 @@ commands_process_disassemble_func(struct annotate_two *a2, struct ibuf *buf,
     response->result_id = id;
     response->request = NULL;
     response->header = TGDB_DISASSEMBLE;
-    response->choice.update_disassemble.error = (result_record == MI_CL_ERROR);
+    response->choice.update_disassemble.error_msg = error_msg;
     response->choice.update_disassemble.disasm = disasm;
     response->choice.update_disassemble.addr_start = addr_start;
     response->choice.update_disassemble.addr_end = addr_end;
@@ -648,7 +649,7 @@ commands_process_disassemble_func(struct annotate_two *a2, struct ibuf *buf,
     tgdb_types_append_command(list, response);
 }
 
-void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
+int commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
     int result_record, char *result_line, int id,
     struct tgdb_list *list)
 {
@@ -658,7 +659,7 @@ void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
     {
         logger_write_pos(logger, __FILE__, __LINE__,
             "commands_process_cgdb_gdbmi state error");
-        return;
+        return -1;
     }
 
     state++;
@@ -669,9 +670,15 @@ void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
     else if (!strncmp(state, "info_frame", 10))
         commands_process_info_frame(a2, buf, result_record, result_line, id, list);
     else if (!strncmp(state, "info_disassemble_func", 21))
+    {
         commands_process_disassemble_func(a2, buf, result_record, result_line, id, list, 1);
+        return 1;
+    }
     else if (!strncmp(state, "info_disassemble", 16))
+    {
         commands_process_disassemble_func(a2, buf, result_record, result_line, id, list, 0);
+        return 1;
+    }
     else if (!strncmp(state, "info_breakpoints", 16))
         commands_process_breakpoints(a2, buf, result_record, result_line, id, list);
     else if (!strncmp(state, "info_complete", 13))
@@ -683,6 +690,8 @@ void commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
     else
         logger_write_pos(logger, __FILE__, __LINE__,
             "commands_process_cgdb_gdbmi error");
+
+    return 0;
 }
 
 /** 

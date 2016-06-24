@@ -1042,7 +1042,7 @@ static void update_file_position(struct tgdb_response_file_position *response)
         {
             /* No disasm found - request it */
             tgdb_request_disassemble_func(tgdb,
-                                          DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL, tfp);
+                DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL, tfp);
             response->file_position = NULL;
         }
     }
@@ -1105,8 +1105,11 @@ static void update_completions(struct tgdb_response_completions *response)
 static void update_disassemble(struct tgdb_request *request,
     struct tgdb_response_disassemble *response)
 {
-    if (response->error)
+    if (response->error_msg)
     {
+        /* Spew our erorr message */
+        if_print_message("\nWarning: %s\n", response->error_msg);
+
         /* If we got an error and this is the disassemble command,
            try to disassemble 100 instructions at address $pc */
         if (response->disasm_function)
@@ -1129,9 +1132,6 @@ static void update_disassemble(struct tgdb_request *request,
 
             tgdb_request_disassemble(tgdb, tfp ? tfp->func : NULL, 100, tfp);
         }
-
-        /* Spew out a warning about disassemble failing */
-        if_print_message("\nWarning: %s\n", response->disasm[0]);
     }
     else
     {
@@ -1298,7 +1298,6 @@ static int gdb_input()
      */
     if (is_finished)
     {
-
         size = tgdb_queue_size(tgdb);
 
         /* This is the second case, this command was queued. */

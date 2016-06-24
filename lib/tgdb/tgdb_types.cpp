@@ -235,13 +235,18 @@ static int tgdb_types_delete_item(void *command)
     case TGDB_DISASSEMBLE:
     {
         int i;
-        char **disasm = com->choice.update_disassemble.disasm;
+        struct tgdb_response_disassemble *response =
+                &com->choice.update_disassemble;
+        char **disasm = response->disasm;
+
+        free(response->error_msg);
 
         for (i = 0; i < sbcount(disasm); i++)
-        {
             free(disasm[i]);
-        }
         sbfree(disasm);
+
+        response->error_msg = NULL;
+        response->disasm = NULL;
         break;
     }
     case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:

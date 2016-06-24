@@ -344,9 +344,8 @@ struct tgdb_response_disassemble
 {
     uint64_t addr_start;
     uint64_t addr_end;
-    /* True if we got an error. Ie, no frame address.
-       Error string is in disasm[0] */
-    int error;
+    /* Error message string */
+    char *error_msg;
     /* True if we tried to disassemble entire function using
        gdb disassemble command */
     int disasm_function;
