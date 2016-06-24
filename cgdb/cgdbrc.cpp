@@ -721,7 +721,7 @@ static int command_parse_unmap(int param)
     return 0;
 }
 
-static int variable_changed_cb(struct ConfigVariable *variable)
+static void variable_changed_cb(struct ConfigVariable *variable)
 {
     /* User switched source/disasm mode. Request a frame update
        so the appropriate data is displayed in the source window. */
@@ -739,18 +739,13 @@ int command_parse_set(void)
      */
 
     int rv = 1;
-    int boolean = 1;
-    const char *value = NULL;
 
     switch ((rv = yylex()))
     {
-    case EOL:
-    {
-        /* TODO: Print out all the variables that have been set. */
-    }
-    break;
     case IDENTIFIER:
     {
+        int boolean = 1;
+        const char *value = NULL;
         const char *token = get_token();
         int length = strlen(token);
         struct ConfigVariable *variable = NULL;
@@ -768,6 +763,7 @@ int command_parse_set(void)
         if ((variable = get_variable(value)) != NULL)
         {
             rv = 0;
+
             if (boolean == 0 && variable->type != CONFIG_TYPE_BOOL)
             {
                 /* this is an error, you cant' do:
@@ -776,14 +772,15 @@ int command_parse_set(void)
                 rv = 1;
             }
 
+            /* Tell callback function this variable has changed. */
+            variable_changed_cb(variable);
+
             switch (variable->type)
             {
             case CONFIG_TYPE_BOOL:
                 *(int *)(variable->data) = boolean;
-                variable_changed_cb(variable);
                 break;
             case CONFIG_TYPE_INT:
-            {
                 if (yylex() == '=' && yylex() == NUMBER)
                 {
                     int data = strtol(get_token(), NULL, 10);
@@ -794,8 +791,7 @@ int command_parse_set(void)
                 {
                     rv = 1;
                 }
-            }
-            break;
+                break;
             case CONFIG_TYPE_STRING:
             {
                 if (yylex() == '=' &&
@@ -810,18 +806,17 @@ int command_parse_set(void)
                         data = data + 1;
                         data[strlen(data) - 1] = '\0';
                     }
+
                     if (variable->data)
-                    {
                         free(variable->data);
-                    }
                     variable->data = strdup(data);
                 }
                 else
                 {
                     rv = 1;
                 }
+                break;
             }
-            break;
             case CONFIG_TYPE_FUNC_VOID:
             {
                 int (*functor)(void) = (int (*)(void))variable->data;
@@ -834,8 +829,8 @@ int command_parse_set(void)
                 {
                     rv = 1;
                 }
+                break;
             }
-            break;
             case CONFIG_TYPE_FUNC_BOOL:
             {
                 int (*functor)(int) = (int (*)(int))variable->data;
@@ -848,8 +843,8 @@ int command_parse_set(void)
                 {
                     rv = 1;
                 }
+                break;
             }
-            break;
             case CONFIG_TYPE_FUNC_INT:
             {
                 int (*functor)(int) = (int (*)(int))variable->data;
@@ -871,8 +866,8 @@ int command_parse_set(void)
                 {
                     rv = 1;
                 }
+                break;
             }
-            break;
             case CONFIG_TYPE_FUNC_STRING:
             {
                 int (*functor)(const char *) =
@@ -901,15 +896,20 @@ int command_parse_set(void)
                 {
                     rv = 1;
                 }
+                break;
             }
-            break;
             default:
                 rv = 1;
                 break;
             }
         }
+        break;
     }
-    break;
+
+    case EOL:
+        /* TODO: Print out all the variables that have been set. */
+        break;
+
     default:
         break;
     }
