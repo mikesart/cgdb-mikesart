@@ -1652,6 +1652,7 @@ void if_print(const char *buf, int source)
         logger_write_pos(logger, __FILE__, __LINE__, "%s", buf);
         return;
     }
+
     /* Print it to the scroller */
     scr_add(gdb_win, buf, source == TTY);
 

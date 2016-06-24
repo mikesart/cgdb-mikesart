@@ -383,11 +383,9 @@ tgdb_request_ptr tgdb_request_modify_breakpoint(struct tgdb *tgdb,
    */
 tgdb_request_ptr tgdb_request_complete(struct tgdb *tgdb, const char *line);
 
-tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb,
-    const char *func, int lines,
-    struct tgdb_file_position *tfp);
-
 tgdb_request_ptr tgdb_request_breakpoints(struct tgdb *tgdb);
+
+tgdb_request_ptr tgdb_request_frame(struct tgdb *tgdb);
 
 /**
    * Used to get disassembly for function.
@@ -407,6 +405,9 @@ enum disassemble_func_type
 tgdb_request_ptr tgdb_request_disassemble_func(struct tgdb *tgdb,
     enum disassemble_func_type type, const char *file, const char *function,
     struct tgdb_file_position *tfp);
+
+tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb,
+    const char *func, int lines, struct tgdb_file_position *tfp);
 
 /**
    * Free the tgdb request pointer data.

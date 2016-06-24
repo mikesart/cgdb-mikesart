@@ -119,6 +119,7 @@ enum cgdbrc_option_kind
     CGDBRC_AUTOSOURCERELOAD,
     CGDBRC_CGDB_MODE_KEY,
     CGDBRC_COLOR,
+    CGDBRC_DISASM,
     CGDBRC_IGNORECASE,
     CGDBRC_SHOWMARKS,
     CGDBRC_SHOWTGDBCOMMANDS,
@@ -131,7 +132,8 @@ enum cgdbrc_option_kind
     CGDBRC_WINMINHEIGHT,
     CGDBRC_WINSPLIT,
     CGDBRC_SPLITORIENTATION,
-    CGDBRC_WRAPSCAN
+    CGDBRC_WRAPSCAN,
+    CGDBRC_Max
 };
 
 /** This represents a single configuration option. */
@@ -153,6 +155,7 @@ struct cgdbrc_config_option
         /* option_kind == CGDBRC_TTIMEOUTLEN */
         /* option_kind == CGDBRC_WINMINHEIGHT */
         /* option_kind == CGDBRC_WRAPSCAN */
+        /* option_kind == CGDBRC_DISASM */
         int int_val;
         /* option_kind == CGDBRC_ARROWSTYLE */
         enum ArrowStyle arrow_style;

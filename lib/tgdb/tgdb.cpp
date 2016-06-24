@@ -246,10 +246,10 @@ void tgdb_set_last_request(struct tgdb_request *request)
             last_request_requires_update = 1;
             break;
         case TGDB_REQUEST_INFO_SOURCES:
-        case TGDB_REQUEST_CURRENT_LOCATION:
         case TGDB_REQUEST_DISASSEMBLE:
         case TGDB_REQUEST_DISASSEMBLE_FUNC:
         case TGDB_REQUEST_BREAKPOINTS:
+        case TGDB_REQUEST_FRAME:
         default:
             last_request_requires_update = 0;
             break;
@@ -717,6 +717,7 @@ void tgdb_request_destroy(tgdb_request_ptr request_ptr)
         }
         break;
     case TGDB_REQUEST_BREAKPOINTS:
+    case TGDB_REQUEST_FRAME:
     case TGDB_REQUEST_INFO_SOURCES:
     case TGDB_REQUEST_DEBUGGER_COMMAND:
     default:
@@ -1435,6 +1436,19 @@ tgdb_request_ptr tgdb_request_breakpoints(struct tgdb *tgdb)
     return request_ptr;
 }
 
+tgdb_request_ptr tgdb_request_frame(struct tgdb *tgdb)
+{
+    tgdb_request_ptr request_ptr;
+
+    request_ptr = (tgdb_request_ptr)cgdb_malloc(sizeof(struct tgdb_request));
+
+    request_ptr->id = -1;
+    request_ptr->header = TGDB_REQUEST_FRAME;
+
+    handle_request(tgdb, request_ptr);
+    return request_ptr;
+}
+
 /* }}}*/
 
 /* Process {{{*/
@@ -1475,20 +1489,20 @@ int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request)
     }
     else
     {
-        if (request->header == TGDB_REQUEST_BREAKPOINTS)
+        if (request->header == TGDB_REQUEST_FRAME)
         {
-            commands_issue_command(tgdb->tcc,
+            ret = commands_issue_command(tgdb->tcc,
+                ANNOTATE_INFO_FRAME, NULL, 0, NULL);
+        }
+        else if (request->header == TGDB_REQUEST_BREAKPOINTS)
+        {
+            ret = commands_issue_command(tgdb->tcc,
                 ANNOTATE_INFO_BREAKPOINTS, NULL, 0, NULL);
         }
         else if (request->header == TGDB_REQUEST_INFO_SOURCES)
         {
             ret = commands_issue_command(tgdb->tcc,
                 ANNOTATE_INFO_SOURCES, NULL, 0, &request->id);
-        }
-        else if (request->header == TGDB_REQUEST_CURRENT_LOCATION)
-        {
-            ret = commands_issue_command(tgdb->tcc,
-                ANNOTATE_INFO_FRAME, NULL, 1, &request->id);
         }
         else if (request->header == TGDB_REQUEST_COMPLETE)
         {

@@ -157,7 +157,6 @@ int rline_shutdown(struct rline *rline)
 
     free(rline);
     rline = NULL;
-
     return 0;
 }
 
@@ -173,7 +172,6 @@ int rline_read_history(struct rline *rline, const char *file)
     using_history();
     read_history(file);
     history_set_pos(history_length);
-
     return 0;
 }
 
@@ -183,7 +181,6 @@ int rline_write_history(struct rline *rline, const char *file)
         return -1;
 
     write_history(file);
-
     return 0;
 }
 
@@ -198,7 +195,6 @@ int rline_set_prompt(struct rline *rline, const char *prompt)
         return -1;
 
     rl_set_prompt(prompt);
-
     return 0;
 }
 
@@ -212,46 +208,33 @@ int rline_clear(struct rline *rline)
     rl_end = 0;
     rl_mark = 0;
     rl_delete_text(0, rl_end);
-
     return 0;
 }
 
 int rline_add_history(struct rline *rline, const char *line)
 {
-    if (!rline)
-        return -1;
-
-    if (!line)
+    if (!rline || !line)
         return -1;
 
     add_history(line);
-
     return 0;
 }
 
 int rline_get_prompt(struct rline *rline, char **prompt)
 {
-    if (!rline)
-        return -1;
-
-    if (!prompt)
+    if (!rline || !prompt)
         return -1;
 
     *prompt = rl_prompt;
-
     return 0;
 }
 
 int rline_get_current_line(struct rline *rline, char **current_line)
 {
-    if (!rline)
-        return -1;
-
-    if (!current_line)
+    if (!rline || !current_line)
         return -1;
 
     *current_line = rl_line_buffer;
-
     return 0;
 }
 
@@ -261,7 +244,6 @@ int rline_rl_forced_update_display(struct rline *rline)
         return -1;
 
     rl_forced_update_display();
-
     return 0;
 }
 

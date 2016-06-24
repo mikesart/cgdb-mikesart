@@ -29,6 +29,8 @@ extern struct tgdb *tgdb;
 
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 
+extern struct kui_map_set *kui_map, *kui_imap;
+
 /**
  * The general idea is that the configuration will read in the users ~/.cgdbrc
  * file, or ~/.cgdb/config or whatever, and execute each command.  This will
@@ -64,13 +66,14 @@ static int cgdbrc_set_val(struct cgdbrc_config_option config_option);
  * This data structure stores all the values of all the config options.
  * It is initialized with the default values.
  */
-static struct cgdbrc_config_option cgdbrc_config_options[CGDBRC_WRAPSCAN + 1] = {
+static struct cgdbrc_config_option cgdbrc_config_options[CGDBRC_Max] = {
     { CGDBRC_ANSIESCAPEPARSING, { 1 } },
     { CGDBRC_ARROWSELECTEDLINE, { 1 } },
     { CGDBRC_ARROWSTYLE, { ARROWSTYLE_LONG } },
     { CGDBRC_AUTOSOURCERELOAD, { 1 } },
     { CGDBRC_CGDB_MODE_KEY, { CGDB_KEY_ESC } },
     { CGDBRC_COLOR, { 1 } },
+    { CGDBRC_DISASM, { 0 } },
     { CGDBRC_IGNORECASE, { 0 } },
     { CGDBRC_SHOWMARKS, { 1 } },
     { CGDBRC_SHOWTGDBCOMMANDS, { 0 } },
@@ -83,7 +86,7 @@ static struct cgdbrc_config_option cgdbrc_config_options[CGDBRC_WRAPSCAN + 1] = 
     { CGDBRC_WINMINHEIGHT, { 0 } },
     { CGDBRC_WINSPLIT, { WIN_SPLIT_EVEN } },
     { CGDBRC_SPLITORIENTATION, { SPLIT_HORIZONTAL } },
-    { CGDBRC_WRAPSCAN, { 1 } }
+    { CGDBRC_WRAPSCAN, { 1 } },
 };
 
 static struct std_list *cgdbrc_attach_list;
@@ -101,7 +104,6 @@ static struct ConfigVariable
     enum ConfigType type;
     void *data;
 } VARIABLES[] = {
-
     /* keep this stuff sorted! !sort */
 
     /* ansiescapeparsing */
@@ -127,6 +129,10 @@ static struct ConfigVariable
     {
         "color", "col", CONFIG_TYPE_INT,
         (void *)&cgdbrc_config_options[CGDBRC_COLOR].variant.int_val },
+    /* disassemble */
+    {
+        "disasm", "dis", CONFIG_TYPE_BOOL,
+        (void *)&cgdbrc_config_options[CGDBRC_DISASM].variant.int_val },
     /* ignorecase */
     {
         "ignorecase", "ic", CONFIG_TYPE_BOOL,
@@ -192,8 +198,6 @@ static int command_parse_highlight(int param);
 static int command_parse_map(int param);
 static int command_parse_unmap(int param);
 
-static int command_do_disassemble(int param);
-
 typedef int (*action_t)(int param);
 typedef struct COMMANDS
 {
@@ -226,8 +230,6 @@ COMMANDS commands[] = {
     /* syntax       */ { "syntax", (action_t)command_parse_syntax, 0 },
     /* unmap        */ { "unmap", (action_t)command_parse_unmap, 0 },
     /* unmap        */ { "unm", (action_t)command_parse_unmap, 0 },
-    /* disassemble  */ { "disassemble", (action_t)command_do_disassemble, 0 },
-    /* disassemble  */ { "dis", (action_t)command_do_disassemble, 0 },
     /* continue     */ { "continue", (action_t)command_do_tgdbcommand, TGDB_CONTINUE },
     /* continue     */ { "c", (action_t)command_do_tgdbcommand, TGDB_CONTINUE },
     /* down         */ { "down", (action_t)command_do_tgdbcommand, TGDB_DOWN },
@@ -640,8 +642,6 @@ static int command_parse_highlight(int param)
     return hl_groups_parse_config(hl_groups_instance);
 }
 
-extern struct kui_map_set *kui_map, *kui_imap;
-
 static int command_parse_map(int param)
 {
     struct kui_map_set *kui_map_choice;
@@ -721,25 +721,12 @@ static int command_parse_unmap(int param)
     return 0;
 }
 
-int command_do_disassemble(int param)
+static int variable_changed_cb(struct ConfigVariable *variable)
 {
-    int ret;
-    struct sviewer *sview = if_get_sview();
-
-    ret = source_set_exec_addr(sview, 0);
-
-    if (!ret)
-    {
-        if_draw();
-    }
-    else if (sview->addr_frame)
-    {
-        /* No disasm found - request it */
-        tgdb_request_disassemble_func(tgdb,
-            DISASSEMBLE_FUNC_SOURCE_LINES, NULL, NULL, NULL);
-    }
-
-    return 0;
+    /* User switched source/disasm mode. Request a frame update
+       so the appropriate data is displayed in the source window. */
+    if (!strcmp(variable->name, "disasm"))
+        tgdb_request_frame(tgdb);
 }
 
 int command_parse_set(void)
@@ -793,6 +780,7 @@ int command_parse_set(void)
             {
             case CONFIG_TYPE_BOOL:
                 *(int *)(variable->data) = boolean;
+                variable_changed_cb(variable);
                 break;
             case CONFIG_TYPE_INT:
             {

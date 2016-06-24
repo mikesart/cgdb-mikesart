@@ -185,18 +185,18 @@ static void driver_prompt_change(const char *new_prompt)
 
 static int gdb_input(void)
 {
-    char buf[MAXLINE];
-    size_t size;
     size_t i;
-    struct tgdb_response *item;
+    size_t size;
+    char buf[MAXLINE];
     int is_finished;
+    struct tgdb_response *item;
 
     if ((size = tgdb_process(tgdb, buf, MAXLINE, &is_finished)) == -1)
     {
         logger_write_pos(logger, __FILE__, __LINE__, "file descriptor closed");
         return -1;
     }
-    /* end if */
+
     for (i = 0; i < size; ++i)
     {
         if (write(STDOUT_FILENO, &(buf[i]), 1) != 1)
@@ -215,6 +215,7 @@ static int gdb_input(void)
         {
             struct tgdb_list *list =
                 item->choice.update_completions.completion_list;
+
             do_tab_completion(list);
         }
 
@@ -235,8 +236,8 @@ static int gdb_input(void)
         qsize = tgdb_queue_size(tgdb);
         if (qsize > 0)
         {
-            struct tgdb_request *request = tgdb_queue_pop(tgdb);
             char *prompt;
+            struct tgdb_request *request = tgdb_queue_pop(tgdb);
 
             rline_get_prompt(rline, &prompt);
             printf("%s", prompt);
@@ -250,7 +251,9 @@ static int gdb_input(void)
             tgdb_process_command(tgdb, request);
         }
         else
+        {
             rline_rl_forced_update_display(rline);
+        }
     }
 
     return 0;
@@ -267,14 +270,16 @@ static void tty_input(void)
         logger_write_pos(logger, __FILE__, __LINE__, "file descriptor closed");
         return;
     }
-    /* end if */
+
     for (i = 0; i < size; ++i)
+    {
         if (write(STDOUT_FILENO, &(buf[i]), 1) != 1)
         {
             logger_write_pos(logger, __FILE__, __LINE__,
                 "could not write byte");
             return;
         }
+    }
 }
 
 static int readline_input()
@@ -307,12 +312,14 @@ static int readline_input()
      * gdb window gets displayed when the filedlg is up
      */
     for (i = 0; i < size; ++i)
+    {
         if (write(STDOUT_FILENO, &(buf[i]), 1) != 1)
         {
             logger_write_pos(logger, __FILE__, __LINE__,
                 "could not write byte");
             return -1;
         }
+    }
 
     return 0;
 }
@@ -347,14 +354,15 @@ static int stdin_input()
      * gdb window gets displayed when the filedlg is up
      */
     for (i = 0; i < size; ++i)
+    {
         if (write(masterfd, &(buf[i]), 1) != 1)
         {
             logger_write_pos(logger, __FILE__, __LINE__,
                 "could not write byte");
             return -1;
         }
+    }
 
-    return 0;
     return 0;
 }
 

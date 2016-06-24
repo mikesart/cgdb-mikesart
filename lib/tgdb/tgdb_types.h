@@ -171,22 +171,20 @@ enum INTERFACE_REQUEST_COMMANDS
      * Request for TGDB to get all of the source files that the debugger 
      * currently knows about the inferior. */
     TGDB_REQUEST_INFO_SOURCES,
-    /**
-     * This asks TGDB to determine the current fullname, filename and line 
-     * number that the debugger is currently at, in the inferior. */
-    TGDB_REQUEST_CURRENT_LOCATION,
     /** Run a debugger command (ie next, step, finish) */
     TGDB_REQUEST_DEBUGGER_COMMAND,
     /** Modify a breakpoint (ie delete/create/disable) */
     TGDB_REQUEST_MODIFY_BREAKPOINT,
     /** Ask GDB to give a list of tab completions for a given string */
     TGDB_REQUEST_COMPLETE,
-    /** Ask GDB to disassemble a $pc */
+    /** Ask GDB to disassemble an address */
     TGDB_REQUEST_DISASSEMBLE,
     /** Ask GDB to disassemble a function */
     TGDB_REQUEST_DISASSEMBLE_FUNC,
     /** Ask GDB to update breakpoints */
     TGDB_REQUEST_BREAKPOINTS,
+    /** Ask GDB to update inferior frame information */
+    TGDB_REQUEST_FRAME,
 };
 
 struct tgdb_request
@@ -255,7 +253,7 @@ typedef struct tgdb_request *tgdb_request_ptr;
   */
 enum tgdb_reponse_type
 {
-    /** All breakpoints that are set.  */
+    /** All breakpoints that are set. */
     TGDB_UPDATE_BREAKPOINTS,
 
     /**
@@ -279,16 +277,10 @@ enum tgdb_reponse_type
      */
     TGDB_INFERIOR_EXITED,
 
-    /**
-     * This returns a list of all the completions.
-     *
-     */
+    /** This returns a list of all the completions. */
     TGDB_UPDATE_COMPLETIONS,
 
-    /**
-     * Disassemble output
-     *
-     */
+    /** Disassemble output */
     TGDB_DISASSEMBLE,
 
     /** The prompt has changed, here is the new value.  */
@@ -335,7 +327,7 @@ struct tgdb_response_exited
 struct tgdb_response_completions
 {
     /* This list has elements of 'const char *'
-         * representing each possible completion. */
+     * representing each possible completion. */
     struct tgdb_list *completion_list;
 };
 
@@ -375,7 +367,7 @@ struct tgdb_response
     int result_id;
     struct tgdb_request *request;
 
-    /** This is the type of response.  */
+    /** This is the type of response. */
     enum tgdb_reponse_type header;
 
     union {

@@ -52,7 +52,6 @@ int mi_get_result_record(struct ibuf *buf, char **lstart, int *id);
 /** The data needed to parse the output of GDB. */
 struct state_machine
 {
-
 /** The maximum size of the prompt. */
 #define GDB_PROMPT_SIZE 1024
 
@@ -309,7 +308,6 @@ static int handle_exited(struct annotate_two *a2, const char *buf, size_t n,
  */
 static struct annotation
 {
-
     /** The name of the annotation. */
     const char *data;
 
@@ -320,7 +318,32 @@ static struct annotation
     int (*f)(struct annotate_two *a2, const char *buf, size_t n,
         struct tgdb_list *list);
 } annotations[] = {
-    { "cgdb-gdbmi", 10, handle_cgdb_gdbmi }, { "breakpoints-invalid", 19, handle_breakpoints_invalid }, { "frame-end", 10, handle_frame_end }, { "pre-commands", 12, handle_misc_pre_prompt }, { "commands", 8, handle_misc_prompt }, { "post-commands", 13, handle_misc_post_prompt }, { "pre-overload-choice", 19, handle_misc_pre_prompt }, { "overload-choice", 15, handle_misc_prompt }, { "post-overload-choice", 20, handle_misc_post_prompt }, { "pre-instance-choice", 19, handle_misc_pre_prompt }, { "instance-choice", 15, handle_misc_prompt }, { "post-instance-choice", 20, handle_misc_post_prompt }, { "pre-query", 9, handle_misc_pre_prompt }, { "query", 5, handle_misc_prompt }, { "post-query", 10, handle_misc_post_prompt }, { "pre-prompt-for-continue", 23, handle_misc_pre_prompt }, { "prompt-for-continue", 19, handle_misc_prompt }, { "post-prompt-for-continue", 24, handle_misc_post_prompt }, { "pre-prompt", 10, handle_pre_prompt }, { "prompt", 6, handle_prompt }, { "post-prompt", 11, handle_post_prompt }, { "error-begin", 11, handle_error_begin }, { "error", 5, handle_error }, { "quit", 4, handle_quit }, { "exited", 6, handle_exited }, { NULL, 0, NULL }
+    { "cgdb-gdbmi", 10, handle_cgdb_gdbmi },
+    { "breakpoints-invalid", 19, handle_breakpoints_invalid },
+    { "frame-end", 10, handle_frame_end },
+    { "pre-commands", 12, handle_misc_pre_prompt },
+    { "commands", 8, handle_misc_prompt },
+    { "post-commands", 13, handle_misc_post_prompt },
+    { "pre-overload-choice", 19, handle_misc_pre_prompt },
+    { "overload-choice", 15, handle_misc_prompt },
+    { "post-overload-choice", 20, handle_misc_post_prompt },
+    { "pre-instance-choice", 19, handle_misc_pre_prompt },
+    { "instance-choice", 15, handle_misc_prompt },
+    { "post-instance-choice", 20, handle_misc_post_prompt },
+    { "pre-query", 9, handle_misc_pre_prompt },
+    { "query", 5, handle_misc_prompt },
+    { "post-query", 10, handle_misc_post_prompt },
+    { "pre-prompt-for-continue", 23, handle_misc_pre_prompt },
+    { "prompt-for-continue", 19, handle_misc_prompt },
+    { "post-prompt-for-continue", 24, handle_misc_post_prompt },
+    { "pre-prompt", 10, handle_pre_prompt },
+    { "prompt", 6, handle_prompt },
+    { "post-prompt", 11, handle_post_prompt },
+    { "error-begin", 11, handle_error_begin },
+    { "error", 5, handle_error },
+    { "quit", 4, handle_quit },
+    { "exited", 6, handle_exited },
+    { NULL, 0, NULL }
 };
 
 static int tgdb_parse_annotation(struct annotate_two *a2, char *data, size_t size,
@@ -367,17 +390,8 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
 
                 if (result_record != -1)
                 {
-                    int ret;
-
-                    ret = commands_process_cgdb_gdbmi(a2, sm->cgdb_gdbmi_buffer,
+                    commands_process_cgdb_gdbmi(a2, sm->cgdb_gdbmi_buffer,
                         result_record, result_line, id, command_list);
-                    if (ret == 1)
-                    {
-                        /* These reponses print an extra prompt, so let's move
-                         * the cursor back to the beginning of the line */
-                        gui_data[counter++] = ' ';
-                        gui_data[counter++] = '\r';
-                    }
 
                     sm->tgdb_state = SM_NL_DATA;
                     ibuf_clear(sm->cgdb_gdbmi_buffer);
@@ -431,8 +445,7 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
                 sm->tgdb_state = SM_NEW_LINE;
                 break;
             default:
-                logger_write_pos(logger, __FILE__, __LINE__,
-                    "Bad state transition");
+                logger_write_pos(logger, __FILE__, __LINE__, "Bad state transition");
                 break;
             } /* end switch */
             break;
@@ -457,8 +470,7 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
                 ibuf_addchar(sm->tgdb_buffer, data[i]);
                 break;
             default:
-                logger_write_pos(logger, __FILE__, __LINE__,
-                    "Bad state transition");
+                logger_write_pos(logger, __FILE__, __LINE__, "Bad state transition");
                 break;
             } /* end switch */
             break;
@@ -497,8 +509,7 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
                 break;
             }
             default:
-                logger_write_pos(logger, __FILE__, __LINE__,
-                    "Bad state transition");
+                logger_write_pos(logger, __FILE__, __LINE__, "Bad state transition");
                 break;
             } /* end switch */
             break;

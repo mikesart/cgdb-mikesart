@@ -966,7 +966,9 @@ static int user_input(void)
         }
     }
     else
+    {
         send_key(val, key);
+    }
 
     return 0;
 }
@@ -1022,7 +1024,7 @@ static void update_file_position(struct tgdb_response_file_position *response)
 
     sview->addr_frame = tfp->addr;
 
-    if (tfp->absolute_path)
+    if (tfp->absolute_path && !cgdbrc_get_int(CGDBRC_DISASM))
     {
         /* Update the file */
         source_reload(sview, tfp->absolute_path, 0);
@@ -1072,7 +1074,7 @@ static void update_source_files(struct tgdb_response_source_files *response)
     {
         /* No files returned? */
         if_display_message("Error:", WIN_REFRESH, 0,
-                           " No sources available! Was the program compiled with debug?");
+            " No sources available! Was the program compiled with debug?");
     }
     else
     {
@@ -1303,11 +1305,19 @@ static int gdb_input()
         /* This is the second case, this command was queued. */
         if (size > 0)
         {
-            struct tgdb_request *request = tgdb_queue_pop(tgdb);
             char *prompt;
+            char *cr_prompt;
+            struct tgdb_request *request = tgdb_queue_pop(tgdb);
 
+            /* Grab the current readline prompt */
             rline_get_prompt(rline, &prompt);
-            if_print(prompt, GDB);
+
+            /* Add a carriage-return, and print it. Need to add the
+               cr so multiple printings of prompt all write at beginning
+               of line. */
+            cr_prompt = sys_aprintf("\r%s", prompt);
+            if_print(cr_prompt, GDB);
+            free(cr_prompt);
 
             if (request->header == TGDB_REQUEST_CONSOLE_COMMAND)
             {
@@ -1316,8 +1326,6 @@ static int gdb_input()
             }
 
             tgdb_process_command(tgdb, request);
-
-            /* This is the first case */
         }
         /** If the user is currently completing, do not update the prompt */
         else if (!completion_ptr)
