@@ -48,9 +48,6 @@ struct annotate_two
 
     /** This is a list of all the commands generated since in the last call.  */
     struct tgdb_command **client_commands;
-
-    /** The current response list. */
-    struct tgdb_list *cur_response_list;
 };
 
 #endif /* __ANNOTATE_TWO_H__ */

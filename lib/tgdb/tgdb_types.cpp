@@ -21,131 +21,7 @@
 /* Local includes */
 #include "tgdb.h"
 #include "tgdb_types.h"
-#include "logger.h"
 #include "sys_util.h"
-#include "ibuf.h"
-#include "tgdb_list.h"
-#include "queue.h"
-
-static int tgdb_types_print_item(void *command)
-{
-    struct tgdb_response *com = (struct tgdb_response *)command;
-    FILE *fd = stderr;
-
-    if (!com)
-    {
-        logger_write_pos(logger, __FILE__, __LINE__, "item is null");
-        return -1;
-    }
-
-    switch (com->header)
-    {
-    case TGDB_UPDATE_BREAKPOINTS:
-    {
-        int i;
-
-        fprintf(fd, "Breakpoint start\n");
-
-        for (i = 0; i < sbcount(com->choice.update_breakpoints.breakpoints); i++)
-        {
-            struct tgdb_breakpoint *tb = &com->choice.update_breakpoints.breakpoints[i];
-
-            fprintf(fd,
-                "\tFILE(%s) FUNCNAME(%s) LINE(%d) ENABLED(%d)\n",
-                tb->file, tb->funcname, tb->line, tb->enabled);
-        }
-
-        fprintf(fd, "Breakpoint end\n");
-        break;
-    }
-    case TGDB_UPDATE_FILE_POSITION:
-    {
-        struct tgdb_file_position *tfp =
-            com->choice.update_file_position.file_position;
-
-        fprintf(fd,
-            "TGDB_UPDATE_FILE_POSITION ABSOLUTE(%s) LINE(%d)\n",
-            tfp->absolute_path, tfp->line_number);
-        break;
-    }
-    case TGDB_UPDATE_SOURCE_FILES:
-    {
-        int i;
-        char **source_files = com->choice.update_source_files.source_files;
-
-        fprintf(fd, "Inferior source files start\n");
-
-        for (i = 0; i < sbcount(source_files); i++)
-        {
-            fprintf(fd, "TGDB_SOURCE_FILE (%s)\n", source_files[i]);
-        }
-        fprintf(fd, "Inferior source files end\n");
-        break;
-    }
-    case TGDB_INFERIOR_EXITED:
-    {
-        int status = com->choice.inferior_exited.exit_status;
-
-        fprintf(fd, "TGDB_INFERIOR_EXITED(%d)\n", status);
-        break;
-    }
-    case TGDB_UPDATE_COMPLETIONS:
-    {
-        struct tgdb_list *list =
-            com->choice.update_completions.completion_list;
-        tgdb_list_iterator *i;
-        char *s;
-
-        fprintf(fd, "completions start\n");
-        i = tgdb_list_get_first(list);
-
-        while (i)
-        {
-            s = (char *)tgdb_list_get_item(i);
-            fprintf(fd, "TGDB_UPDATE_COMPLETION (%s)\n", s);
-            i = tgdb_list_next(i);
-        }
-        fprintf(fd, "completions end\n");
-        break;
-    }
-    case TGDB_UPDATE_DISASSEMBLY:
-        //$ TODO
-        break;
-    case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
-    {
-        const char *value =
-            com->choice.update_console_prompt_value.prompt_value;
-        fprintf(fd, "TGDB_UPDATE_CONSOLE_PROMPT_VALUE(%s)\n", value);
-        break;
-    }
-    case TGDB_QUIT:
-    {
-        struct tgdb_response_quit *response = &com->choice.quit;
-
-        fprintf(fd, "TGDB_QUIT EXIT_STATUS(%d)RETURN_VALUE(%d)\n",
-            response->exit_status, response->return_value);
-        break;
-    }
-    }
-
-    return 0;
-}
-
-static int tgdb_types_breakpoint_free(void *data)
-{
-    struct tgdb_breakpoint *tb;
-
-    tb = (struct tgdb_breakpoint *)data;
-
-    /* Free the structure */
-    free((char *)tb->file);
-    tb->file = NULL;
-    free((char *)tb->funcname);
-    tb->funcname = NULL;
-    free(tb);
-    tb = NULL;
-    return 0;
-}
 
 static int tgdb_types_source_files_free(void *data)
 {
@@ -156,10 +32,8 @@ static int tgdb_types_source_files_free(void *data)
     return 0;
 }
 
-static int tgdb_types_delete_item(void *command)
+static int tgdb_delete_response(struct tgdb_response *com)
 {
-    struct tgdb_response *com = (struct tgdb_response *)command;
-
     if (!com)
         return -1;
 
@@ -267,14 +141,9 @@ static int tgdb_types_delete_item(void *command)
     return 0;
 }
 
-int tgdb_types_print_command(void *command)
-{
-    return tgdb_types_print_item((void *)command);
-}
-
 int tgdb_types_free_command(void *command)
 {
-    return tgdb_types_delete_item((void *)command);
+    return tgdb_delete_response((struct tgdb_response *)command);
 }
 
 void tgdb_types_append_command(struct tgdb_list *command_list,

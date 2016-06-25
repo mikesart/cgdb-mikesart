@@ -112,7 +112,8 @@ enum internal_state data_get_state(struct state_machine *d)
     return d->data_state;
 }
 
-void data_set_state(struct annotate_two *a2, enum internal_state state)
+void data_set_state(struct annotate_two *a2, enum internal_state state,
+        struct tgdb_list *list)
 {
     /* if tgdb is at an internal command, than nothing changes that
      * state unless tgdb gets to the prompt annotation. This means that
@@ -138,7 +139,7 @@ void data_set_state(struct annotate_two *a2, enum internal_state state)
             ibuf_add(a2->sm->gdb_prompt_last, ibuf_get(a2->sm->gdb_prompt));
 
             /* Update the prompt */
-            if (a2->cur_response_list)
+            if (list)
             {
                 struct tgdb_response *response =
                     tgdb_create_response(TGDB_UPDATE_CONSOLE_PROMPT_VALUE);
@@ -146,7 +147,7 @@ void data_set_state(struct annotate_two *a2, enum internal_state state)
                 response->choice.update_console_prompt_value.prompt_value =
                     cgdb_strdup(ibuf_get(a2->sm->gdb_prompt));
 
-                tgdb_list_append(a2->cur_response_list, response);
+                tgdb_list_append(list, response);
             }
         }
 
@@ -199,7 +200,7 @@ static int handle_misc_pre_prompt(struct annotate_two *a2, const char *buf,
     size_t n, struct tgdb_list *list)
 {
     /* If tgdb is sending a command, then continue past it */
-    data_set_state(a2, AT_PROMPT);
+    data_set_state(a2, AT_PROMPT, list);
     return 0;
 }
 
@@ -207,7 +208,7 @@ static int handle_misc_prompt(struct annotate_two *a2, const char *buf,
     size_t n, struct tgdb_list *list)
 {
     a2->sm->misc_prompt_command = 1;
-    data_set_state(a2, USER_AT_PROMPT);
+    data_set_state(a2, USER_AT_PROMPT, list);
     a2->command_finished = 1;
     return 0;
 }
@@ -216,14 +217,14 @@ static int handle_misc_post_prompt(struct annotate_two *a2, const char *buf,
     size_t n, struct tgdb_list *list)
 {
     a2->sm->misc_prompt_command = 0;
-    data_set_state(a2, POST_PROMPT);
+    data_set_state(a2, POST_PROMPT, list);
     return 0;
 }
 
 static int handle_pre_prompt(struct annotate_two *a2, const char *buf, size_t n,
     struct tgdb_list *list)
 {
-    data_set_state(a2, AT_PROMPT);
+    data_set_state(a2, AT_PROMPT, list);
     return 0;
 }
 
@@ -238,21 +239,21 @@ static int handle_prompt(struct annotate_two *a2, const char *buf, size_t n,
     struct tgdb_list *list)
 {
     /* All done. */
-    data_set_state(a2, USER_AT_PROMPT);
+    data_set_state(a2, USER_AT_PROMPT, list);
     return 0;
 }
 
 static int handle_post_prompt(struct annotate_two *a2, const char *buf,
     size_t n, struct tgdb_list *list)
 {
-    data_set_state(a2, POST_PROMPT);
+    data_set_state(a2, POST_PROMPT, list);
     return 0;
 }
 
 static int handle_error(struct annotate_two *a2, const char *buf, size_t n,
     struct tgdb_list *list)
 {
-    data_set_state(a2, POST_PROMPT); /* TEMPORARY */
+    data_set_state(a2, POST_PROMPT, list); /* TEMPORARY */
     return 0;
 }
 
@@ -264,14 +265,14 @@ static int handle_error_begin(struct annotate_two *a2, const char *buf,
      * Unfortunately, the debugger ( gdb ) isn't nice enough to return a
      * post-prompt when a signal is received.
      */
-    data_set_state(a2, VOID);
+    data_set_state(a2, VOID, list);
     return 0;
 }
 
 static int handle_quit(struct annotate_two *a2, const char *buf, size_t n,
     struct tgdb_list *list)
 {
-    data_set_state(a2, POST_PROMPT); /* TEMPORARY */
+    data_set_state(a2, POST_PROMPT, list); /* TEMPORARY */
     return 0;
 }
 
@@ -356,12 +357,14 @@ static int tgdb_parse_annotation(struct annotate_two *a2, char *data, size_t siz
     return 0;
 }
 
-int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
+void a2_parse_io(struct annotate_two *a2,
     const char *data, const size_t size,
-    char *gui_data, size_t *gui_size, struct tgdb_list *command_list)
+    char *gui_data, size_t *gui_size,
+    struct tgdb_list *command_list)
 {
     int i;
     int gui_len = 0;
+    struct state_machine *sm = a2->sm;
 
     /* track state to find next file and line number */
     for (i = 0; i < size; ++i)
@@ -508,5 +511,4 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
 
     gui_data[gui_len] = '\0';
     *gui_size = gui_len;
-    return 0;
 }

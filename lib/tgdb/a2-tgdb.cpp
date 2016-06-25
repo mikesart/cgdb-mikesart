@@ -88,8 +88,6 @@ static struct annotate_two *initialize_annotate_two(void)
     a2->config_dir[0] = '\0';
     a2->a2_gdb_init_file[0] = '\0';
 
-    a2->cur_response_list = NULL;
-
     return a2;
 }
 
@@ -205,8 +203,6 @@ int a2_shutdown(struct annotate_two *a2)
         free(tc);
     }
 
-    tgdb_list_free(a2->cur_response_list, tgdb_types_free_command);
-    tgdb_list_destroy(a2->cur_response_list);
     return 0;
 }
 
@@ -220,25 +216,6 @@ int a2_is_client_ready(struct annotate_two *a2)
         return 1;
 
     return 0;
-}
-
-int a2_parse_io(struct annotate_two *a2,
-    const char *input_data, const size_t input_data_size,
-    char *debugger_output, size_t *debugger_output_size,
-    char *inferior_output, size_t *inferior_output_size,
-    struct tgdb_list *list)
-{
-    int val;
-
-    a2->command_finished = 0;
-    a2->cur_response_list = list;
-
-    val = a2_handle_data(a2, a2->sm, input_data, input_data_size,
-        debugger_output, debugger_output_size, list);
-
-    a2->cur_response_list = NULL;
-
-    return a2->command_finished;
 }
 
 pid_t a2_get_debugger_pid(struct annotate_two *a2)
