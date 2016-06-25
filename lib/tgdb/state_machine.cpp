@@ -37,9 +37,9 @@
  * annotate unit and this unit is free of all responsibility :)
  */
 
-enum state
+enum sm_state
 {
-    SM_CGDB_GDBMI,
+    SM_CGDB_GDBMI, /* Parsing cgdb-gdbmi command */
     SM_DATA,       /* data from debugger */
     SM_NEW_LINE,   /* got '\n' */
     SM_CONTROL_Z,  /* got first ^Z '\032' */
@@ -47,37 +47,32 @@ enum state
     SM_NL_DATA     /* got a nl at the end of annotation */
 };
 
-int mi_get_result_record(struct ibuf *buf, char **lstart, int *id);
-
 /** The data needed to parse the output of GDB. */
 struct state_machine
 {
-/** The maximum size of the prompt. */
-#define GDB_PROMPT_SIZE 1024
-
     /** the state of the data context */
     enum internal_state data_state;
 
-    /** The debugger's prompt. */
-    char gdb_prompt[GDB_PROMPT_SIZE];
-
-    /** The size of gdb_prompt. */
-    int gdb_prompt_size;
+    /** The debugger's current prompt. */
+    struct ibuf *gdb_prompt;
 
     /** What the debugger's prompt was before. */
-    char gdb_prompt_last[GDB_PROMPT_SIZE];
+    struct ibuf *gdb_prompt_last;
 
+    /** Current gdb/mi string. */
     struct ibuf *cgdb_gdbmi_buffer;
 
     /** Annotations will be stored here. */
     struct ibuf *tgdb_buffer;
 
     /** The state of the annotation parser ( current context ). */
-    enum state tgdb_state;
+    enum sm_state tgdb_state;
 
-    /** Is a misc prompt command be run. */
+    /** If a misc prompt command be run. */
     unsigned short misc_prompt_command;
 };
+
+int mi_get_result_record(struct ibuf *buf, char **lstart, int *id);
 
 struct state_machine *state_machine_initialize(void)
 {
@@ -85,9 +80,8 @@ struct state_machine *state_machine_initialize(void)
         (struct state_machine *)cgdb_malloc(sizeof(struct state_machine));
 
     sm->data_state = VOID;
-    sm->gdb_prompt_size = 0;
-    sm->gdb_prompt[0] = 0;
-    sm->gdb_prompt_last[0] = 0;
+    sm->gdb_prompt = ibuf_init();
+    sm->gdb_prompt_last = ibuf_init();
     sm->cgdb_gdbmi_buffer = ibuf_init();
     sm->tgdb_buffer = ibuf_init();
     sm->tgdb_state = SM_DATA;
@@ -98,6 +92,12 @@ struct state_machine *state_machine_initialize(void)
 
 void state_machine_shutdown(struct state_machine *sm)
 {
+    ibuf_free(sm->gdb_prompt);
+    sm->gdb_prompt = NULL;
+
+    ibuf_free(sm->gdb_prompt_last);
+    sm->gdb_prompt_last = NULL;
+
     ibuf_free(sm->cgdb_gdbmi_buffer);
     sm->cgdb_gdbmi_buffer = NULL;
 
@@ -125,35 +125,32 @@ void data_set_state(struct annotate_two *a2, enum internal_state state)
     case VOID:
     case USER_COMMAND:
         break;
-    case AT_PROMPT:
-        a2->sm->gdb_prompt_size = 0;
+    case AT_PROMPT: /* pre-prompt */
+        ibuf_clear(a2->sm->gdb_prompt);
         break;
-    case USER_AT_PROMPT:
-        /* Null-Terminate the prompt */
-        a2->sm->gdb_prompt[a2->sm->gdb_prompt_size] = '\0';
-
-        if (strcmp(a2->sm->gdb_prompt, a2->sm->gdb_prompt_last) != 0)
+    case POST_PROMPT: /* post-prompt */
+        a2->sm->data_state = VOID;
+        break;
+    case USER_AT_PROMPT: /* prompt */
+        if (strcmp(ibuf_get(a2->sm->gdb_prompt), ibuf_get(a2->sm->gdb_prompt_last)))
         {
-            strcpy(a2->sm->gdb_prompt_last, a2->sm->gdb_prompt);
+            ibuf_clear(a2->sm->gdb_prompt_last);
+            ibuf_add(a2->sm->gdb_prompt_last, ibuf_get(a2->sm->gdb_prompt));
+
             /* Update the prompt */
             if (a2->cur_response_list)
             {
-                struct tgdb_response *response = (struct tgdb_response *)
-                    cgdb_malloc(sizeof(struct tgdb_response));
+                struct tgdb_response *response =
+                    tgdb_create_response(TGDB_UPDATE_CONSOLE_PROMPT_VALUE);
 
-                response->header = TGDB_UPDATE_CONSOLE_PROMPT_VALUE;
-                response->result_id = -1;
-                response->request = NULL;
                 response->choice.update_console_prompt_value.prompt_value =
-                    cgdb_strdup(a2->sm->gdb_prompt_last);
+                    cgdb_strdup(ibuf_get(a2->sm->gdb_prompt));
+
                 tgdb_list_append(a2->cur_response_list, response);
             }
         }
 
         a2->command_finished = 1;
-        break;
-    case POST_PROMPT:
-        a2->sm->data_state = VOID;
         break;
     }
 }
@@ -166,7 +163,7 @@ static void data_process(struct annotate_two *a2, char a, char *buf, int *n)
         buf[(*n)++] = a;
         break;
     case AT_PROMPT:
-        a2->sm->gdb_prompt[a2->sm->gdb_prompt_size++] = a;
+        ibuf_addchar(a2->sm->gdb_prompt, a);
         break;
     case USER_AT_PROMPT:
     case USER_COMMAND:
@@ -178,14 +175,9 @@ static void data_process(struct annotate_two *a2, char a, char *buf, int *n)
 /* This turns true if tgdb gets a misc prompt. This is so that we do not
  * send commands to gdb at this point.
  */
-int globals_is_misc_prompt(struct state_machine *sm)
+int sm_is_misc_prompt(struct state_machine *sm)
 {
     return sm->misc_prompt_command;
-}
-
-void globals_set_misc_prompt_command(struct state_machine *sm, unsigned short set)
-{
-    sm->misc_prompt_command = set;
 }
 
 static int
@@ -214,7 +206,7 @@ static int handle_misc_pre_prompt(struct annotate_two *a2, const char *buf,
 static int handle_misc_prompt(struct annotate_two *a2, const char *buf,
     size_t n, struct tgdb_list *list)
 {
-    globals_set_misc_prompt_command(a2->sm, 1);
+    a2->sm->misc_prompt_command = 1;
     data_set_state(a2, USER_AT_PROMPT);
     a2->command_finished = 1;
     return 0;
@@ -223,7 +215,7 @@ static int handle_misc_prompt(struct annotate_two *a2, const char *buf,
 static int handle_misc_post_prompt(struct annotate_two *a2, const char *buf,
     size_t n, struct tgdb_list *list)
 {
-    globals_set_misc_prompt_command(a2->sm, 0);
+    a2->sm->misc_prompt_command = 0;
     data_set_state(a2, POST_PROMPT);
     return 0;
 }
@@ -293,10 +285,7 @@ static int handle_exited(struct annotate_two *a2, const char *buf, size_t n,
     //    "exited 0"
     exit_status = (n >= 7) ? atoi(buf + 7) : -1;
 
-    response = (struct tgdb_response *)cgdb_malloc(sizeof(struct tgdb_response));
-    response->result_id = -1;
-    response->request = NULL;
-    response->header = TGDB_INFERIOR_EXITED;
+    response = tgdb_create_response(TGDB_INFERIOR_EXITED);
     response->choice.inferior_exited.exit_status = exit_status;
     tgdb_types_append_command(list, response);
     return 0;
@@ -371,7 +360,8 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
     const char *data, const size_t size,
     char *gui_data, size_t *gui_size, struct tgdb_list *command_list)
 {
-    int i, counter = 0;
+    int i;
+    int gui_len = 0;
 
     /* track state to find next file and line number */
     for (i = 0; i < size; ++i)
@@ -390,6 +380,7 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
 
                 if (result_record != -1)
                 {
+                    /* Parse the cgdb-gdbmi command */
                     commands_process_cgdb_gdbmi(a2, sm->cgdb_gdbmi_buffer,
                         result_record, result_line, id, command_list);
 
@@ -414,12 +405,12 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
                 break;
             case SM_NEW_LINE:
                 sm->tgdb_state = SM_NEW_LINE;
-                data_process(a2, '\n', gui_data, &counter);
+                data_process(a2, '\n', gui_data, &gui_len);
                 break;
             case SM_CONTROL_Z:
                 sm->tgdb_state = SM_DATA;
-                data_process(a2, '\n', gui_data, &counter);
-                data_process(a2, '\032', gui_data, &counter);
+                data_process(a2, '\n', gui_data, &gui_len);
+                data_process(a2, '\032', gui_data, &gui_len);
                 break;
             case SM_ANNOTATION:
             {
@@ -433,9 +424,8 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
 
                 if (is_cgdb_gdbmi)
                 {
-                    ibuf_adddata(sm->cgdb_gdbmi_buffer,
-                        ibuf_get(sm->tgdb_buffer), ibuf_length(sm->tgdb_buffer));
                     sm->tgdb_state = SM_CGDB_GDBMI;
+                    ibuf_add(sm->cgdb_gdbmi_buffer, ibuf_get(sm->tgdb_buffer));
                 }
 
                 ibuf_clear(sm->tgdb_buffer);
@@ -455,7 +445,7 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
             {
             case SM_DATA:
                 sm->tgdb_state = SM_DATA;
-                data_process(a2, '\032', gui_data, &counter);
+                data_process(a2, '\032', gui_data, &gui_len);
                 break;
             case SM_NEW_LINE:
                 sm->tgdb_state = SM_CONTROL_Z;
@@ -478,22 +468,22 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
             switch (sm->tgdb_state)
             {
             case SM_DATA:
-                data_process(a2, data[i], gui_data, &counter);
+                data_process(a2, data[i], gui_data, &gui_len);
                 break;
             case SM_NL_DATA:
                 sm->tgdb_state = SM_DATA;
-                data_process(a2, data[i], gui_data, &counter);
+                data_process(a2, data[i], gui_data, &gui_len);
                 break;
             case SM_NEW_LINE:
                 sm->tgdb_state = SM_DATA;
-                data_process(a2, '\n', gui_data, &counter);
-                data_process(a2, data[i], gui_data, &counter);
+                data_process(a2, '\n', gui_data, &gui_len);
+                data_process(a2, data[i], gui_data, &gui_len);
                 break;
             case SM_CONTROL_Z:
                 sm->tgdb_state = SM_DATA;
-                data_process(a2, '\n', gui_data, &counter);
-                data_process(a2, '\032', gui_data, &counter);
-                data_process(a2, data[i], gui_data, &counter);
+                data_process(a2, '\n', gui_data, &gui_len);
+                data_process(a2, '\032', gui_data, &gui_len);
+                data_process(a2, data[i], gui_data, &gui_len);
                 break;
             case SM_ANNOTATION:
             {
@@ -514,9 +504,9 @@ int a2_handle_data(struct annotate_two *a2, struct state_machine *sm,
             } /* end switch */
             break;
         } /* end switch */
-    }     /* end for */
+    } /* end for */
 
-    gui_data[counter] = '\0';
-    *gui_size = counter;
+    gui_data[gui_len] = '\0';
+    *gui_size = gui_len;
     return 0;
 }

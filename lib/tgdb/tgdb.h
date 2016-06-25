@@ -388,7 +388,7 @@ tgdb_request_ptr tgdb_request_breakpoints(struct tgdb *tgdb);
 tgdb_request_ptr tgdb_request_frame(struct tgdb *tgdb);
 
 /**
-   * Used to get disassembly for function.
+   * Get disassembly for entire function.
    *
    * \param tgdb
    * An instance of the tgdb library to operate on.
@@ -407,7 +407,7 @@ tgdb_request_ptr tgdb_request_disassemble_func(struct tgdb *tgdb,
     struct tgdb_file_position *tfp);
 
 tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb,
-    const char *func, int lines, struct tgdb_file_position *tfp);
+    uint64_t addr, int lines, struct tgdb_file_position *tfp);
 
 /**
    * Free the tgdb request pointer data.

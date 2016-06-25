@@ -220,7 +220,10 @@ static int gdb_input(void)
         }
 
         if (item->header == TGDB_UPDATE_CONSOLE_PROMPT_VALUE)
-            driver_prompt_change(item->choice.update_console_prompt_value.prompt_value);
+        {
+            driver_prompt_change(
+                item->choice.update_console_prompt_value.prompt_value);
+        }
 
         if (item->header == TGDB_QUIT)
         {

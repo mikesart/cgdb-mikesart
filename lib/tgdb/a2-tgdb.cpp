@@ -248,5 +248,5 @@ pid_t a2_get_debugger_pid(struct annotate_two *a2)
 
 int a2_is_misc_prompt(struct annotate_two *a2)
 {
-    return globals_is_misc_prompt(a2->sm);
+    return sm_is_misc_prompt(a2->sm);
 }

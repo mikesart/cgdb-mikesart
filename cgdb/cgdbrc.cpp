@@ -576,7 +576,7 @@ int command_do_logo(int param)
 int command_do_quit(int param)
 {
     /* FIXME: Test to see if debugged program is still running */
-    cleanup();
+    cgdb_cleanup();
     exit(0);
     return 0;
 }
@@ -616,20 +616,13 @@ int command_parse_syntax(int param)
     switch ((rv = yylex()))
     {
     case EOL:
-    {
         /* TODO: Print out syntax info (like vim?) */
-    }
-    break;
+        break;
     case BOOLEAN:
     case IDENTIFIER:
-    {
-        const char *value = get_token();
-
-        command_set_syntax_type(value);
-
+        command_set_syntax_type(get_token());
         if_draw();
-    }
-    break;
+        break;
     default:
         break;
     }
@@ -793,7 +786,6 @@ int command_parse_set(void)
                 }
                 break;
             case CONFIG_TYPE_STRING:
-            {
                 if (yylex() == '=' &&
                     (rv = yylex(), rv == STRING || rv == IDENTIFIER))
                 {
@@ -816,66 +808,41 @@ int command_parse_set(void)
                     rv = 1;
                 }
                 break;
-            }
             case CONFIG_TYPE_FUNC_VOID:
             {
                 int (*functor)(void) = (int (*)(void))variable->data;
 
-                if (functor)
-                {
-                    rv = functor();
-                }
-                else
-                {
-                    rv = 1;
-                }
+                rv = functor ? functor() : 1;
                 break;
             }
             case CONFIG_TYPE_FUNC_BOOL:
             {
                 int (*functor)(int) = (int (*)(int))variable->data;
 
-                if (functor)
-                {
-                    rv = functor(boolean);
-                }
-                else
-                {
-                    rv = 1;
-                }
+                rv = functor ? functor(boolean) : 1;
                 break;
             }
             case CONFIG_TYPE_FUNC_INT:
-            {
-                int (*functor)(int) = (int (*)(int))variable->data;
-
                 if (yylex() == '=' && yylex() == NUMBER)
                 {
                     int data = strtol(get_token(), NULL, 10);
+                    int (*functor)(int) = (int (*)(int))variable->data;
 
-                    if (functor)
-                    {
-                        rv = functor(data);
-                    }
-                    else
-                    {
-                        rv = 1;
-                    }
+                    rv = functor ? functor(data) : 1;
                 }
                 else
                 {
                     rv = 1;
                 }
                 break;
-            }
             case CONFIG_TYPE_FUNC_STRING:
-            {
-                int (*functor)(const char *) =
-                    (int (*)(const char *))variable->data;
-                if (yylex() == '=' && (rv = yylex(), rv == STRING || rv == IDENTIFIER))
+                if (yylex() == '=' &&
+                        (rv = yylex(), rv == STRING || rv == IDENTIFIER))
                 {
                     /* BAM! comma operator */
                     char *data = (char *)get_token();
+                    int (*functor)(const char *) =
+                            (int (*)(const char *))variable->data;
 
                     if (rv == STRING)
                     {
@@ -883,21 +850,13 @@ int command_parse_set(void)
                         data = data + 1;
                         data[strlen(data) - 1] = '\0';
                     }
-                    if (functor)
-                    {
-                        rv = functor(data);
-                    }
-                    else
-                    {
-                        rv = 1;
-                    }
+                    rv = functor ? functor(data) : 1;
                 }
                 else
                 {
                     rv = 1;
                 }
                 break;
-            }
             default:
                 rv = 1;
                 break;

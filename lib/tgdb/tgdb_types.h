@@ -147,23 +147,7 @@ struct tgdb_file_position
     char *func;
 };
 
-/**
-  * This tells the front end how the debugger terminated.
-  */
-struct tgdb_debugger_exit_status
-{
-    /**
-     * If this is 0, the debugger terminated normally and return_value is valid
-     * If this is -1, the debugger terminated abnormally and return_value is 
-     * invalid
-     */
-    int exit_status;
-
-    /** This is the return value of the debugger upon normal termination. */
-    int return_value;
-};
-
-enum INTERFACE_REQUEST_COMMANDS
+enum tgdb_request_type
 {
     /** Request for TGDB to run a console command through the debugger */
     TGDB_REQUEST_CONSOLE_COMMAND,
@@ -189,11 +173,11 @@ enum INTERFACE_REQUEST_COMMANDS
 
 struct tgdb_request
 {
-    /** This is the gdbmi request id number */
+    /** This is the gdbmi request id number. */
     int id;
 
-    /** This is the type of request.  */
-    enum INTERFACE_REQUEST_COMMANDS header;
+    /** This is the type of request. */
+    enum tgdb_request_type header;
 
     union {
         struct
@@ -228,7 +212,7 @@ struct tgdb_request
 
         struct
         {
-            const char *func;
+            uint64_t addr;
             int lines;
             struct tgdb_file_position *tfp;
         } disassemble;
@@ -281,7 +265,7 @@ enum tgdb_reponse_type
     TGDB_UPDATE_COMPLETIONS,
 
     /** Disassemble output */
-    TGDB_DISASSEMBLE,
+    TGDB_UPDATE_DISASSEMBLY,
 
     /** The prompt has changed, here is the new value.  */
     TGDB_UPDATE_CONSOLE_PROMPT_VALUE,
@@ -331,7 +315,7 @@ struct tgdb_response_completions
     struct tgdb_list *completion_list;
 };
 
-/* header == TGDB_DISASSEMBLE */
+/* header == TGDB_UPDATE_DISASSEMBLY */
 struct tgdb_response_disassemble
 {
     uint64_t addr_start;
@@ -340,7 +324,7 @@ struct tgdb_response_disassemble
     char *error_msg;
     /* True if we tried to disassemble entire function using
        gdb disassemble command */
-    int disasm_function;
+    int is_disasm_function;
     char **disasm;
 };
 
@@ -354,7 +338,17 @@ struct tgdb_response_prompt_value
 /* header == TGDB_QUIT */
 struct tgdb_response_quit
 {
-    struct tgdb_debugger_exit_status *exit_status;
+    /**
+      * This tells the front end how the debugger terminated.
+      *
+      * If this is 0, the debugger terminated normally and return_value is valid
+      * If this is -1, the debugger terminated abnormally and return_value is
+      * invalid
+      */
+    int exit_status;
+
+    /** This is the return value of the debugger upon normal termination. */
+    int return_value;
 };
 
 /**
@@ -364,7 +358,10 @@ struct tgdb_response_quit
   */
 struct tgdb_response
 {
+    /** gdb/mi command ID */
     int result_id;
+
+    /** Request that initiated this response (if available). */
     struct tgdb_request *request;
 
     /** This is the type of response. */
@@ -381,5 +378,7 @@ struct tgdb_response
         struct tgdb_response_quit quit;
     } choice;
 };
+
+struct tgdb_response *tgdb_create_response(enum tgdb_reponse_type header);
 
 #endif /* __TGDB_TYPES_H__ */

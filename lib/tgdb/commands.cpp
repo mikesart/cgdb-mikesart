@@ -179,14 +179,12 @@ static int commands_parse_file_position(int id, mi_results *res,
     {
         struct tgdb_file_position *tfp = (struct tgdb_file_position *)
             cgdb_malloc(sizeof(struct tgdb_file_position));
-        struct tgdb_response *response = (struct tgdb_response *)
-            cgdb_malloc(sizeof(struct tgdb_response));
+        struct tgdb_response *response =
+            tgdb_create_response(TGDB_UPDATE_FILE_POSITION);
 
         *tfp = fp;
 
         response->result_id = id;
-        response->request = NULL;
-        response->header = TGDB_UPDATE_FILE_POSITION;
         response->choice.update_file_position.file_position = tfp;
 
         tgdb_types_append_command(list, response);
@@ -386,10 +384,8 @@ commands_process_sources(struct annotate_two *a2, struct ibuf *buf,
         /* Add source files to our file list */
         source_files = mi_parse_sources(miout);
 
-        response = (struct tgdb_response *)cgdb_malloc(sizeof(struct tgdb_response));
+        response = tgdb_create_response(TGDB_UPDATE_SOURCE_FILES);
         response->result_id = id;
-        response->request = NULL;
-        response->header = TGDB_UPDATE_SOURCE_FILES;
         response->choice.update_source_files.source_files = source_files;
 
         tgdb_types_append_command(list, response);
@@ -403,6 +399,7 @@ commands_process_breakpoints(struct annotate_two *a2, struct ibuf *buf,
     int result_record, char *result_line, int id,
     struct tgdb_list *list)
 {
+    struct tgdb_response *response;
     mi_output *miout = mi_parse_gdb_output(result_line, NULL);
 
     if (miout && (miout->type == MI_T_RESULT_RECORD))
@@ -434,12 +431,8 @@ commands_process_breakpoints(struct annotate_two *a2, struct ibuf *buf,
             bplist = bplist->next;
         }
 
-        struct tgdb_response *response = (struct tgdb_response *)
-            cgdb_malloc(sizeof(struct tgdb_response));
-
+        response = tgdb_create_response(TGDB_UPDATE_BREAKPOINTS);
         response->result_id = id;
-        response->request = NULL;
-        response->header = TGDB_UPDATE_BREAKPOINTS;
         response->choice.update_breakpoints.breakpoints = breakpoints;
 
         /* At this point, annotate needs to send the breakpoints to the gui.
@@ -506,10 +499,8 @@ commands_process_complete(struct annotate_two *a2, struct ibuf *buf,
         str = end;
     }
 
-    response = (struct tgdb_response *)cgdb_malloc(sizeof(struct tgdb_response));
+    response = tgdb_create_response(TGDB_UPDATE_COMPLETIONS);
     response->result_id = id;
-    response->request = NULL;
-    response->header = TGDB_UPDATE_COMPLETIONS;
     response->choice.update_completions.completion_list = tab_completions;
     tgdb_types_append_command(list, response);
 }
@@ -559,14 +550,14 @@ static uint64_t disassemble_parse_address(const char *line)
 static void
 commands_process_disassemble_func(struct annotate_two *a2, struct ibuf *buf,
     int result_record, char *result_line, int id,
-    struct tgdb_list *list, int disasm_function)
+    struct tgdb_list *list, int is_disasm_function)
 
 {
     char **disasm = NULL;
     uint64_t addr_start = 0;
     uint64_t addr_end = 0;
-    struct tgdb_response *response;
     char *error_msg = NULL;
+    struct tgdb_response *response;
 
     if (result_record == MI_CL_ERROR)
     {
@@ -636,16 +627,14 @@ commands_process_disassemble_func(struct annotate_two *a2, struct ibuf *buf,
         }
     }
 
-    response = (struct tgdb_response *)cgdb_malloc(sizeof(struct tgdb_response));
+    response = tgdb_create_response(TGDB_UPDATE_DISASSEMBLY);
     response->result_id = id;
-    response->request = NULL;
-    response->header = TGDB_DISASSEMBLE;
     response->choice.update_disassemble.error_msg = error_msg;
     response->choice.update_disassemble.disasm = disasm;
     response->choice.update_disassemble.addr_start = addr_start;
     response->choice.update_disassemble.addr_end = addr_end;
     /* Was this the "disassemble" function command or "x/100i"? */
-    response->choice.update_disassemble.disasm_function = disasm_function;
+    response->choice.update_disassemble.is_disasm_function = is_disasm_function;
     tgdb_types_append_command(list, response);
 }
 

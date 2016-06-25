@@ -557,17 +557,18 @@ static char *tgdb_client_modify_breakpoint_call(struct tgdb *tgdb,
     return sys_aprintf("%s *0x%" PRIx64, action, addr);
 }
 
-static int tgdb_disassemble(struct annotate_two *a2, const char *func, int lines, int *id)
+static int tgdb_disassemble(struct annotate_two *a2, uint64_t addr, int lines, int *id)
 {
     int ret;
     char *data;
 
     if (!lines)
         lines = 100;
-    if (!func || !strcmp(func, "??"))
-        func = "$pc";
 
-    data = sys_aprintf("%di %s", lines, func);
+    if (addr)
+        data = sys_aprintf("%di 0x%" PRIx64, lines, addr);
+    else
+        data = sys_aprintf("%di $pc", lines);
 
     ret = commands_issue_command(a2, ANNOTATE_DISASSEMBLE, data, 0, id);
 
@@ -1020,21 +1021,12 @@ ssize_t tgdb_recv_inferior_data(struct tgdb *tgdb, char *buf, size_t n)
  */
 static int tgdb_add_quit_command(struct tgdb *tgdb)
 {
-    struct tgdb_debugger_exit_status *tstatus;
     struct tgdb_response *response;
 
-    tstatus = (struct tgdb_debugger_exit_status *)
-        cgdb_malloc(sizeof(struct tgdb_debugger_exit_status));
-
     /* Child did not exit normally */
-    tstatus->exit_status = -1;
-    tstatus->return_value = 0;
-
-    response = (struct tgdb_response *)cgdb_malloc(sizeof(struct tgdb_response));
-    response->result_id = -1;
-    response->request = NULL;
-    response->header = TGDB_QUIT;
-    response->choice.quit.exit_status = tstatus;
+    response = tgdb_create_response(TGDB_QUIT);
+    response->choice.quit.exit_status = -1;
+    response->choice.quit.return_value = 0;
 
     tgdb_types_append_command(tgdb->command_list, response);
 
@@ -1059,17 +1051,12 @@ static int tgdb_get_quit_command(struct tgdb *tgdb, int *tgdb_will_quit)
     pid_t pid = a2_get_debugger_pid(tgdb->tcc);
     int status = 0;
     pid_t ret;
-    struct tgdb_debugger_exit_status *tstatus;
-    struct tgdb_response *response = (struct tgdb_response *)
-        cgdb_malloc(sizeof(struct tgdb_response));
+    struct tgdb_response *response = tgdb_create_response(TGDB_QUIT);
 
     if (!tgdb_will_quit)
         return -1;
 
     *tgdb_will_quit = 0;
-
-    tstatus = (struct tgdb_debugger_exit_status *)
-        cgdb_malloc(sizeof(struct tgdb_debugger_exit_status));
 
     ret = waitpid(pid, &status, WNOHANG);
 
@@ -1087,19 +1074,15 @@ static int tgdb_get_quit_command(struct tgdb *tgdb, int *tgdb_will_quit)
     if ((WIFEXITED(status)) == 0)
     {
         /* Child did not exit normally */
-        tstatus->exit_status = -1;
-        tstatus->return_value = 0;
+        response->choice.quit.exit_status = -1;
+        response->choice.quit.return_value = 0;
     }
     else
     {
-        tstatus->exit_status = 0;
-        tstatus->return_value = WEXITSTATUS(status);
+        response->choice.quit.exit_status = 0;
+        response->choice.quit.return_value = WEXITSTATUS(status);
     }
 
-    response->header = TGDB_QUIT;
-    response->result_id = -1;
-    response->request = NULL;
-    response->choice.quit.exit_status = tstatus;
     tgdb_types_append_command(tgdb->command_list, response);
     *tgdb_will_quit = 1;
 
@@ -1273,6 +1256,18 @@ void tgdb_traverse_responses(struct tgdb *tgdb)
     tgdb_list_foreach(tgdb->command_list, tgdb_types_print_command);
 }
 
+struct tgdb_response *tgdb_create_response(enum tgdb_reponse_type header)
+{
+    struct tgdb_response *response;
+
+    response = (struct tgdb_response *)cgdb_calloc(1, sizeof(struct tgdb_response));
+    response->result_id = -1;
+    response->request = NULL;
+    response->header = header;
+
+    return response;
+}
+
 void tgdb_delete_responses(struct tgdb *tgdb)
 {
     tgdb_list_free(tgdb->command_list, tgdb_types_free_command);
@@ -1386,7 +1381,7 @@ tgdb_request_ptr tgdb_request_complete(struct tgdb *tgdb, const char *line)
     return request_ptr;
 }
 
-tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb, const char *func, int lines,
+tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb, uint64_t addr, int lines,
     struct tgdb_file_position *tfp)
 {
     tgdb_request_ptr request_ptr;
@@ -1395,7 +1390,7 @@ tgdb_request_ptr tgdb_request_disassemble(struct tgdb *tgdb, const char *func, i
 
     request_ptr->id = -1;
     request_ptr->header = TGDB_REQUEST_DISASSEMBLE;
-    request_ptr->choice.disassemble.func = func;
+    request_ptr->choice.disassemble.addr = addr;
     request_ptr->choice.disassemble.lines = lines;
     request_ptr->choice.disassemble.tfp = tfp;
 
@@ -1512,9 +1507,8 @@ int tgdb_process_command(struct tgdb *tgdb, tgdb_request_ptr request)
         }
         else if (request->header == TGDB_REQUEST_DISASSEMBLE)
         {
-            ret = tgdb_disassemble(tgdb->tcc, request->choice.disassemble.func,
-                request->choice.disassemble.lines,
-                &request->id);
+            ret = tgdb_disassemble(tgdb->tcc, request->choice.disassemble.addr,
+                request->choice.disassemble.lines, &request->id);
         }
         else if (request->header == TGDB_REQUEST_DISASSEMBLE_FUNC)
         {
