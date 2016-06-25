@@ -304,7 +304,8 @@ static struct annotation
 } annotations[] = {
     { "cgdb-gdbmi", 10, handle_cgdb_gdbmi },
     { "breakpoints-invalid", 19, handle_breakpoints_invalid },
-    { "frame-end", 10, handle_frame_end },
+    { "frame-end", 9, handle_frame_end },
+    { "frames-invalid", 14, handle_frame_end },
     { "pre-commands", 12, handle_misc_pre_prompt },
     { "commands", 8, handle_misc_prompt },
     { "post-commands", 13, handle_misc_post_prompt },

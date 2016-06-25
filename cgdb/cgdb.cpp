@@ -1028,13 +1028,15 @@ static void update_file_position(struct tgdb_response_file_position *response)
     /* If we got a pathname and we're not showing disasm... */
     if (tfp->absolute_path && !cgdbrc_get_int(CGDBRC_DISASM))
     {
+        int exe_line = sview->addr_frame ? tfp->line_number : -1;
+
         /* Update the file */
         source_reload(sview, tfp->absolute_path, 0);
 
         /* Show the source file at this line number */
-        if_show_file(tfp->absolute_path, tfp->line_number, tfp->line_number);
+        if_show_file(tfp->absolute_path, tfp->line_number, exe_line);
     }
-    else
+    else if (sview->addr_frame)
     {
         /* Try to show the disasm for the current $pc address */
         int ret = source_set_exec_addr(sview, 0x0);

@@ -222,16 +222,22 @@ commands_process_info_frame(struct annotate_two *a2, struct ibuf *buf,
     */
 
     int success = 0;
-    mi_output *miout = mi_parse_gdb_output(result_line, NULL);
 
-    if (miout && (miout->tclass == MI_CL_DONE))
+    if (result_record == MI_CL_DONE)
     {
-        mi_results *res = mi_find_var(miout->c, "frame", t_tuple);
+        mi_output *miout = mi_parse_gdb_output(result_line, NULL);
 
-        if (res)
+        if (miout && (miout->tclass == MI_CL_DONE))
         {
-            success = commands_parse_file_position(a2, id, res->v.rs);
+            mi_results *res = mi_find_var(miout->c, "frame", t_tuple);
+
+            if (res)
+            {
+                success = commands_parse_file_position(a2, id, res->v.rs);
+            }
         }
+
+        mi_free_output(miout);
     }
 
     if (!success)
@@ -239,8 +245,6 @@ commands_process_info_frame(struct annotate_two *a2, struct ibuf *buf,
         /* We got nothing - try "info source" command. */
         commands_issue_command(a2, ANNOTATE_INFO_SOURCE, NULL, 0, NULL);
     }
-
-    mi_free_output(miout);
 }
 
 /* commands_process_info_source:
