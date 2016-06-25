@@ -680,6 +680,20 @@ static char *create_gdb_command(enum annotate_commands com,
     char *cmd = NULL;
     const char *name = NULL;
 
+    /*
+     * TODO mikesart
+     *   -data-list-register-names #
+     *   -stack-list-variables 2
+     *   -stack-list-frames ; colorize this output?
+     *
+     * https://sourceware.org/gdb/onlinedocs/gdb/GDB_002fMI-Variable-Objects.html#GDB_002fMI-Variable-Objects
+     *   -var-create
+     *   -var-set-format
+     *   -var-evaluate-expression
+     *   -var-delete
+     *   -var-list-children
+     *   -var-update
+     */
     switch (com)
     {
     case ANNOTATE_GDB_VERSION:
