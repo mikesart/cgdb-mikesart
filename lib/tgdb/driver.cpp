@@ -121,9 +121,9 @@ readline_completion_display_func(char **matches, int num_matches,
     }
 }
 
-int do_tab_completion(struct tgdb_list *list)
+int do_tab_completion(char **completions)
 {
-    if (rline_rl_complete(rline, list, &readline_completion_display_func) == -1)
+    if (rline_rl_complete(rline, completions, &readline_completion_display_func) == -1)
     {
         logger_write_pos(logger, __FILE__, __LINE__,
             "rline_rl_complete error\n");
@@ -212,10 +212,9 @@ static int gdb_input(void)
     {
         if (item->header == TGDB_UPDATE_COMPLETIONS)
         {
-            struct tgdb_list *list =
-                item->choice.update_completions.completion_list;
+            char **completions = item->choice.update_completions.completions;
 
-            do_tab_completion(list);
+            do_tab_completion(completions);
         }
 
         if (item->header == TGDB_UPDATE_CONSOLE_PROMPT_VALUE)

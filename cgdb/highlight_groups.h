@@ -69,7 +69,7 @@ enum hl_group_kind
 /* Creating and Destroying a hl_groups context. {{{*/
 /******************************************************************************/
 /**
- * @name Createing and Destroying a hl_groups context.
+ * @name Creating and Destroying a hl_groups context.
  * These functions are for createing and destroying a hl_groups context.
  */
 /******************************************************************************/

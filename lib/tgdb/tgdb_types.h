@@ -263,9 +263,9 @@ struct tgdb_response_exited
 /* header == TGDB_UPDATE_COMPLETIONS */
 struct tgdb_response_completions
 {
-    /* This list has elements of 'const char *'
+    /* This sb array has elements of 'const char *'
      * representing each possible completion. */
-    struct tgdb_list *completion_list;
+    char **completions;
 };
 
 /* header == TGDB_UPDATE_DISASSEMBLY */

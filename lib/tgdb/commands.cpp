@@ -28,7 +28,6 @@
 #include "ibuf.h"
 #include "a2-tgdb.h"
 #include "queue.h"
-#include "tgdb_list.h"
 #include "annotate_two.h"
 #include "mi_gdb.h"
 
@@ -445,7 +444,7 @@ commands_process_complete(struct annotate_two *a2, struct ibuf *buf,
 {
     char *str = ibuf_get(buf);
     struct tgdb_response *response;
-    struct tgdb_list *tab_completions = tgdb_list_init();
+    char **completions = NULL;
 
     while (str)
     {
@@ -476,7 +475,7 @@ commands_process_complete(struct annotate_two *a2, struct ibuf *buf,
                 if (cstr[length - 1] == '\n')
                     cstr[--length] = 0;
 
-                tgdb_list_append(tab_completions, miout->c->v.cstr);
+                sbpush(completions, miout->c->v.cstr);
                 miout->c->v.cstr = NULL;
             }
         }
@@ -487,7 +486,7 @@ commands_process_complete(struct annotate_two *a2, struct ibuf *buf,
 
     response = tgdb_create_response(a2, TGDB_UPDATE_COMPLETIONS);
     response->result_id = id;
-    response->choice.update_completions.completion_list = tab_completions;
+    response->choice.update_completions.completions = completions;
 }
 
 /*

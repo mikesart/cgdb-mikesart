@@ -45,6 +45,10 @@
 
 /* }}}*/
 
+/* Our array of completion strings and current index */
+static int completions_index = 0;
+static char **completions_array = NULL;
+
 struct rline
 {
     /* The input to readline. Writing to this, writes to readline. */
@@ -65,15 +69,14 @@ struct rline
      * since that particular functionality of readline does not work with
      * the alternative interface. */
     int rline_rl_completion_query_items;
-};
 
-static tgdb_list_iterator *rline_local_iter = NULL;
+};
 
 static void custom_deprep_term_function()
 {
 }
 
-/* Createing and Destroying a librline context. {{{*/
+/* Creating and Destroying a librline context. {{{*/
 struct rline *rline_initialize(int slavefd, command_cb *command,
     completion_cb *completion, const char *TERM)
 {
@@ -144,10 +147,27 @@ struct rline *rline_initialize(int slavefd, command_cb *command,
     return rline;
 }
 
+static void rline_free_completions()
+{
+    int i;
+
+    /* Free all the completion entries */
+    for (i = 0; i < sbcount(completions_array); i++)
+        free(completions_array[i]);
+
+    /* Set and index to 0. */
+    sbsetcount(completions_array, 0);
+    completions_index = 0;
+}
+
 int rline_shutdown(struct rline *rline)
 {
     if (!rline)
         return -1; /* Should this be OK? */
+
+    rline_free_completions();
+    sbfree(completions_array);
+    completions_array = NULL;
 
     if (rline->input)
         fclose(rline->input);
@@ -274,20 +294,19 @@ int rline_rl_callback_read_char(struct rline *rline)
  */
 char *rline_rl_completion_entry_function(const char *text, int matches)
 {
-    if (rline_local_iter)
+    if (completions_index < sbcount(completions_array))
     {
         /**
-     * 'local' is a possible completion. 'text' is the data to be completed.
-     * 'word' is the current possible match started off at the same point 
-     * in local, that text is started in rl_line_buffer.
-     *
-     * In C++ if you do "b 'classname::functionam<Tab>". This will complete
-     * the line like "b 'classname::functioname'".
-     */
-        char *local = (char *)tgdb_list_get_item(rline_local_iter);
+         * 'local' is a possible completion. 'text' is the data to be completed.
+         * 'word' is the current possible match started off at the same point
+         * in local, that text is started in rl_line_buffer.
+         *
+         * In C++ if you do "b 'classname::functionam<Tab>". This will complete
+         * the line like "b 'classname::functioname'".
+         */
+        char *local = completions_array[completions_index++];
         char *word = local + rl_point - strlen(text);
 
-        rline_local_iter = tgdb_list_next(rline_local_iter);
         return strdup(word);
     }
 
@@ -306,8 +325,8 @@ static char *rline_rl_cpvfunc_t(void)
     return buf;
 }
 
-int rline_rl_complete(struct rline *rline, struct tgdb_list *list,
-    display_callback display_cb)
+int rline_rl_complete(struct rline *rline, char **completions,
+        display_callback display_cb)
 {
     int size;
     int key;
@@ -321,8 +340,10 @@ int rline_rl_complete(struct rline *rline, struct tgdb_list *list,
     if (!display_cb)
         return -1;
 
-    size = tgdb_list_size(list);
+    /* Free the current completion array entries */
+    rline_free_completions();
 
+    size = sbcount(completions);
     if (size == 0)
     {
         rl_completion_word_break_hook = NULL;
@@ -330,13 +351,19 @@ int rline_rl_complete(struct rline *rline, struct tgdb_list *list,
     }
     else
     {
+        int i;
+
+        /* Steal the malloc'd strings from completions into our array */
+        for (i = 0; i < size; i++)
+            sbpush(completions_array, completions[i]);
+        /* Clear all entries from the passed in array */
+        sbsetcount(completions, 0);
+
         rl_completion_word_break_hook = rline_rl_cpvfunc_t;
         rl_completion_entry_function = rline_rl_completion_entry_function;
     }
 
     rl_completion_display_matches_hook = display_cb;
-
-    rline_local_iter = tgdb_list_get_first(list);
 
     /* This is probably a hack, however it works for now.
      *
