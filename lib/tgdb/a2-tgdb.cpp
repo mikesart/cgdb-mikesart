@@ -19,7 +19,6 @@
 #include "io.h"
 #include "state_machine.h"
 #include "commands.h"
-#include "queue.h"
 #include "sys_util.h"
 #include "ibuf.h"
 
@@ -43,7 +42,7 @@ int a2_open_new_tty(struct annotate_two *a2, int *inferior_stdin, int *inferior_
     *inferior_stdout = pty_pair_get_masterfd(a2->pty_pair);
 
     commands_issue_command(a2, ANNOTATE_TTY,
-        pty_pair_get_slavename(a2->pty_pair), 0, NULL);
+        pty_pair_get_slavename(a2->pty_pair), 1, NULL);
 
     return 0;
 }
@@ -124,13 +123,13 @@ int a2_initialize(struct annotate_two *a2,
     a2_open_new_tty(a2, inferior_stdin, inferior_stdout);
 
     /* Initialize gdb_version_major, gdb_version_minor */
-    commands_issue_command(a2, ANNOTATE_GDB_VERSION, NULL, 0, NULL);
+    commands_issue_command(a2, ANNOTATE_GDB_VERSION, NULL, 1, NULL);
 
     /* Need to get source information before breakpoint information otherwise
      * the TGDB_UPDATE_BREAKPOINTS event will be ignored in process_commands()
      * because there are no source files to add the breakpoints to.
      */
-    commands_issue_command(a2, ANNOTATE_INFO_FRAME, NULL, 0, NULL);
+    commands_issue_command(a2, ANNOTATE_INFO_FRAME, NULL, 1, NULL);
 
     /* gdb may already have some breakpoints when it starts. This could happen
      * if the user puts breakpoints in there .gdbinit.

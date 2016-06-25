@@ -79,17 +79,6 @@ int tgdb_shutdown(struct tgdb *tgdb);
 
 /*@{*/
 
-/**
-   * This will check to see if TGDB is currently capable of receiving another command.
-   * 
-   * \param tgdb
-   * An instance of the tgdb library to operate on.
-   *
-   * \return
-   * Will return as 1 if tgdb is busy, otherwise 0.
-   */
-int tgdb_is_busy(struct tgdb *tgdb);
-
 /*@}*/
 /* }}}*/
 
@@ -410,10 +399,10 @@ tgdb_request_ptr tgdb_pop_request_id(int id);
 
 /**
    * Have TGDB append a command to it's list of commands it needs to run.
-   * 
+   *
    * \param tgdb
    * An instance of the tgdb library to operate on.
-   * 
+   *
    * \param request
    * The requested command to have TGDB process.
    *

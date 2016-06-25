@@ -54,7 +54,7 @@ struct tgdb_command
  * \param item
  * The tgdb_command to free
  */
-void tgdb_command_destroy(void *item);
+void tgdb_command_destroy(struct tgdb_command *tc);
 
 /**
  * Get gdb version, major and minor numbers.

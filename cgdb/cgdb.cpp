@@ -91,7 +91,6 @@
 #include "io.h"
 #include "fork_util.h"
 #include "terminal.h"
-#include "queue.h"
 #include "rline.h"
 #include "ibuf.h"
 #include "usage.h"
@@ -1260,11 +1259,11 @@ static void process_commands(struct tgdb *tgdb_in)
     }
 }
 
-/* gdb_input: Receives data from tgdb:
+/* tgdb_input: Receives data from tgdb:
  *
  *  Returns:  -1 on error, 0 on success
  */
-static int gdb_input()
+static int tgdb_input()
 {
     int size;
     int is_finished;
@@ -1629,10 +1628,8 @@ static int main_loop(void)
         /* gdb's output -> stdout */
         if (FD_ISSET(gdb_fd, &rset))
         {
-            if (gdb_input() == -1)
-            {
+            if (tgdb_input() == -1)
                 return -1;
-            }
 
             /* When the file dialog is opened, the user input is blocked, 
              * until GDB returns all the files that should be displayed,

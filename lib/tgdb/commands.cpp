@@ -25,9 +25,7 @@
 #include "tgdb_types.h"
 #include "logger.h"
 #include "sys_util.h"
-#include "queue.h"
 #include "ibuf.h"
-#include "queue.h"
 #include "mi_gdb.h"
 
 /* gdb version number parsed from gdb/mi -gdb-version */
@@ -243,7 +241,7 @@ commands_process_info_frame(struct annotate_two *a2, struct ibuf *buf,
     if (!success)
     {
         /* We got nothing - try "info source" command. */
-        commands_issue_command(a2, ANNOTATE_INFO_SOURCE, NULL, 0, NULL);
+        commands_issue_command(a2, ANNOTATE_INFO_SOURCE, NULL, 1, NULL);
     }
 }
 
@@ -746,10 +744,8 @@ static char *create_gdb_command(enum annotate_commands com,
     return NULL;
 }
 
-void tgdb_command_destroy(void *item)
+void tgdb_command_destroy(struct tgdb_command *tc)
 {
-    struct tgdb_command *tc = (struct tgdb_command *)item;
-
     free(tc->gdb_command);
     free(tc);
 }
