@@ -1,18 +1,6 @@
 #ifndef __IO_H__
 #define __IO_H__
 
-#if HAVE_CONFIG_H
-#include "config.h"
-#endif /* HAVE_CONFIG_H */
-
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif /* HAVE_UNISTD_H */
-
-#if HAVE_STDIO_H
-#include <stdio.h>
-#endif /* HAVE_STDIO_H */
-
 #if HAVE_ATTRIBUTE_PRINTF
 #define ATTRIBUTE_PRINTF(_x, _y) __attribute__((__format__(__printf__, _x, _y)))
 #else

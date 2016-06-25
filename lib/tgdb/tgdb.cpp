@@ -1,11 +1,15 @@
 /* Includes {{{ */
 #if HAVE_CONFIG_H
 #include "config.h"
-#endif /* HAVE_CONFIG_H */
+#endif
 
-#if HAVE_STDLIB_H
-#include <stdlib.h>
-#endif /* HAVE_STDLIB_H */
+#if HAVE_STDIO_H
+#include <stdio.h>
+#endif /* HAVE_STDIO_H */
+
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif /* HAVE_UNISTD_H */
 
 #if HAVE_SIGNAL_H
 #include <signal.h> /* sig_atomic_t */
@@ -15,28 +19,20 @@
 #include <string.h>
 #endif /* HAVE_STRING_H */
 
-#if HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-
 #if HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #endif
 
 #include <inttypes.h>
 
+#include "a2-tgdb.h"
 #include "tgdb.h"
 #include "commands.h"
-#include "fs_util.h"
+#include "state_machine.h"
 #include "ibuf.h"
 #include "io.h"
 #include "queue.h"
-#include "a2-tgdb.h"
-#include "annotate_two.h"
-#include "state_machine.h"
-
 #include "pseudo.h" /* SLAVE_SIZE constant */
-#include "fork_util.h"
 #include "sys_util.h"
 #include "logger.h"
 
@@ -1225,6 +1221,116 @@ struct tgdb_response *tgdb_create_response(struct annotate_two *a2,
     /* Add this response to our list of responses */
     sbpush(a2->responses, response);
     return response;
+}
+
+int tgdb_delete_response(struct tgdb_response *com)
+{
+    if (!com)
+        return -1;
+
+    if (com->request)
+    {
+        tgdb_request_destroy(com->request);
+        com->request = NULL;
+    }
+
+    switch (com->header)
+    {
+    case TGDB_UPDATE_BREAKPOINTS:
+    {
+        int i;
+
+        for (i = 0; i < sbcount(com->choice.update_breakpoints.breakpoints); i++)
+        {
+
+            struct tgdb_breakpoint *tb = &com->choice.update_breakpoints.breakpoints[i];
+
+            free(tb->file);
+            free(tb->funcname);
+        }
+
+        sbfree(com->choice.update_breakpoints.breakpoints);
+        com->choice.update_breakpoints.breakpoints = NULL;
+        break;
+    }
+    case TGDB_UPDATE_FILE_POSITION:
+    {
+        struct tgdb_file_position *tfp =
+            com->choice.update_file_position.file_position;
+
+        if (tfp)
+        {
+            free(tfp->absolute_path);
+            free(tfp->from);
+            free(tfp->func);
+
+            free(tfp);
+
+            com->choice.update_file_position.file_position = NULL;
+        }
+        break;
+    }
+    case TGDB_UPDATE_SOURCE_FILES:
+    {
+        int i;
+        char **source_files = com->choice.update_source_files.source_files;
+
+        for (i = 0; i < sbcount(source_files); i++)
+        {
+            free(source_files[i]);
+        }
+        sbfree(source_files);
+
+        com->choice.update_source_files.source_files = NULL;
+        break;
+    }
+    case TGDB_INFERIOR_EXITED:
+        break;
+    case TGDB_UPDATE_COMPLETIONS:
+    {
+        int i;
+        char **completions = com->choice.update_completions.completions;
+
+        for (i = 0; i < sbcount(completions); i++)
+            free(completions[i]);
+        sbfree(completions);
+
+        com->choice.update_completions.completions = NULL;
+        break;
+    }
+    case TGDB_UPDATE_DISASSEMBLY:
+    {
+        int i;
+        struct tgdb_response_disassemble *response =
+                &com->choice.update_disassemble;
+        char **disasm = response->disasm;
+
+        free(response->error_msg);
+
+        for (i = 0; i < sbcount(disasm); i++)
+            free(disasm[i]);
+        sbfree(disasm);
+
+        response->error_msg = NULL;
+        response->disasm = NULL;
+        break;
+    }
+    case TGDB_UPDATE_CONSOLE_PROMPT_VALUE:
+    {
+        const char *value =
+            com->choice.update_console_prompt_value.prompt_value;
+
+        free((char *)value);
+        com->choice.update_console_prompt_value.prompt_value = NULL;
+        break;
+    }
+    case TGDB_QUIT:
+        break;
+    }
+
+    free(com);
+    com = NULL;
+    return 0;
 }
 
 void a2_delete_responses(struct annotate_two *a2)

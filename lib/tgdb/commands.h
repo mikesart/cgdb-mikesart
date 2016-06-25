@@ -1,8 +1,6 @@
 #ifndef __COMMANDS_H__
 #define __COMMANDS_H__
 
-#include "a2-tgdb.h"
-
 /**
  * The current command type. TGDB is capable of having any commands of this
  * type in it's queue.
