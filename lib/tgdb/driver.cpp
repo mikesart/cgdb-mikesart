@@ -207,7 +207,8 @@ static int gdb_input(void)
         }
     }
 
-    while ((item = tgdb_get_response(tgdb)) != NULL)
+    int index = 0;
+    while ((item = tgdb_get_response(tgdb, index++)) != NULL)
     {
         if (item->header == TGDB_UPDATE_COMPLETIONS)
         {

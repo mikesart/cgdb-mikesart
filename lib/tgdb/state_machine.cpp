@@ -112,8 +112,7 @@ enum internal_state data_get_state(struct state_machine *d)
     return d->data_state;
 }
 
-void data_set_state(struct annotate_two *a2, enum internal_state state,
-        struct tgdb_list *list)
+void data_set_state(struct annotate_two *a2, enum internal_state state)
 {
     /* if tgdb is at an internal command, than nothing changes that
      * state unless tgdb gets to the prompt annotation. This means that
@@ -135,20 +134,16 @@ void data_set_state(struct annotate_two *a2, enum internal_state state,
     case USER_AT_PROMPT: /* prompt */
         if (strcmp(ibuf_get(a2->sm->gdb_prompt), ibuf_get(a2->sm->gdb_prompt_last)))
         {
+            struct tgdb_response *response;
+
             ibuf_clear(a2->sm->gdb_prompt_last);
             ibuf_add(a2->sm->gdb_prompt_last, ibuf_get(a2->sm->gdb_prompt));
 
             /* Update the prompt */
-            if (list)
-            {
-                struct tgdb_response *response =
-                    tgdb_create_response(TGDB_UPDATE_CONSOLE_PROMPT_VALUE);
+            response = tgdb_create_response(a2, TGDB_UPDATE_CONSOLE_PROMPT_VALUE);
 
-                response->choice.update_console_prompt_value.prompt_value =
-                    cgdb_strdup(ibuf_get(a2->sm->gdb_prompt));
-
-                tgdb_list_append(list, response);
-            }
+            response->choice.update_console_prompt_value.prompt_value =
+                cgdb_strdup(ibuf_get(a2->sm->gdb_prompt));
         }
 
         a2->command_finished = 1;
@@ -182,102 +177,102 @@ int sm_is_misc_prompt(struct state_machine *sm)
 }
 
 static int
-handle_frame_end(struct annotate_two *a2, const char *buf, size_t n,
-    struct tgdb_list *list)
+handle_frame_end(struct annotate_two *a2, const char *buf, size_t n)
 {
     /* set up the info_source command to get file info */
-    return commands_issue_command(a2, ANNOTATE_INFO_FRAME, NULL, 1, NULL);
-}
-
-static int
-handle_breakpoints_invalid(struct annotate_two *a2, const char *buf, size_t n,
-    struct tgdb_list *list)
-{
-    return commands_issue_command(a2, ANNOTATE_INFO_BREAKPOINTS, NULL, 0, NULL);
-}
-
-static int handle_misc_pre_prompt(struct annotate_two *a2, const char *buf,
-    size_t n, struct tgdb_list *list)
-{
-    /* If tgdb is sending a command, then continue past it */
-    data_set_state(a2, AT_PROMPT, list);
+    commands_issue_command(a2, ANNOTATE_INFO_FRAME, NULL, 0, NULL);
     return 0;
 }
 
-static int handle_misc_prompt(struct annotate_two *a2, const char *buf,
-    size_t n, struct tgdb_list *list)
+static int
+handle_breakpoints_invalid(struct annotate_two *a2, const char *buf, size_t n)
+{
+    commands_issue_command(a2, ANNOTATE_INFO_BREAKPOINTS, NULL, 0, NULL);
+    return 0;
+}
+
+static int
+handle_misc_pre_prompt(struct annotate_two *a2, const char *buf, size_t n)
+{
+    /* If tgdb is sending a command, then continue past it */
+    data_set_state(a2, AT_PROMPT);
+    return 0;
+}
+
+static int
+handle_misc_prompt(struct annotate_two *a2, const char *buf, size_t n)
 {
     a2->sm->misc_prompt_command = 1;
-    data_set_state(a2, USER_AT_PROMPT, list);
+    data_set_state(a2, USER_AT_PROMPT);
     a2->command_finished = 1;
     return 0;
 }
 
-static int handle_misc_post_prompt(struct annotate_two *a2, const char *buf,
-    size_t n, struct tgdb_list *list)
+static int
+handle_misc_post_prompt(struct annotate_two *a2, const char *buf, size_t n)
 {
     a2->sm->misc_prompt_command = 0;
-    data_set_state(a2, POST_PROMPT, list);
+    data_set_state(a2, POST_PROMPT);
     return 0;
 }
 
-static int handle_pre_prompt(struct annotate_two *a2, const char *buf, size_t n,
-    struct tgdb_list *list)
+static int
+handle_pre_prompt(struct annotate_two *a2, const char *buf, size_t n)
 {
-    data_set_state(a2, AT_PROMPT, list);
+    data_set_state(a2, AT_PROMPT);
     return 0;
 }
 
-static int handle_cgdb_gdbmi(struct annotate_two *a2, const char *buf, size_t n,
-    struct tgdb_list *list)
+static int
+handle_cgdb_gdbmi(struct annotate_two *a2, const char *buf, size_t n)
 {
     /* Return cgdb-gdbmi ID */
     return atoi(buf + strlen("cgdb-gdbmi"));
 }
 
-static int handle_prompt(struct annotate_two *a2, const char *buf, size_t n,
-    struct tgdb_list *list)
+static int
+handle_prompt(struct annotate_two *a2, const char *buf, size_t n)
 {
     /* All done. */
-    data_set_state(a2, USER_AT_PROMPT, list);
+    data_set_state(a2, USER_AT_PROMPT);
     return 0;
 }
 
-static int handle_post_prompt(struct annotate_two *a2, const char *buf,
-    size_t n, struct tgdb_list *list)
+static int
+handle_post_prompt(struct annotate_two *a2, const char *buf, size_t n)
 {
-    data_set_state(a2, POST_PROMPT, list);
+    data_set_state(a2, POST_PROMPT);
     return 0;
 }
 
-static int handle_error(struct annotate_two *a2, const char *buf, size_t n,
-    struct tgdb_list *list)
+static int
+handle_error(struct annotate_two *a2, const char *buf, size_t n)
 {
-    data_set_state(a2, POST_PROMPT, list); /* TEMPORARY */
+    data_set_state(a2, POST_PROMPT); /* TEMPORARY */
     return 0;
 }
 
-static int handle_error_begin(struct annotate_two *a2, const char *buf,
-    size_t n, struct tgdb_list *list)
+static int
+handle_error_begin(struct annotate_two *a2, const char *buf, size_t n)
 {
     /* After a signal is sent (^c), the debugger will then output
      * something like "Quit\n", so that should be displayed to the user.
      * Unfortunately, the debugger ( gdb ) isn't nice enough to return a
      * post-prompt when a signal is received.
      */
-    data_set_state(a2, VOID, list);
+    data_set_state(a2, VOID);
     return 0;
 }
 
-static int handle_quit(struct annotate_two *a2, const char *buf, size_t n,
-    struct tgdb_list *list)
+static int
+handle_quit(struct annotate_two *a2, const char *buf, size_t n)
 {
-    data_set_state(a2, POST_PROMPT, list); /* TEMPORARY */
+    data_set_state(a2, POST_PROMPT); /* TEMPORARY */
     return 0;
 }
 
-static int handle_exited(struct annotate_two *a2, const char *buf, size_t n,
-    struct tgdb_list *list)
+static int
+handle_exited(struct annotate_two *a2, const char *buf, size_t n)
 {
     int exit_status;
     struct tgdb_response *response;
@@ -286,9 +281,8 @@ static int handle_exited(struct annotate_two *a2, const char *buf, size_t n,
     //    "exited 0"
     exit_status = (n >= 7) ? atoi(buf + 7) : -1;
 
-    response = tgdb_create_response(TGDB_INFERIOR_EXITED);
+    response = tgdb_create_response(a2, TGDB_INFERIOR_EXITED);
     response->choice.inferior_exited.exit_status = exit_status;
-    tgdb_types_append_command(list, response);
     return 0;
 }
 
@@ -305,8 +299,7 @@ static struct annotation
     size_t size;
 
     /** The function to call when the annotation is found. */
-    int (*f)(struct annotate_two *a2, const char *buf, size_t n,
-        struct tgdb_list *list);
+    int (*f)(struct annotate_two *a2, const char *buf, size_t n);
 } annotations[] = {
     { "cgdb-gdbmi", 10, handle_cgdb_gdbmi },
     { "breakpoints-invalid", 19, handle_breakpoints_invalid },
@@ -336,8 +329,8 @@ static struct annotation
     { NULL, 0, NULL }
 };
 
-static int tgdb_parse_annotation(struct annotate_two *a2, char *data, size_t size,
-    struct tgdb_list *list, int *is_cgdb_gdbmi)
+static int tgdb_parse_annotation(struct annotate_two *a2,
+    char *data, size_t size, int *is_cgdb_gdbmi)
 {
     int i;
 
@@ -349,7 +342,7 @@ static int tgdb_parse_annotation(struct annotate_two *a2, char *data, size_t siz
         {
             *is_cgdb_gdbmi = (annotations[i].f == handle_cgdb_gdbmi);
 
-            return annotations[i].f(a2, data, size, list);
+            return annotations[i].f(a2, data, size);
         }
     }
 
@@ -359,8 +352,7 @@ static int tgdb_parse_annotation(struct annotate_two *a2, char *data, size_t siz
 
 void a2_parse_io(struct annotate_two *a2,
     const char *data, const size_t size,
-    char *gui_data, size_t *gui_size,
-    struct tgdb_list *command_list)
+    char *gui_data, size_t *gui_size)
 {
     int i;
     int gui_len = 0;
@@ -379,13 +371,14 @@ void a2_parse_io(struct annotate_two *a2,
             {
                 int id;
                 char *result_line;
-                int result_record = mi_get_result_record(sm->cgdb_gdbmi_buffer, &result_line, &id);
+                int result_record = mi_get_result_record(
+                        sm->cgdb_gdbmi_buffer, &result_line, &id);
 
                 if (result_record != -1)
                 {
                     /* Parse the cgdb-gdbmi command */
                     commands_process_cgdb_gdbmi(a2, sm->cgdb_gdbmi_buffer,
-                        result_record, result_line, id, command_list);
+                        result_record, result_line, id);
 
                     sm->tgdb_state = SM_NL_DATA;
                     ibuf_clear(sm->cgdb_gdbmi_buffer);
@@ -422,8 +415,7 @@ void a2_parse_io(struct annotate_two *a2,
 
                 sm->tgdb_state = SM_NL_DATA;
                 tgdb_parse_annotation(a2, ibuf_get(sm->tgdb_buffer),
-                    ibuf_length(sm->tgdb_buffer), command_list,
-                    &is_cgdb_gdbmi);
+                    ibuf_length(sm->tgdb_buffer), &is_cgdb_gdbmi);
 
                 if (is_cgdb_gdbmi)
                 {

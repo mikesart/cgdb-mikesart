@@ -212,15 +212,7 @@ ssize_t tgdb_recv_inferior_data(struct tgdb *tgdb, char *buf, size_t n);
    * A valid response if responses still exist.
    * Null if no more responses exist.
    */
-struct tgdb_response *tgdb_get_response(struct tgdb *tgdb);
-
-/**
-   * This will free all of the memory used by the responses that tgdb returns.
-   *
-   * \param tgdb
-   * An instance of the tgdb library to operate on.
-   */
-void tgdb_delete_responses(struct tgdb *tgdb);
+struct tgdb_response *tgdb_get_response(struct tgdb *tgdb, int index);
 
 /*@}*/
 /* }}}*/

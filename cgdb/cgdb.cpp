@@ -1220,9 +1220,10 @@ static void update_prompt(struct tgdb_response_prompt_value *response)
 
 static void process_commands(struct tgdb *tgdb_in)
 {
+    int index = 0;
     struct tgdb_response *item;
 
-    while ((item = tgdb_get_response(tgdb_in)) != NULL)
+    while ((item = tgdb_get_response(tgdb_in, index++)) != NULL)
     {
         switch (item->header)
         {

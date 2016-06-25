@@ -131,6 +131,14 @@ int a2_initialize(struct annotate_two *a2,
  */
 int a2_shutdown(struct annotate_two *a2);
 
+/**
+   * This will free all of the memory used by the responses that tgdb returns.
+   *
+   * \param tgdb
+   * An instance of the tgdb library to operate on.
+   */
+void a2_delete_responses(struct annotate_two *a2);
+
 /*@}*/
 
 /******************************************************************************/

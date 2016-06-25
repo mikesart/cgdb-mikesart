@@ -156,7 +156,6 @@ int rline_shutdown(struct rline *rline)
         fclose(rline->output);
 
     free(rline);
-    rline = NULL;
     return 0;
 }
 

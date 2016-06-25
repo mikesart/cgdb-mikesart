@@ -69,28 +69,6 @@ int a2_open_new_tty(struct annotate_two *a2, int *inferior_stdin, int *inferior_
     return 0;
 }
 
-/* initialize_annotate_two
- *
- * initializes an annotate_two subsystem and sets up all initial values.
- */
-static struct annotate_two *initialize_annotate_two(void)
-{
-    struct annotate_two *a2 = (struct annotate_two *)
-        cgdb_malloc(sizeof(struct annotate_two));
-
-    a2->tgdb_initialized = 0;
-    a2->debugger_stdin = -1;
-    a2->debugger_out = -1;
-
-    a2->pty_pair = NULL;
-
-    /* null terminate */
-    a2->config_dir[0] = '\0';
-    a2->a2_gdb_init_file[0] = '\0';
-
-    return a2;
-}
-
 /* tgdb_setup_config_file: 
  * -----------------------
  *  Creates a config file for the user.
@@ -127,9 +105,12 @@ static int tgdb_setup_config_file(struct annotate_two *a2, const char *dir)
 struct annotate_two *a2_create_context(const char *debugger,
     int argc, char **argv, const char *config_dir, struct logger *logger_in)
 {
-
-    struct annotate_two *a2 = initialize_annotate_two();
     char a2_debug_file[FSUTIL_PATH_MAX];
+    struct annotate_two *a2 = (struct annotate_two *)
+        cgdb_calloc(1, sizeof(struct annotate_two));
+
+    a2->debugger_stdin = -1;
+    a2->debugger_out = -1;
 
     if (!tgdb_setup_config_file(a2, config_dir))
     {
@@ -142,8 +123,7 @@ struct annotate_two *a2_create_context(const char *debugger,
     fs_util_get_path(config_dir, "a2_tgdb_debug.txt", a2_debug_file);
     io_debug_init(a2_debug_file);
 
-    a2->debugger_pid =
-        invoke_debugger(debugger, argc, argv,
+    a2->debugger_pid = invoke_debugger(debugger, argc, argv,
             &a2->debugger_stdin, &a2->debugger_out, 0, a2->a2_gdb_init_file);
 
     /* Couldn't invoke process */
@@ -162,8 +142,6 @@ int a2_initialize(struct annotate_two *a2,
 
     a2->sm = state_machine_initialize();
 
-    a2->client_commands = NULL;
-
     a2_open_new_tty(a2, inferior_stdin, inferior_stdout);
 
     /* Initialize gdb_version_major, gdb_version_minor */
@@ -173,7 +151,7 @@ int a2_initialize(struct annotate_two *a2,
      * the TGDB_UPDATE_BREAKPOINTS event will be ignored in process_commands()
      * because there are no source files to add the breakpoints to.
      */
-    commands_issue_command(a2, ANNOTATE_INFO_FRAME, NULL, 1, NULL);
+    commands_issue_command(a2, ANNOTATE_INFO_FRAME, NULL, 0, NULL);
 
     /* gdb may already have some breakpoints when it starts. This could happen
      * if the user puts breakpoints in there .gdbinit.
@@ -186,14 +164,19 @@ int a2_initialize(struct annotate_two *a2,
     return 0;
 }
 
-/* TODO: Implement shutdown properly */
 int a2_shutdown(struct annotate_two *a2)
 {
     int i;
 
     cgdb_close(a2->debugger_stdin);
+    a2->debugger_stdin = -1;
 
     state_machine_shutdown(a2->sm);
+    a2->sm = NULL;
+
+    a2_delete_responses(a2);
+    sbfree(a2->responses);
+    a2->responses = NULL;
 
     for (i = 0; i < sbcount(a2->client_commands); i++)
     {
@@ -202,6 +185,8 @@ int a2_shutdown(struct annotate_two *a2)
         free(tc->gdb_command);
         free(tc);
     }
+    sbfree(a2->client_commands);
+    a2->client_commands = NULL;
 
     return 0;
 }
@@ -211,11 +196,8 @@ int a2_is_client_ready(struct annotate_two *a2)
     if (!a2->tgdb_initialized)
         return 0;
 
-    /* If the user is at the prompt */
-    if (data_get_state(a2->sm) == USER_AT_PROMPT)
-        return 1;
-
-    return 0;
+    /* Return 1 if the user is at the prompt */
+    return (data_get_state(a2->sm) == USER_AT_PROMPT);
 }
 
 pid_t a2_get_debugger_pid(struct annotate_two *a2)

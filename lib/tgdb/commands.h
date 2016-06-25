@@ -1,29 +1,7 @@
 #ifndef __COMMANDS_H__
 #define __COMMANDS_H__
 
-#include "tgdb_types.h"
 #include "a2-tgdb.h"
-
-/* commands_issue_command:
- * -----------------------
- *  
- *  This is used by the annotations library to internally issure commands to
- *  the debugger. It sends a command to tgdb-base.
- *
- *  Returns -1 on error, 0 on success
- */
-int commands_issue_command(struct annotate_two *a2,
-    enum annotate_commands commmand, const char *data, int oob, int *id);
-
-/* commands_process: This function receives the output from gdb when gdb
- *                   is running a command on behalf of this package.
- *
- *    a     -> the character received from gdb.
- *    com   -> commands to give back to gdb.
- */
-int commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
-    int result_record, char *result_line, int id,
-    struct tgdb_list *command_list);
 
 /**
  * The current command type. TGDB is capable of having any commands of this
@@ -76,7 +54,7 @@ struct tgdb_command
  * This is a function for debugging.
  *
  * \param item
- * The command to free
+ * The tgdb_command to free
  */
 void tgdb_command_destroy(void *item);
 
@@ -88,4 +66,21 @@ void tgdb_command_destroy(void *item);
  */
 int tgdb_get_gdb_version(int *major, int *minor);
 
-#endif
+/* commands_issue_command:
+ * -----------------------
+ *
+ *  Issue a given command to gdb.
+ */
+void commands_issue_command(struct annotate_two *a2,
+    enum annotate_commands commmand, const char *data, int oob, int *id);
+
+/* commands_process: This function receives the output from gdb when gdb
+ *                   is running a command on behalf of this package.
+ *
+ *    a     -> the character received from gdb.
+ *    com   -> commands to give back to gdb.
+ */
+int commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
+    int result_record, char *result_line, int id);
+
+#endif /* __COMMANDS_H__ */

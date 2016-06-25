@@ -139,8 +139,8 @@ int mi_get_result_record(struct ibuf *buf, char **lstart, int *id)
     return -1;
 }
 
-static int commands_parse_file_position(int id, mi_results *res,
-    struct tgdb_list *list)
+static int commands_parse_file_position(struct annotate_two *a2,
+        int id, mi_results *res)
 {
     struct tgdb_file_position fp;
 
@@ -180,14 +180,12 @@ static int commands_parse_file_position(int id, mi_results *res,
         struct tgdb_file_position *tfp = (struct tgdb_file_position *)
             cgdb_malloc(sizeof(struct tgdb_file_position));
         struct tgdb_response *response =
-            tgdb_create_response(TGDB_UPDATE_FILE_POSITION);
+            tgdb_create_response(a2, TGDB_UPDATE_FILE_POSITION);
 
         *tfp = fp;
 
         response->result_id = id;
         response->choice.update_file_position.file_position = tfp;
-
-        tgdb_types_append_command(list, response);
         return 1;
     }
     else
@@ -207,8 +205,7 @@ static int commands_parse_file_position(int id, mi_results *res,
  */
 static void
 commands_process_info_frame(struct annotate_two *a2, struct ibuf *buf,
-    int result_record, char *result_line, int id,
-    struct tgdb_list *list)
+    int result_record, char *result_line, int id)
 {
     /*
     ^error,msg="No registers."
@@ -234,14 +231,14 @@ commands_process_info_frame(struct annotate_two *a2, struct ibuf *buf,
 
         if (res)
         {
-            success = commands_parse_file_position(id, res->v.rs, list);
+            success = commands_parse_file_position(a2, id, res->v.rs);
         }
     }
 
     if (!success)
     {
         /* We got nothing - try "info source" command. */
-        commands_issue_command(a2, ANNOTATE_INFO_SOURCE, NULL, 1, NULL);
+        commands_issue_command(a2, ANNOTATE_INFO_SOURCE, NULL, 0, NULL);
     }
 
     mi_free_output(miout);
@@ -255,8 +252,7 @@ commands_process_info_frame(struct annotate_two *a2, struct ibuf *buf,
  */
 static void
 commands_process_info_source(struct annotate_two *a2, struct ibuf *buf,
-    int result_record, char *result_line, int id,
-    struct tgdb_list *list)
+    int result_record, char *result_line, int id)
 {
     /* parse gdbmi -file-list-exec-source-file output:
        ^done,line="51",file="driver.cpp",
@@ -269,7 +265,7 @@ commands_process_info_source(struct annotate_two *a2, struct ibuf *buf,
     {
         mi_results *res = (miout->type == MI_T_RESULT_RECORD) ? miout->c : NULL;
 
-        commands_parse_file_position(id, res, list);
+        commands_parse_file_position(a2, id, res);
 
         mi_free_output(miout);
     }
@@ -314,8 +310,7 @@ mi_parse_sources(mi_output *miout)
 
 static void
 commands_process_gdbversion(struct annotate_two *a2, struct ibuf *buf,
-    int record_result, char *result_line, int id,
-    struct tgdb_list *list)
+    int record_result, char *result_line, int id)
 {
     char *str = ibuf_get(buf);
 
@@ -370,8 +365,7 @@ commands_process_gdbversion(struct annotate_two *a2, struct ibuf *buf,
 /* process's source files */
 static void
 commands_process_sources(struct annotate_two *a2, struct ibuf *buf,
-    int record_result, char *result_line, int id,
-    struct tgdb_list *list)
+    int record_result, char *result_line, int id)
 {
     /* parse gdbmi -file-list-exec-source-files output */
     mi_output *miout = mi_parse_gdb_output(result_line, NULL);
@@ -384,11 +378,9 @@ commands_process_sources(struct annotate_two *a2, struct ibuf *buf,
         /* Add source files to our file list */
         source_files = mi_parse_sources(miout);
 
-        response = tgdb_create_response(TGDB_UPDATE_SOURCE_FILES);
+        response = tgdb_create_response(a2, TGDB_UPDATE_SOURCE_FILES);
         response->result_id = id;
         response->choice.update_source_files.source_files = source_files;
-
-        tgdb_types_append_command(list, response);
 
         mi_free_output(miout);
     }
@@ -396,8 +388,7 @@ commands_process_sources(struct annotate_two *a2, struct ibuf *buf,
 
 static void
 commands_process_breakpoints(struct annotate_two *a2, struct ibuf *buf,
-    int result_record, char *result_line, int id,
-    struct tgdb_list *list)
+    int result_record, char *result_line, int id)
 {
     struct tgdb_response *response;
     mi_output *miout = mi_parse_gdb_output(result_line, NULL);
@@ -431,13 +422,9 @@ commands_process_breakpoints(struct annotate_two *a2, struct ibuf *buf,
             bplist = bplist->next;
         }
 
-        response = tgdb_create_response(TGDB_UPDATE_BREAKPOINTS);
+        response = tgdb_create_response(a2, TGDB_UPDATE_BREAKPOINTS);
         response->result_id = id;
         response->choice.update_breakpoints.breakpoints = breakpoints;
-
-        /* At this point, annotate needs to send the breakpoints to the gui.
-            All of the valid breakpoints are stored in breakpoint_queue. */
-        tgdb_types_append_command(list, response);
     }
 
     mi_free_output(miout);
@@ -454,8 +441,7 @@ commands_process_breakpoints(struct annotate_two *a2, struct ibuf *buf,
 */
 static void
 commands_process_complete(struct annotate_two *a2, struct ibuf *buf,
-    int result_record, char *result_line, int id,
-    struct tgdb_list *list)
+    int result_record, char *result_line, int id)
 {
     char *str = ibuf_get(buf);
     struct tgdb_response *response;
@@ -499,10 +485,9 @@ commands_process_complete(struct annotate_two *a2, struct ibuf *buf,
         str = end;
     }
 
-    response = tgdb_create_response(TGDB_UPDATE_COMPLETIONS);
+    response = tgdb_create_response(a2, TGDB_UPDATE_COMPLETIONS);
     response->result_id = id;
     response->choice.update_completions.completion_list = tab_completions;
-    tgdb_types_append_command(list, response);
 }
 
 /*
@@ -549,9 +534,7 @@ static uint64_t disassemble_parse_address(const char *line)
 
 static void
 commands_process_disassemble_func(struct annotate_two *a2, struct ibuf *buf,
-    int result_record, char *result_line, int id,
-    struct tgdb_list *list, int is_disasm_function)
-
+    int result_record, char *result_line, int id, int is_disasm_function)
 {
     char **disasm = NULL;
     uint64_t addr_start = 0;
@@ -627,7 +610,7 @@ commands_process_disassemble_func(struct annotate_two *a2, struct ibuf *buf,
         }
     }
 
-    response = tgdb_create_response(TGDB_UPDATE_DISASSEMBLY);
+    response = tgdb_create_response(a2, TGDB_UPDATE_DISASSEMBLY);
     response->result_id = id;
     response->choice.update_disassemble.error_msg = error_msg;
     response->choice.update_disassemble.disasm = disasm;
@@ -635,12 +618,10 @@ commands_process_disassemble_func(struct annotate_two *a2, struct ibuf *buf,
     response->choice.update_disassemble.addr_end = addr_end;
     /* Was this the "disassemble" function command or "x/100i"? */
     response->choice.update_disassemble.is_disasm_function = is_disasm_function;
-    tgdb_types_append_command(list, response);
 }
 
 int commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
-    int result_record, char *result_line, int id,
-    struct tgdb_list *list)
+    int result_record, char *result_line, int id)
 {
     const char *state = strchr(ibuf_get(buf), ':');
 
@@ -653,21 +634,21 @@ int commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
 
     state++;
     if (!strncmp(state, "info_sources", 12))
-        commands_process_sources(a2, buf, result_record, result_line, id, list);
+        commands_process_sources(a2, buf, result_record, result_line, id);
     else if (!strncmp(state, "info_source", 11))
-        commands_process_info_source(a2, buf, result_record, result_line, id, list);
+        commands_process_info_source(a2, buf, result_record, result_line, id);
     else if (!strncmp(state, "info_frame", 10))
-        commands_process_info_frame(a2, buf, result_record, result_line, id, list);
+        commands_process_info_frame(a2, buf, result_record, result_line, id);
     else if (!strncmp(state, "info_disassemble_func", 21))
-        commands_process_disassemble_func(a2, buf, result_record, result_line, id, list, 1);
+        commands_process_disassemble_func(a2, buf, result_record, result_line, id, 1);
     else if (!strncmp(state, "info_disassemble", 16))
-        commands_process_disassemble_func(a2, buf, result_record, result_line, id, list, 0);
+        commands_process_disassemble_func(a2, buf, result_record, result_line, id, 0);
     else if (!strncmp(state, "info_breakpoints", 16))
-        commands_process_breakpoints(a2, buf, result_record, result_line, id, list);
+        commands_process_breakpoints(a2, buf, result_record, result_line, id);
     else if (!strncmp(state, "info_complete", 13))
-        commands_process_complete(a2, buf, result_record, result_line, id, list);
+        commands_process_complete(a2, buf, result_record, result_line, id);
     else if (!strncmp(state, "gdb_version", 11))
-        commands_process_gdbversion(a2, buf, result_record, result_line, id, list);
+        commands_process_gdbversion(a2, buf, result_record, result_line, id);
     else if (!strncmp(state, "info_tty", 8))
         ;
     else
@@ -785,7 +766,7 @@ static int command_get_next_id()
     return command_id++;
 }
 
-int commands_issue_command(struct annotate_two *a2,
+void commands_issue_command(struct annotate_two *a2,
     enum annotate_commands command, const char *data, int oob, int *id)
 {
     struct tgdb_command *tc;
@@ -805,5 +786,4 @@ int commands_issue_command(struct annotate_two *a2,
 
     if (id)
         *id = command_id;
-    return 0;
 }

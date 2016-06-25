@@ -15,7 +15,6 @@
 /** This is the main context for the annotate two subsytem. */
 struct annotate_two
 {
-
     /**  This is set when this context has initialized itself */
     int tgdb_initialized;
 
@@ -42,12 +41,15 @@ struct annotate_two
 
     /** 
 	 * This module is used for parsing the output of gdb for annotate 2 
-	 * It is used to determine what is a gdb output and what is annotations
-	 */
+     * It is used to determine what is a gdb output and what is annotations */
     struct state_machine *sm;
 
-    /** This is a list of all the commands generated since in the last call.  */
+    /** This is a list of all the commands generated since in the last call. */
     struct tgdb_command **client_commands;
+
+    /** This is the queue of responses to tgdb commands for the front end. */
+    struct tgdb_response **responses;
+
 };
 
 #endif /* __ANNOTATE_TWO_H__ */
