@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# https://autotools.io/automake/silent.html
+#  Verbose build: make V=1
+
+# Silent make:
+#  make --no-print-directory
+
+repeat()
+{
+    str=$(printf "%40s")
+    echo ${str// /"#"}
+    echo $1
+    echo ${str// /"#"}
+}
+
+if [ ! -f config.h.in ]; then
+    repeat autogen.sh
+    CGDB_VERSION=$(git describe --tags) ./autogen.sh
+fi
+
+if [ ! -f config.h ]; then
+    repeat configure
+
+    export CC
+    export CXX
+    export CFLAGS
+    export CXXFLAGS
+    export LDFLAGS
+
+    DO_ASAN=1
+    CC=$(command -v gcc-6)
+    CXX=$(command -v g++-6)
+
+    if [[ -z "$CC" || -z "$CXX" ]]; then
+        CC=$(command -v gcc-5)
+        CXX=$(command -v g++-5)
+
+        if [[ -z "$CC" || -z "$CXX" ]]; then
+            CC=cc
+            CXX=cpp
+            DO_ASAN=
+        fi
+    fi
+
+    CFLAGS+=" -g2 -gdwarf-4 -Wall -Wextra -Wshadow"
+    if [ $DO_ASAN ]; then
+        CFLAGS+=" -Wsuggest-attribute=format -Wmissing-include-dirs"
+        CFLAGS+=" -Wno-unused-parameter"
+        CFLAGS+=" -Wno-sign-compare"
+        CFLAGS+=" -Wno-unused-but-set-variable"
+        CFLAGS+=" -Wno-unused-function"
+        CFLAGS+=" -Wno-variadic-macros"
+
+        ASAN_FLAGS=" -fno-omit-frame-pointer -fno-optimize-sibling-calls"
+        ASAN_FLAGS+=" -fsanitize=address" # fast mem error detector (heap, stack, global buffer overflow, and use-after free)
+        ASAN_FLAGS+=" -fsanitize=leak" # detect leaks
+        ASAN_FLAGS+=" -fsanitize=undefined" # fast undefined behavior detector
+        ASAN_FLAGS+=" -fsanitize=float-divide-by-zero" # detect floating-point division by zero;
+        ASAN_FLAGS+=" -fsanitize=bounds" # enable instrumentation of array bounds and detect out-of-bounds accesses;
+        ASAN_FLAGS+=" -fsanitize=object-size" # enable object size checking, detect various out-of-bounds accesses.
+    fi
+
+    CXXFLAGS+=" -std=c++98"
+    CXXFLAGS+=${CFLAGS}
+    CXXFLAGS+=${ASAN_FLAGS}
+
+    LDFLAGS+=${ASAN_FLAGS}
+
+    ./configure --enable-silent-rules
+
+    repeat "CXXFLAGS: $CXXFLAGS"
+fi
+
+repeat make
+make -s -j $(getconf _NPROCESSORS_ONLN)
+
