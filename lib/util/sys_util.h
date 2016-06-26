@@ -40,6 +40,8 @@ int log10_uint(unsigned int val);
 
 char *sys_aprintf(const char *fmt, ...) ATTRIBUTE_PRINTF(1, 2);
 
+char *sys_quote_nonprintables(char *str, int len);
+
 uint64_t sys_hexstr_to_u64(const char *line);
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -57,6 +59,9 @@ uint64_t sys_hexstr_to_u64(const char *line);
 #define sbforeach(v, arr) for ((v) = (arr); (v) < (arr) + sbcount(arr); ++(v))
 #define sbsetcount(a, n) (stb__sbmaybegrow(a, n), stb__sbn(a) = n)
 #define sbpopfront(a) (sbpush(a,*(a)), stb__shl(a), (a)[--stb__sbn(a)])
+
+void sbpushstr(char **arr, const char *str, int len);
+void sbpushstrf(char **arr, const char *fmt, ...) ATTRIBUTE_PRINTF(2, 3);
 
 #define stb__sbraw(a) ((int *)(a)-2)
 #define stb__sbm(a) stb__sbraw(a)[0]

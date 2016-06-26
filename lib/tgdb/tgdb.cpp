@@ -395,6 +395,26 @@ static int tgdb_initialize_config_dir(struct tgdb *tgdb, char *config_dir)
     return 0;
 }
 
+static int clog_open(int id, const char *fmt, const char *config_dir)
+{
+    int i;
+
+    /* Try to open a log file exclusively. This allows us to run
+     * several instances of cgdb without the logfiles getting borked. */
+    for (i = 1; i < 100; i++)
+    {
+        char filename[FSUTIL_PATH_MAX];
+
+        /* Initialize the debug file that a2_tgdb writes to */
+        snprintf(filename, sizeof(filename), fmt, config_dir, i);
+
+        if (clog_init_path(id, filename) == 0)
+            return 0;
+    }
+
+    return -1;
+}
+
 /**
  * Knowing the user's home directory, TGDB can initialize the logger interface
  *
@@ -434,6 +454,22 @@ static int tgdb_initialize_logger_interface(struct tgdb *tgdb, char *config_dir)
         printf("Error: Could not open log file\n");
         return -1;
     }
+
+    /* Open our cgdb and tgdb io logfiles */
+    //$ TODO: clog_open(CLOG_CGDB_ID, "%s/cgdb_log%d.txt", config_dir);
+    clog_open(CLOG_GDBIO_ID, "%s/a2_tgdb_debug%d.txt", config_dir);
+
+    /* Puts cgdb in a mode where it writes a debug log of everything
+     *    that is read from gdb. That is basically the entire session. This info
+     *    is useful in determining what is going on under tgdb since the gui
+     *    is good at hiding that info from the user.
+     *
+     * Change level to CLOG_ERROR to write only error messages.
+     */
+    clog_set_level(CLOG_GDBIO_ID, CLOG_DEBUG);
+
+    /* General cgdb logging */
+    //$ TODO: clog_set_level(CLOG_CGDB_ID, CLOG_DEBUG);
 
     return 0;
 }
@@ -813,7 +849,13 @@ static void tgdb_deliver_command(struct tgdb *tgdb, struct tgdb_command *command
     tgdb->is_gdb_ready_for_next_command = 0;
 
     /* Send what we're doing to log file */
-    io_debug_write_fmt(" tgdb_deliver_command: <%s>", command->gdb_command);
+    if (clog_get_level(CLOG_GDBIO_ID) <= CLOG_INFO)
+    {
+        char *str = sys_quote_nonprintables(command->gdb_command, -1);
+
+        clog_debug(CLOG_GDBIO, "<%s>", str);
+        sbfree(str);
+    }
 
     /* Here is where the command is actually given to the debugger.
      * Before this is done, if the command is a GUI command, we save it,
@@ -832,7 +874,7 @@ static void tgdb_deliver_command(struct tgdb *tgdb, struct tgdb_command *command
     io_writen(tgdb->debugger_stdin, command->gdb_command,
         strlen(command->gdb_command));
 
-/* Uncomment this if you wish to see all of the commands, that are 
+    /* Uncomment this if you wish to see all of the commands, that are
      * passed to GDB. */
 #if 1
     {

@@ -76,7 +76,6 @@ struct logger *logger_create(void)
 
 int logger_destroy(struct logger *log)
 {
-
     if (!log)
         return 0;
 
@@ -137,7 +136,6 @@ static int logger_close_writer(struct logger *log)
 
 int logger_set_file(struct logger *log, const char *file)
 {
-
     if (!log)
         return -1;
 

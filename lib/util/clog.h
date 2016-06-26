@@ -70,9 +70,18 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/file.h>
 
 /* Number of loggers that can be defined. */
 #define CLOG_MAX_LOGGERS 16
+
+/* cgdb clog IDs */
+/*   1: cgdb logging */
+#define CLOG_CGDB_ID 1
+#define CLOG_CGDB CLOG(CLOG_CGDB_ID)
+/*   2: gdb io logging (io.cpp) */
+#define CLOG_GDBIO_ID 2
+#define CLOG_GDBIO CLOG(CLOG_GDBIO_ID)
 
 /* Format strings cannot be longer than this. */
 #define CLOG_FORMAT_LENGTH 256
@@ -82,7 +91,8 @@
 #define CLOG_DATETIME_LENGTH 256
 
 /* Default format strings. */
-#define CLOG_DEFAULT_FORMAT "%d %t %f(%n): %l: %m\n"
+/* #define CLOG_DEFAULT_FORMAT "%d %t %f(%n): %l: %m\n" */
+#define CLOG_DEFAULT_FORMAT "-- %d %t %f:%n(%F) %l:%m\n"
 #define CLOG_DEFAULT_DATE_FORMAT "%Y-%m-%d"
 #define CLOG_DEFAULT_TIME_FORMAT "%H:%M:%S"
 
@@ -183,6 +193,10 @@ void clog_error( const char *sfile, int sline, const char *sfunc, int id, const 
  */
 int clog_set_level( int id, enum clog_level level );
 
+enum clog_level clog_get_level( int id );
+char *clog_get_path( int id );
+size_t clog_get_byteswritten( int id );
+
 /**
  * Set the format string used for times.  See strftime(3) for how this string
  * should be defined.  The default format string is CLOG_DEFAULT_TIME_FORMAT.
@@ -256,6 +270,12 @@ struct clog
 
     /* Tracks whether the fd needs to be closed eventually. */
     int opened;
+
+    /* Logfile pathname if opened with clog_init_path, otherwise NULL */
+    char *pathname;
+
+    /* Count of bytes written to the logfile */
+    size_t byteswritten;
 };
 
 void _clog_err( const char *fmt, ... ) ATTRIBUTE_PRINTF(1, 2);
@@ -283,12 +303,23 @@ int clog_init_path( int id, const char *const path )
         _clog_err( "Unable to open %s: %s\n", path, strerror( errno ) );
         return 1;
     }
+
+    int res = flock( fd, LOCK_EX | LOCK_NB );
+    if ( res == -1 )
+    {
+        close( fd );
+        return 2;
+    }
+
+    ftruncate( fd, 0 );
+
     if ( clog_init_fd( id, fd ) )
     {
         close( fd );
         return 1;
     }
     _clog_loggers[ id ]->opened = 1;
+    _clog_loggers[ id ]->pathname = strdup(path);
     return 0;
 }
 
@@ -312,6 +343,8 @@ int clog_init_fd( int id, int fd )
     clogger->level = CLOG_DEBUG;
     clogger->fd = fd;
     clogger->opened = 0;
+    clogger->pathname = NULL;
+    clogger->byteswritten = 0;
     strcpy( clogger->fmt, CLOG_DEFAULT_FORMAT );
     strcpy( clogger->date_fmt, CLOG_DEFAULT_DATE_FORMAT );
     strcpy( clogger->time_fmt, CLOG_DEFAULT_TIME_FORMAT );
@@ -328,6 +361,9 @@ void clog_free( int id )
         {
             close( _clog_loggers[ id ]->fd );
         }
+
+        free( _clog_loggers[ id ]->pathname );
+
         free( _clog_loggers[ id ] );
         _clog_loggers[ id ] = 0;
     }
@@ -345,6 +381,36 @@ int clog_set_level( int id, enum clog_level level )
     }
     _clog_loggers[ id ]->level = level;
     return 0;
+}
+
+enum clog_level clog_get_level( int id )
+{
+    if ( _clog_loggers[ id ] == NULL )
+    {
+        return (enum clog_level)-1;
+    }
+
+    return _clog_loggers[ id ]->level;
+}
+
+char *clog_get_path( int id )
+{
+    if ( _clog_loggers[ id ] == NULL )
+    {
+        return NULL;
+    }
+
+    return _clog_loggers[ id ]->pathname;
+}
+
+size_t clog_get_byteswritten( int id )
+{
+    if ( _clog_loggers[ id ] == NULL )
+    {
+        return 0;
+    }
+
+    return _clog_loggers[ id ]->byteswritten;
 }
 
 int clog_set_time_fmt( int id, const char *fmt )
@@ -604,6 +670,10 @@ void _clog_log( const char *sfile, int sline, const char *sfunc, enum clog_level
         if ( result == -1 )
         {
             _clog_err( "Unable to write to log file: %s\n", strerror( errno ) );
+        }
+        else
+        {
+            clogger->byteswritten += result;
         }
         if ( message != message_buf )
         {

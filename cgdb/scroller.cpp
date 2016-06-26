@@ -505,7 +505,6 @@ void scr_refresh(struct scroller *scr, int focus, enum win_refresh dorefresh)
     /* Start drawing at the bottom of the viewable space, and work our way up */
     for (nlines = 1; nlines <= height; nlines++)
     {
-
         if ((r <= scr->clear_row) && !scr->in_scroll_mode)
             r = -1;
 
