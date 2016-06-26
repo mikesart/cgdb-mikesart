@@ -11,6 +11,7 @@
  */
 
 #include "tgdb_types.h"
+#include "sys_util.h"
 /* }}}*/
 
 /* Creating and Destroying a libtgdb context. {{{*/
@@ -518,7 +519,7 @@ int tgdb_set_verbose_gui_command_output(struct tgdb *tgdb, int value);
    * 1 if option is set, otherwise 0
    */
 int tgdb_set_verbose_error_handling(struct tgdb *tgdb, int value,
-    void (*print_message)(const char *fmt, ...));
+    void (*print_message)(const char *fmt, ...) ATTRIBUTE_PRINTF(1, 2));
 
 /*@}*/
 /* }}}*/

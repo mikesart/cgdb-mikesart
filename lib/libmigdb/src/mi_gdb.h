@@ -12,9 +12,19 @@
 extern "C" {
 #endif
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h> /* pid_t */
+
+#if HAVE_ATTRIBUTE_PRINTF
+#define ATTRIBUTE_PRINTF(_x, _y) __attribute__((__format__(__printf__, _x, _y)))
+#else
+#define ATTRIBUTE_PRINTF(_x, _y)
+#endif
 
 #define MI_OK                      0
 #define MI_OUT_OF_MEMORY           1
@@ -437,7 +447,7 @@ void mi_set_from_gdb_cb(mi_h *h, stream_cb cb, void *data);
 stream_cb mi_get_to_gdb_cb(mi_h *h, void **data);
 stream_cb mi_get_from_gdb_cb(mi_h *h, void **data);
 /* Sends a message to gdb. */
-int mi_send(mi_h *h, const char *format, ...);
+int mi_send(mi_h *h, const char *format, ...) ATTRIBUTE_PRINTF(2,3);
 /* Wait until gdb sends a response. */
 mi_output *mi_get_response_blk(mi_h *h);
 /* Check if gdb sent a complete response. Use with mi_retire_response. */

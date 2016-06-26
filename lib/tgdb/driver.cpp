@@ -462,6 +462,7 @@ int main_loop(int gdbfd)
     return 0;
 }
 
+static void print_message(const char *fmt, ...) ATTRIBUTE_PRINTF(1, 2);
 static void print_message(const char *fmt, ...)
 {
     va_list ap;

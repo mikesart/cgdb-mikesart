@@ -32,7 +32,6 @@
 #include "ibuf.h"
 #include "io.h"
 #include "pseudo.h" /* SLAVE_SIZE constant */
-#include "sys_util.h"
 #include "logger.h"
 
 /* }}} */
@@ -147,7 +146,7 @@ struct tgdb
      * running. Otherwise, if it is 1, it does.  */
     int show_gui_commands;
 
-    void (*print_message)(const char *fmt, ...);
+    void (*print_message)(const char *fmt, ...) ATTRIBUTE_PRINTF(1, 2);
 
     /**
      * When GDB dies (purposely or not), the SIGCHLD is sent to the application controlling TGDB.
@@ -410,7 +409,6 @@ static int tgdb_initialize_config_dir(struct tgdb *tgdb, char *config_dir)
  */
 static int tgdb_initialize_logger_interface(struct tgdb *tgdb, char *config_dir)
 {
-
     /* Get the home directory */
     const char *tgdb_log_file = "tgdb_log.txt";
     char tgdb_log_path[FSUTIL_PATH_MAX];
