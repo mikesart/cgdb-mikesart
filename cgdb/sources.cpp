@@ -50,16 +50,15 @@
 
 /* Local Includes */
 #include "cgdb.h"
+#include "sys_util.h"
 #include "highlight.h"
 #include "sources.h"
 #include "logo.h"
-#include "sys_util.h"
 #include "fs_util.h"
 #include "cgdbrc.h"
 #include "highlight_groups.h"
 #include "tgdb_types.h"
 #include "interface.h"
-#include "logger.h"
 
 int sources_syntax_on = 1;
 
@@ -539,7 +538,7 @@ static int highlight_node(struct list_node *node)
 
                 if (hlg == HLG_LAST)
                 {
-                    logger_write_pos(logger, __FILE__, __LINE__, "Bad hlg_type for '%s', e==%d\n", tok_data.data, tok_data.e);
+                    clog_error(CLOG_CGDB, "Bad hlg_type for '%s', e==%d\n", tok_data.data, tok_data.e);
                     hlg = HLG_TEXT;
                 }
 

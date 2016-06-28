@@ -7,8 +7,6 @@
 #define ATTRIBUTE_PRINTF(_x, _y)
 #endif
 
-#include "clog.h"
-
 /* The Next three function handle reading and writing of bytes */
 
 /* io_read_byte: reads the byte c from source.

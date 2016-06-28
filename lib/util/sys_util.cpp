@@ -26,6 +26,7 @@
 #include <errno.h>
 #endif /* HAVE_ERRNO_H */
 
+#define CLOG_MAIN
 #include "sys_util.h"
 
 void *cgdb_calloc(size_t nmemb, size_t size)

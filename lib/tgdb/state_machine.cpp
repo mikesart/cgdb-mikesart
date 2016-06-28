@@ -14,12 +14,11 @@
 #include <sys/types.h>
 #endif /* HAVE_SYS_TYPES_H */
 
+#include "sys_util.h"
 #include "tgdb_types.h"
 #include "a2-tgdb.h"
 #include "state_machine.h"
 #include "commands.h"
-#include "logger.h"
-#include "sys_util.h"
 #include "ibuf.h"
 #include "mi_gdb.h"
 
@@ -432,7 +431,7 @@ void a2_parse_io(struct annotate_two *a2,
                 sm->tgdb_state = SM_NEW_LINE;
                 break;
             default:
-                logger_write_pos(logger, __FILE__, __LINE__, "Bad state transition");
+                clog_error(CLOG_CGDB, "Bad state transition");
                 break;
             } /* end switch */
             break;
@@ -457,7 +456,7 @@ void a2_parse_io(struct annotate_two *a2,
                 ibuf_addchar(sm->tgdb_buffer, data[i]);
                 break;
             default:
-                logger_write_pos(logger, __FILE__, __LINE__, "Bad state transition");
+                clog_error(CLOG_CGDB, "Bad state transition");
                 break;
             } /* end switch */
             break;
@@ -496,7 +495,7 @@ void a2_parse_io(struct annotate_two *a2,
                 break;
             }
             default:
-                logger_write_pos(logger, __FILE__, __LINE__, "Bad state transition");
+                clog_error(CLOG_CGDB, "Bad state transition");
                 break;
             } /* end switch */
             break;

@@ -92,7 +92,7 @@
 
 /* Default format strings. */
 /* #define CLOG_DEFAULT_FORMAT "%d %t %f(%n): %l: %m\n" */
-#define CLOG_DEFAULT_FORMAT "-- %d %t %f:%n(%F) %l:%m\n"
+#define CLOG_DEFAULT_FORMAT "%d %t %f:%n(%F) %l:%m\n\n"
 #define CLOG_DEFAULT_DATE_FORMAT "%Y-%m-%d"
 #define CLOG_DEFAULT_TIME_FORMAT "%H:%M:%S"
 
@@ -196,6 +196,7 @@ int clog_set_level( int id, enum clog_level level );
 enum clog_level clog_get_level( int id );
 char *clog_get_path( int id );
 size_t clog_get_byteswritten( int id );
+int clog_set_echo_to_stderr( int id, int echo_to_stderr );
 
 /**
  * Set the format string used for times.  See strftime(3) for how this string
@@ -276,6 +277,9 @@ struct clog
 
     /* Count of bytes written to the logfile */
     size_t byteswritten;
+
+    /* Echo output to stderr? */
+    int echo_to_stderr;
 };
 
 void _clog_err( const char *fmt, ... ) ATTRIBUTE_PRINTF(1, 2);
@@ -345,6 +349,7 @@ int clog_init_fd( int id, int fd )
     clogger->opened = 0;
     clogger->pathname = NULL;
     clogger->byteswritten = 0;
+    clogger->echo_to_stderr = 0;
     strcpy( clogger->fmt, CLOG_DEFAULT_FORMAT );
     strcpy( clogger->date_fmt, CLOG_DEFAULT_DATE_FORMAT );
     strcpy( clogger->time_fmt, CLOG_DEFAULT_TIME_FORMAT );
@@ -391,6 +396,16 @@ enum clog_level clog_get_level( int id )
     }
 
     return _clog_loggers[ id ]->level;
+}
+
+int clog_set_echo_to_stderr( int id, int echo_to_stderr )
+{
+    if ( _clog_loggers[ id ] == NULL )
+    {
+        return 1;
+    }
+    _clog_loggers[ id ]->echo_to_stderr = echo_to_stderr;
+    return 0;
 }
 
 char *clog_get_path( int id )
@@ -666,7 +681,12 @@ void _clog_log( const char *sfile, int sline, const char *sfunc, enum clog_level
             }
             return;
         }
+
+        if ( clogger->echo_to_stderr )
+            write( STDERR_FILENO, message, strlen( message ) );
+
         result = write( clogger->fd, message, strlen( message ) );
+
         if ( result == -1 )
         {
             _clog_err( "Unable to write to log file: %s\n", strerror( errno ) );

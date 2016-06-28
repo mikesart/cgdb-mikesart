@@ -14,12 +14,11 @@
 #include <stdio.h>
 #endif
 
+#include "sys_util.h"
 #include "a2-tgdb.h"
-#include "logger.h"
 #include "io.h"
 #include "state_machine.h"
 #include "commands.h"
-#include "sys_util.h"
 #include "ibuf.h"
 
 /* Here are the two functions that deal with getting tty information out
@@ -34,7 +33,7 @@ int a2_open_new_tty(struct annotate_two *a2, int *inferior_stdin, int *inferior_
     a2->pty_pair = pty_pair_create();
     if (!a2->pty_pair)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "pty_pair_create failed");
+        clog_error(CLOG_CGDB, "pty_pair_create failed");
         return -1;
     }
 
@@ -72,7 +71,7 @@ static int tgdb_setup_config_file(struct annotate_two *a2, const char *dir)
     }
     else
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "fopen error '%s'",
+        clog_error(CLOG_CGDB, "fopen error '%s'",
             a2->a2_gdb_init_file);
         return 0;
     }
@@ -81,7 +80,7 @@ static int tgdb_setup_config_file(struct annotate_two *a2, const char *dir)
 }
 
 struct annotate_two *a2_create_context(const char *debugger,
-    int argc, char **argv, const char *config_dir, struct logger *logger_in)
+    int argc, char **argv, const char *config_dir)
 {
     struct annotate_two *a2 = (struct annotate_two *)
         cgdb_calloc(1, sizeof(struct annotate_two));
@@ -91,8 +90,7 @@ struct annotate_two *a2_create_context(const char *debugger,
 
     if (!tgdb_setup_config_file(a2, config_dir))
     {
-        logger_write_pos(logger_in, __FILE__, __LINE__,
-            "tgdb_init_config_file error");
+        clog_error(CLOG_CGDB,  "tgdb_init_config_file error");
         return NULL;
     }
 
@@ -160,9 +158,6 @@ int a2_shutdown(struct annotate_two *a2)
     }
     sbfree(a2->client_commands);
     a2->client_commands = NULL;
-
-    clog_info(CLOG_GDBIO, "Closing logfile.");
-    clog_free(CLOG_GDBIO_ID);
     return 0;
 }
 

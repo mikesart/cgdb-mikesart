@@ -19,12 +19,11 @@
 #endif
 
 /* Local includes */
+#include "sys_util.h"
 #include "a2-tgdb.h"
 #include "commands.h"
 #include "io.h"
 #include "tgdb_types.h"
-#include "logger.h"
-#include "sys_util.h"
 #include "ibuf.h"
 #include "mi_gdb.h"
 
@@ -628,7 +627,7 @@ int commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
 
     if (!state)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
+        clog_error(CLOG_CGDB,
             "commands_process_cgdb_gdbmi state error");
         return -1;
     }
@@ -654,7 +653,7 @@ int commands_process_cgdb_gdbmi(struct annotate_two *a2, struct ibuf *buf,
         ;
     else
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
+        clog_error(CLOG_CGDB,
             "commands_process_cgdb_gdbmi error");
         return -1;
     }
@@ -727,7 +726,7 @@ static char *create_gdb_command(enum annotate_commands com,
         cmd = sys_aprintf("complete %s", data);
         break;
     default:
-        logger_write_pos(logger, __FILE__, __LINE__, "switch error");
+        clog_error(CLOG_CGDB, "switch error");
         break;
     };
 

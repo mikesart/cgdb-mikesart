@@ -7,8 +7,6 @@ libcgdbutil_a_SOURCES = \
     fs_util.h \
     io.cpp \
     io.h \
-    logger.cpp \
-    logger.h \
     pseudo.cpp \
     pseudo.h \
     sys_util.cpp \

@@ -19,6 +19,8 @@
 #define ATTRIBUTE_PRINTF(_x, _y)
 #endif
 
+#include "clog.h"
+
 /* These are wrappers for the memory management functions
  * If a memory allocation fails cgdb will exit
  * They act identical to the POSIX calls

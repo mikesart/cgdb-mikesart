@@ -1,5 +1,5 @@
-#include "tgdb_list.h"
 #include "sys_util.h"
+#include "tgdb_list.h"
 
 struct tgdb_list_node
 {

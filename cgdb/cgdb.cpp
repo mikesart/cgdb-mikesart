@@ -79,7 +79,7 @@
 
 /* Local Includes */
 #include "cgdb.h"
-#include "logger.h"
+#include "sys_util.h"
 #include "interface.h"
 #include "scroller.h"
 #include "sources.h"
@@ -94,7 +94,6 @@
 #include "rline.h"
 #include "ibuf.h"
 #include "usage.h"
-#include "sys_util.h"
 
 /* --------- */
 /* Constants */
@@ -469,8 +468,7 @@ static int tab_completion(int a, int b)
 
     ret = rline_get_current_line(rline, &cur_line);
     if (ret == -1)
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "rline_get_current_line error\n");
+        clog_error(CLOG_CGDB, "rline_get_current_line error\n");
 
     tgdb_request_complete(tgdb, cur_line);
     return 0;
@@ -693,12 +691,10 @@ readline_completion_display_func(char **matches, int num_matches,
     /* Create the tab completion item, and attempt to display it to the user */
     completion_ptr = tab_completion_create(matches, num_matches, max_length);
     if (!completion_ptr)
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "tab_completion_create error\n");
+        clog_error(CLOG_CGDB, "tab_completion_create error\n");
 
     if (handle_tab_completion_request(completion_ptr, -1) == -1)
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "handle_tab_completion_request error\n");
+        clog_error(CLOG_CGDB, "handle_tab_completion_request error\n");
 }
 
 int do_tab_completion(char **completions)
@@ -708,8 +704,7 @@ int do_tab_completion(char **completions)
     ret = rline_rl_complete(rline, completions, &readline_completion_display_func);
     if (ret == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "rline_rl_complete error\n");
+        clog_error(CLOG_CGDB, "rline_rl_complete error\n");
         return -1;
     }
 
@@ -857,8 +852,7 @@ static int init_home_dir(void)
     /* Create the config directory */
     if (!fs_util_create_dir_in_base(home_dir, cgdb_dir))
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "fs_util_create_dir_in_base error");
+        clog_error(CLOG_CGDB, "fs_util_create_dir_in_base error");
         return -1;
     }
 
@@ -876,10 +870,6 @@ static int start_gdb(int argc, char *argv[])
     if (tgdb == NULL)
         return -1;
 
-#if 0
-    tgdb_set_verbose_error_handling(tgdb, 0, if_print_message);
-#endif
-
     return 0;
 }
 
@@ -892,10 +882,10 @@ static void send_key(int focus, char key)
 
         masterfd = pty_pair_get_masterfd(pty_pair);
         if (masterfd == -1)
-            logger_write_pos(logger, __FILE__, __LINE__, "send_key error");
+            clog_error(CLOG_CGDB, "send_key error");
         size = write(masterfd, &key, sizeof(char));
         if (size != 1)
-            logger_write_pos(logger, __FILE__, __LINE__, "send_key error");
+            clog_error(CLOG_CGDB, "send_key error");
     }
     else if (focus == 2)
     {
@@ -917,7 +907,7 @@ static int user_input(void)
     val = kui_manager_clear_map_sets(kui_ctx);
     if (val == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "user_input error");
+        clog_error(CLOG_CGDB, "user_input error");
         return -1;
     }
 
@@ -929,8 +919,7 @@ static int user_input(void)
     key = kui_manager_getkey(kui_ctx);
     if (key == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "kui_manager_getkey error");
+        clog_error(CLOG_CGDB, "kui_manager_getkey error");
         return -1;
     }
 
@@ -938,7 +927,7 @@ static int user_input(void)
 
     if (val == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "if_input error");
+        clog_error(CLOG_CGDB, "if_input error");
         return -1;
     }
     else if (val != 1 && val != 2)
@@ -954,7 +943,7 @@ static int user_input(void)
 
         if (seqbuf == NULL)
         {
-            logger_write_pos(logger, __FILE__, __LINE__,
+            clog_error(CLOG_CGDB,
                 "kui_term_get_ascii_char_sequence_from_key error %d", key);
             return -1;
         }
@@ -997,8 +986,7 @@ static int user_input_loop()
 
         if (user_input() == -1)
         {
-            logger_write_pos(logger, __FILE__, __LINE__,
-                "user_input_loop failed");
+            clog_error(CLOG_CGDB, "user_input_loop failed");
             return -1;
         }
     } while (kui_manager_cangetkey(kui_ctx));
@@ -1250,8 +1238,7 @@ static void process_commands(struct tgdb *tgdb_in)
             update_prompt(&item->choice.update_console_prompt_value);
             break;
         case TGDB_QUIT:
-            cgdb_cleanup();
-            exit(0);
+            cgdb_cleanup_and_exit(0);
             break;
         default:
             break;
@@ -1273,8 +1260,7 @@ static int tgdb_input()
     size = tgdb_process(tgdb, buf, GDB_MAXBUF, &is_finished);
     if (size == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "tgdb_recv_debugger_data error");
+        clog_error(CLOG_CGDB, "tgdb_recv_debugger_data error");
         return -1;
     }
 
@@ -1361,15 +1347,14 @@ static int readline_input()
 
     if (masterfd == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "pty_pair_get_masterfd error");
+        clog_error(CLOG_CGDB, "pty_pair_get_masterfd error");
         return -1;
     }
 
     size = read(masterfd, buf, GDB_MAXBUF);
     if (size == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "read error");
+        clog_error(CLOG_CGDB, "read error");
         return -1;
     }
 
@@ -1399,8 +1384,7 @@ static ssize_t child_input()
     size = tgdb_recv_inferior_data(tgdb, buf, GDB_MAXBUF);
     if (size == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "tgdb_recv_inferior_data error ");
+        clog_error(CLOG_CGDB, "tgdb_recv_inferior_data error ");
         return -1;
     }
     buf[size] = 0;
@@ -1416,7 +1400,7 @@ static int cgdb_resize_term(int fd)
 
     if (read(fd, &c, sizeof(int)) < sizeof(int))
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "read from resize pipe");
+        clog_error(CLOG_CGDB, "read from resize pipe");
         return -1;
     }
 
@@ -1427,7 +1411,7 @@ static int cgdb_resize_term(int fd)
     result = io_data_ready(fd, 0);
     if (result == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "io_data_ready");
+        clog_error(CLOG_CGDB, "io_data_ready");
         return -1;
     }
 
@@ -1436,7 +1420,7 @@ static int cgdb_resize_term(int fd)
 
     if (if_resize_term() == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "if_resize_term error");
+        clog_error(CLOG_CGDB, "if_resize_term error");
         return -1;
     }
 
@@ -1462,7 +1446,7 @@ static int cgdb_handle_signal_in_main_loop(int fd)
 
     if (read(fd, &signo, sizeof(int)) < sizeof(int))
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "read from signal pipe");
+        clog_error(CLOG_CGDB, "read from signal pipe");
         return -1;
     }
 
@@ -1485,16 +1469,14 @@ static int main_loop(void)
     masterfd = pty_pair_get_masterfd(pty_pair);
     if (masterfd == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "pty_pair_get_masterfd error");
+        clog_error(CLOG_CGDB, "pty_pair_get_masterfd error");
         return -1;
     }
 
     slavefd = pty_pair_get_slavefd(pty_pair);
     if (slavefd == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "pty_pair_get_slavefd error");
+        clog_error(CLOG_CGDB, "pty_pair_get_slavefd error");
         return -1;
     }
 
@@ -1547,8 +1529,7 @@ static int main_loop(void)
                 continue;
             else
             {
-                logger_write_pos(logger, __FILE__, __LINE__,
-                    "select failed: %s", strerror(errno));
+                clog_error(CLOG_CGDB, "select failed: %s", strerror(errno));
                 return -1;
             }
         }
@@ -1650,12 +1631,11 @@ static int main_loop(void)
 /* Exposed Functions */
 /* ----------------- */
 
-/* cgdb_cleanup: Invoked by the various err_xxx funtions when dying.
+/* cgdb_cleanup_and_exit: Invoked by the various err_xxx funtions when dying.
  * -------- */
-void cgdb_cleanup()
+void cgdb_cleanup_and_exit(int val)
 {
-    char *log_file, *tmp_log_file;
-    int has_recv_data;
+    size_t log_bytes_written;
 
     ibuf_free(current_line);
 
@@ -1683,29 +1663,33 @@ void cgdb_cleanup()
      * TGDB guarantees the logger to be open at this point.
      * So, we can get the filename directly from the logger 
      */
-    logger_get_file(logger, &tmp_log_file);
-    log_file = strdup(tmp_log_file);
-    logger_has_recv_data(logger, &has_recv_data);
 
     /* Shut down debugger */
     tgdb_shutdown(tgdb);
 
     if (tty_set_attributes(STDIN_FILENO, &term_attributes) == -1)
-        logger_write_pos(logger, __FILE__, __LINE__, "tty_reset error");
+        clog_error(CLOG_CGDB, "tty_reset error");
 
-    if (has_recv_data)
+    log_bytes_written = clog_get_byteswritten(CLOG_CGDB_ID);
+    if (log_bytes_written)
+    {
+        char *logfile = clog_get_path(CLOG_CGDB_ID);
+
         fprintf(stderr, "CGDB had unexpected results, see %s for details.\n",
-            log_file);
+            logfile);
+    }
 
-    free(log_file);
-    log_file = NULL;
+    /* Close our logfiles */
+    tgdb_close_logfiles();
+
+    exit(val);
 }
 
 int init_resize_pipe(void)
 {
     if (pipe(resize_pipe) == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "pipe error");
+        clog_error(CLOG_CGDB, "pipe error");
         return -1;
     }
 
@@ -1718,7 +1702,7 @@ int init_signal_pipe(void)
 
     if (result == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "pipe error");
+        clog_error(CLOG_CGDB, "pipe error");
     }
 
     return result;
@@ -1767,8 +1751,7 @@ int create_and_init_pair()
     slavefd = pty_pair_get_slavefd(pty_pair);
     if (slavefd == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "pty_pair_get_slavefd error");
+        clog_error(CLOG_CGDB, "pty_pair_get_slavefd error");
         return -1;
     }
 
@@ -1830,36 +1813,28 @@ int init_kui(void)
         cgdbrc_get_mapped_key_timeoutlen());
     if (!kui_ctx)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "Unable to initialize input library");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "Unable to initialize input library");
+        cgdb_cleanup_and_exit(-1);
     }
 
     kui_map = kui_ms_create();
     if (!kui_map)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "Unable to initialize input library");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "Unable to initialize input library");
+        cgdb_cleanup_and_exit(-1);
     }
 
     kui_imap = kui_ms_create();
     if (!kui_imap)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "Unable to initialize input library");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "Unable to initialize input library");
+        cgdb_cleanup_and_exit(-1);
     }
 
     if (kui_manager_add_map_set(kui_ctx, kui_map) == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "Unable to initialize input library");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "Unable to initialize input library");
+        cgdb_cleanup_and_exit(-1);
     }
 
     /* Combine the cgdbrc config package with libkui. If any of the options
@@ -1942,31 +1917,26 @@ int main(int argc, char *argv[])
     /* Create the home directory */
     if (init_home_dir() == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "Unable to create home dir ~/.cgdb");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "Unable to create home dir ~/.cgdb");
+        cgdb_cleanup_and_exit(-1);
     }
 
     if (init_readline() == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "Unable to init readline");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "Unable to init readline");
+        cgdb_cleanup_and_exit(-1);
     }
 
     if (tty_cbreak(STDIN_FILENO, &term_attributes) == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "tty_cbreak error");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "tty_cbreak error");
+        cgdb_cleanup_and_exit(-1);
     }
 
     if (init_kui() == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "init_kui error");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "init_kui error");
+        cgdb_cleanup_and_exit(-1);
     }
 
     /* Parse the cgdbrc file. Note that we are doing this before
@@ -1980,47 +1950,36 @@ int main(int argc, char *argv[])
     switch (if_init())
     {
     case 1:
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "Unable to initialize the curses library");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "Unable to initialize the curses library");
+        cgdb_cleanup_and_exit(-1);
     case 2:
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "Unable to handle signal: SIGWINCH");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "Unable to handle signal: SIGWINCH");
+        cgdb_cleanup_and_exit(-1);
     case 3:
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "Unable to setup highlighting groups");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "Unable to setup highlighting groups");
+        cgdb_cleanup_and_exit(-1);
     case 4:
-        logger_write_pos(logger, __FILE__, __LINE__,
-            "New GDB window failed -- out of memory?");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "New GDB window failed -- out of memory?");
+        cgdb_cleanup_and_exit(-1);
     }
 
     /* Initialize the pipe that is used for resize */
     if (init_resize_pipe() == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "init_resize_pipe error");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "init_resize_pipe error");
+        cgdb_cleanup_and_exit(-1);
     }
 
     /* Initialize the pipe that is used for signals */
     if (init_signal_pipe() == -1)
     {
-        logger_write_pos(logger, __FILE__, __LINE__, "init_signal_pipe error");
-        cgdb_cleanup();
-        exit(-1);
+        clog_error(CLOG_CGDB, "init_signal_pipe error");
+        cgdb_cleanup_and_exit(-1);
     }
 
     /* Enter main loop */
     main_loop();
 
     /* Shut down curses and exit */
-    cgdb_cleanup();
-    return 0;
+    cgdb_cleanup_and_exit(0);
 }
