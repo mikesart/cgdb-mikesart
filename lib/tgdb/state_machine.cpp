@@ -181,6 +181,18 @@ handle_frame_end(struct annotate_two *a2, const char *buf, size_t n)
 {
     /* set up the info_source command to get file info */
     commands_issue_command(a2, ANNOTATE_INFO_FRAME, NULL, 1, NULL);
+
+    /* Clear the frames-invalid marker, inferior is still alive. */
+    a2->got_frames_invalid_annotation = 0;
+    return 0;
+}
+
+/* frames-invalid: This can happen when you "kill" the debugged process. */
+static int
+handle_frames_invalid(struct annotate_two *a2, const char *buf, size_t n)
+{
+    /* set up the info_source command to get file info */
+    a2->got_frames_invalid_annotation = 1;
     return 0;
 }
 
@@ -219,6 +231,12 @@ handle_misc_post_prompt(struct annotate_two *a2, const char *buf, size_t n)
 static int
 handle_pre_prompt(struct annotate_two *a2, const char *buf, size_t n)
 {
+    if (a2->got_frames_invalid_annotation)
+    {
+        commands_issue_command(a2, ANNOTATE_INFO_FRAME, NULL, 1, NULL);
+        a2->got_frames_invalid_annotation = 0;
+    }
+
     data_set_state(a2, AT_PROMPT);
     return 0;
 }
@@ -304,7 +322,7 @@ static struct annotation
     { "cgdb-gdbmi", 10, handle_cgdb_gdbmi },
     { "breakpoints-invalid", 19, handle_breakpoints_invalid },
     { "frame-end", 9, handle_frame_end },
-    { "frames-invalid", 14, handle_frame_end },
+    { "frames-invalid", 14, handle_frames_invalid },
     { "pre-commands", 12, handle_misc_pre_prompt },
     { "commands", 8, handle_misc_prompt },
     { "post-commands", 13, handle_misc_post_prompt },

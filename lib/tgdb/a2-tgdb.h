@@ -48,6 +48,14 @@ struct annotate_two
     /** This is the queue of responses to tgdb commands for the front end. */
     struct tgdb_response **responses;
 
+    /** Kill command sends frames-invalid annotation only.
+     * Regular commands send multiple frames-invalid, then frame-end.
+     *
+     * So this gets set to true if we see a frames-invalid, and gets cleared
+     * when we get the frame-end. If we see this set when we're at
+     * the prompt, we should issue a ANNOTATE_INFO_FRAME to see if the
+     * inferior is still running. */
+    int got_frames_invalid_annotation;
 };
 
 /**  
