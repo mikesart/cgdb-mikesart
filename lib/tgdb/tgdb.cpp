@@ -370,18 +370,20 @@ static struct tgdb *initialize_tgdb_context(void)
  */
 static int tgdb_initialize_config_dir(struct tgdb *tgdb, char *config_dir)
 {
-    /* Get the home directory */
+    char cgdb_dir[FSUTIL_PATH_MAX];
     char *home_dir = getenv("HOME");
-    const char *tgdb_dir = ".tgdb";
 
-    /* Create the config directory */
-    if (!fs_util_create_dir_in_base(home_dir, tgdb_dir))
+    /* Make sure the toplevel .cgdb dir exists */
+    snprintf(cgdb_dir, sizeof(cgdb_dir), "%s/.cgdb", home_dir);
+    fs_util_create_dir(cgdb_dir);
+
+    /* Try to create full .cgdb/logs directory */
+    snprintf(config_dir, FSUTIL_PATH_MAX, "%s/.cgdb/logs", home_dir);
+    if (!fs_util_create_dir(config_dir))
     {
         clog_error(CLOG_CGDB, "fs_util_create_dir_in_base error");
         return -1;
     }
-
-    fs_util_get_path(home_dir, tgdb_dir, config_dir);
 
     return 0;
 }
@@ -422,7 +424,7 @@ static int tgdb_initialize_logger_interface(struct tgdb *tgdb, char *config_dir)
 {
     /* Open our cgdb and tgdb io logfiles */
     clog_open(CLOG_CGDB_ID, "%s/cgdb_log%d.txt", config_dir);
-    clog_open(CLOG_GDBIO_ID, "%s/a2_tgdb_debug%d.txt", config_dir);
+    clog_open(CLOG_GDBIO_ID, "%s/cgdb_gdb_io_log%d.txt", config_dir);
 
     /* Puts cgdb in a mode where it writes a debug log of everything
      *    that is read from gdb. That is basically the entire session. This info

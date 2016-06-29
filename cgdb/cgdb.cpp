@@ -842,7 +842,6 @@ static void parse_long_options(int *argc, char ***argv)
  *
  * Return:  0 on success or -1 on error
  */
-
 static int init_home_dir(void)
 {
     /* Get the home directory */
@@ -857,7 +856,6 @@ static int init_home_dir(void)
     }
 
     fs_util_get_path(home_dir, cgdb_dir, cgdb_home_dir);
-
     return 0;
 }
 
