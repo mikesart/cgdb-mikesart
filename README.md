@@ -22,6 +22,8 @@ Please let us know if you try any of the below and run into any issues or have a
 - Add support for <digits>j, <digits>k source movement
 - Color logos. Woot! :)
 - Pull Armin Widegreen's rust syntax highlighting patch
+- Show disassembly when no source is available
+- Add ":set [no]dis" command to toggle source / disassembly
 
 ### Minor tweaks / bug fixes
 - update configure version number
@@ -45,6 +47,11 @@ Please let us know if you try any of the below and run into any issues or have a
 - fix several spelling, grammar mistakes
 - switch several malloc calls to cgdb_malloc
 - check file existence before adding to file dialog
+- fix several flashing issues
+- display exit code in status bar when inferior exits
+- clean up log file output
+- move log files to ~/.cgdb/logs
+- check for kill command and hide executing marker
 
 CGDB
 ====
