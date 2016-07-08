@@ -46,6 +46,11 @@ struct scroller
         int c;   /* Current column number */
         int pos; /* Cursor position in last line */
     } current;
+
+    int in_search_mode;
+    struct hl_regex_info *hlregex;
+    int regex_is_searching;
+    int search_r;
     WINDOW *win; /* The scoller's own window */
 };
 
@@ -130,5 +135,9 @@ void scr_move(struct scroller *scr,
  *   focus:  If the window has focus
  */
 void scr_refresh(struct scroller *scr, int focus, enum win_refresh dorefresh);
+
+void scr_search_regex_init(struct scroller *scr);
+int scr_search_regex(struct scroller *scr, const char *regex, int opt,
+    int direction, int icase);
 
 #endif

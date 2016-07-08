@@ -36,6 +36,7 @@
 #include "cgdbrc.h"
 #include "highlight_groups.h"
 #include "scroller.h"
+#include "highlight.h"
 
 /* --------------- */
 /* Local Functions */
@@ -231,6 +232,11 @@ struct scroller *scr_new(int pos_r, int pos_c, int height, int width)
     rv->last_tty_attr = -1;
     rv->win = newwin(height, width, pos_r, pos_c);
 
+    rv->in_search_mode = 0;
+    rv->hlregex = NULL;
+    rv->regex_is_searching = 0;
+    rv->search_r = 0;
+
     /* Start with a single (blank) line */
     rv->lines = NULL;
     scroller_addline(rv, strdup(""), NULL, 0);
@@ -250,6 +256,10 @@ void scr_free(struct scroller *scr)
     sbfree(scr->lines);
     scr->lines = NULL;
 
+    hl_regex_free(&scr->hlregex);
+    scr->hlregex = NULL;
+    scr->regex_is_searching = 0;
+
     free(scr->last_tty_line);
     scr->last_tty_line = NULL;
 
@@ -260,87 +270,65 @@ void scr_free(struct scroller *scr)
     free(scr);
 }
 
-void scr_up(struct scroller *scr, int nlines)
+static int get_last_col(struct scroller *scr, int row)
 {
-    int height, width;
-    int length;
+    int width = getmaxx(scr->win);
+
+    return (MAX(scr->lines[row].line_len - 1, 0) / width) * width;
+}
+
+static void scr_scroll_lines(struct scroller *scr, int *r, int *c, int nlines)
+{
     int i;
+    int width = getmaxx(scr->win);
+    int row = *r;
+    int col = (*c / width) * width;
+    int amt = (nlines < 0) ? -width : width;
 
-    scr->in_scroll_mode = 1;
-
-    /* Sanity check */
-    getmaxyx(scr->win, height, width);
-    if (scr->current.c > 0)
-    {
-        if (scr->current.c % width != 0)
-            scr->current.c = (scr->current.c / width) * width;
-    }
+    if (nlines < 0)
+        nlines = -nlines;
 
     for (i = 0; i < nlines; i++)
     {
-        /* If current column is positive, drop it by 'width' */
-        if (scr->current.c > 0)
-            scr->current.c -= width;
+        col += amt;
 
-        /* Else, decrease the current row number, and set column accordingly */
-        else
+        if (col < 0)
         {
-            if (scr->current.r > 0)
-            {
-                scr->current.r--;
-                if ((length = strlen(scr->lines[scr->current.r].line)) > width)
-                    scr->current.c = ((length - 1) / width) * width;
-            }
-            else
-            {
-                /* At top */
+            if (row <= 0)
                 break;
-            }
+
+            row--;
+            col = get_last_col(scr, row);
         }
+        else if (col >= scr->lines[row].line_len)
+        {
+            if (row >= sbcount(scr->lines) - 1)
+                break;
+
+            row++;
+            col = 0;
+        }
+
+        *r = row;
+        *c = col;
     }
+}
+
+void scr_up(struct scroller *scr, int nlines)
+{
+    scr->in_scroll_mode = 1;
+
+    scr_scroll_lines(scr, &scr->current.r, &scr->current.c, -nlines);
 }
 
 void scr_down(struct scroller *scr, int nlines)
 {
-    int height, width;
-    int length;
-    int i;
-
     int at_bottom = (scr->current.r == (sbcount(scr->lines) - 1));
+
     if (at_bottom)
         scr->in_scroll_mode = 0;
 
-    /* Sanity check */
-    getmaxyx(scr->win, height, width);
-    if (scr->current.c > 0)
-    {
-        if (scr->current.c % width != 0)
-            scr->current.c = (scr->current.c / width) * width;
-    }
-
-    for (i = 0; i < nlines; i++)
-    {
-        /* If the current line wraps to the next, then advance column number */
-        length = strlen(scr->lines[scr->current.r].line);
-        if (scr->current.c < length - width)
-            scr->current.c += width;
-
-        /* Otherwise, advance row number, and set column number to 0. */
-        else
-        {
-            if (scr->current.r < sbcount(scr->lines) - 1)
-            {
-                scr->current.r++;
-                scr->current.c = 0;
-            }
-            else
-            {
-                /* At bottom */
-                at_bottom = 1;
-                break;
-            }
-        }
-    }
+    scr_scroll_lines(scr, &scr->current.r, &scr->current.c, nlines);
 }
 
 void scr_home(struct scroller *scr)
@@ -353,12 +341,8 @@ void scr_home(struct scroller *scr)
 
 void scr_end(struct scroller *scr)
 {
-    int height, width;
-
-    getmaxyx(scr->win, height, width);
-
     scr->current.r = sbcount(scr->lines) - 1;
-    scr->current.c = (strlen(scr->lines[scr->current.r].line) / width) * width;
+    scr->current.c = get_last_col(scr, scr->current.r);
 
     scr->in_scroll_mode = 0;
 }
@@ -380,12 +364,13 @@ static void scr_add_buf(struct scroller *scr, const char *buf, int tty)
         {
             int index = sbcount(scr->lines) - 1;
             char *orig = scr->lines[index].line;
+            int orig_len = scr->lines[index].line_len;
 
             if ((scr->last_tty_attr != -1) && (tty != scr->lines[index].tty))
             {
                 struct hl_line_attr attr;
 
-                attr.col = strlen(orig);
+                attr.col = orig_len;
                 if (tty)
                 {
                     attr.attr = scr->last_tty_attr;
@@ -457,7 +442,8 @@ void scr_add(struct scroller *scr, const char *buf, int tty)
         else
         {
             /* Combine this tty line with previous tty line */
-            tempbuf = (char *)cgdb_realloc(scr->last_tty_line, strlen(scr->last_tty_line) + strlen(buf) + 1);
+            tempbuf = (char *)cgdb_realloc(scr->last_tty_line,
+                strlen(scr->last_tty_line) + strlen(buf) + 1);
             strcat(tempbuf, buf);
             buf = tempbuf;
         }
@@ -479,12 +465,86 @@ void scr_move(struct scroller *scr, int pos_r, int pos_c, int height, int width)
     werase(scr->win);
 }
 
+void scr_search_regex_init(struct scroller *scr)
+{
+    scr->in_search_mode = 1;
+
+    /* Start searching at the beginning of the selected line */
+    scr->search_r = scr->current.r;
+}
+
+static int wrap_line(struct scroller *scr, int line)
+{
+    int count = sbcount(scr->lines);
+
+    if (line < 0)
+        line = count - 1;
+    else if (line >= count)
+        line = 0;
+
+    return line;
+}
+
+int scr_search_regex(struct scroller *scr, const char *regex, int opt,
+    int direction, int icase)
+{
+    /* If we've got a regex, store the opt value:
+     *   1: searching
+     *   2: done searching
+     */
+    scr->regex_is_searching = (regex && regex[0]) ? opt : 0;
+
+    if (scr->regex_is_searching)
+    {
+        int line;
+        int line_end;
+        int line_inc = direction ? +1 : -1;
+        int line_start = scr->search_r;
+
+        line = wrap_line(scr, line_start + line_inc);
+
+        if (cgdbrc_get_int(CGDBRC_WRAPSCAN))
+            line_end = line_start;
+        else
+            line_end = direction ? sbcount(scr->lines) : -1;
+
+        for (;;)
+        {
+            int ret;
+            int start, end;
+            char *line_str = scr->lines[line].line;
+
+            ret = hl_regex_search(&scr->hlregex, line_str, regex, icase, &start, &end);
+            if (ret > 0)
+            {
+                /* Got a match */
+                scr->current.r = line;
+                scr->current.c = get_last_col(scr, line);
+
+                /* Finalized match - move to this location */
+                if (opt == 2)
+                    scr->search_r = line;
+                return 1;
+            }
+
+            line = wrap_line(scr, line + line_inc);
+            if (line == line_end)
+                break;
+        }
+    }
+
+    /* Nothing found - go back to original line */
+    scr->current.r = scr->search_r;
+    scr->current.c = get_last_col(scr, scr->search_r);
+    return 0;
+}
+
 void scr_refresh(struct scroller *scr, int focus, enum win_refresh dorefresh)
 {
     int length;        /* Length of current line */
     int nlines;        /* Number of lines written so far */
-    int r;             /* Current row in scroller */
-    int c;             /* Current column in row */
+    int row;           /* Current row in scroller */
+    int col;           /* Current column in row */
     int width, height; /* Width and height of window */
     int highlight_attr;
 
@@ -494,38 +554,53 @@ void scr_refresh(struct scroller *scr, int focus, enum win_refresh dorefresh)
     /* Sanity check */
     getmaxyx(scr->win, height, width);
 
-    if (scr->current.c > 0)
-    {
-        if (scr->current.c % width != 0)
-            scr->current.c = (scr->current.c / width) * width;
-    }
-    r = scr->current.r;
-    c = scr->current.c;
+    scr->current.c = (scr->current.c / width) * width;
+
+    row = scr->current.r;
+    col = scr->current.c;
 
     /* Start drawing at the bottom of the viewable space, and work our way up */
     for (nlines = 1; nlines <= height; nlines++)
     {
-        if ((r <= scr->clear_row) && !scr->in_scroll_mode)
-            r = -1;
+        if ((row <= scr->clear_row) && !scr->in_scroll_mode)
+            row = -1;
 
         /* Print the current line [segment] */
-        if (r >= 0)
+        if (row >= 0)
         {
-            struct scroller_line *sline = &scr->lines[r];
+            struct scroller_line *sline = &scr->lines[row];
 
-            hl_printline(scr->win, sline->line, sline->line_len, sline->attrs, 0, height - nlines, c, width);
+            hl_printline(scr->win, sline->line, sline->line_len, sline->attrs,
+                0, height - nlines, col, width);
+
+            /* If we're searching right now or we finished search and have focus... */
+            if ((scr->regex_is_searching == 1) || (scr->regex_is_searching == 2 && focus))
+            {
+                struct hl_line_attr *attrs;
+
+                attrs = hl_regex_highlight(&scr->hlregex, sline->line);
+
+                if (sbcount(attrs))
+                {
+                    hl_printline_highlight(scr->win, sline->line, sline->line_len,
+                        attrs, 0, height - nlines, col, width);
+                    sbfree(attrs);
+                }
+            }
 
             /* Update our position */
-            if (c >= width)
-                c -= width;
+            if (col >= width)
+            {
+                col -= width;
+            }
             else
             {
-                r--;
-                if (r >= 0)
+                row--;
+                if (row >= 0)
                 {
-                    length = scr->lines[r].line_len;
+                    length = scr->lines[row].line_len;
                     if (length > width)
-                        c = ((length - 1) / width) * width;
+                        col = ((length - 1) / width) * width;
                 }
             }
         }

@@ -156,7 +156,7 @@ enum StatusBarCommandKind
     SBC_REGEX
 };
 
-static enum StatusBarCommandKind sbc_kind;
+static enum StatusBarCommandKind sbc_kind = SBC_NORMAL;
 
 /* --------------- */
 /* Local Functions */
@@ -435,13 +435,13 @@ static void update_status_win(enum win_refresh dorefresh)
         wattroff(tty_status_win, attr);
 
     /* Print the regex that the user is looking for Forward */
-    if (focus == CGDB_STATUS_BAR && sbc_kind == SBC_REGEX && regex_direction_cur)
+    if (/*focus == CGDB_STATUS_BAR &&*/ sbc_kind == SBC_REGEX && regex_direction_cur)
     {
         if_display_message("/", dorefresh, WIDTH - 1, "%s", ibuf_get(regex_cur));
         curs_set(1);
     }
     /* Regex backwards */
-    else if (focus == CGDB_STATUS_BAR && sbc_kind == SBC_REGEX)
+    else if (/*focus == CGDB_STATUS_BAR &&*/ sbc_kind == SBC_REGEX)
     {
         if_display_message("?", dorefresh, WIDTH - 1, "%s", ibuf_get(regex_cur));
         curs_set(1);
@@ -971,6 +971,90 @@ static int tty_input(int key)
     return 0;
 }
 
+/**
+ * Capture a regular expression from the user, one key at a time.
+ * This modifies the global variables regex_cur and regex_last.
+ *
+ * \param sview
+ * The source viewer.
+ *
+ * \return
+ * 0 if user gave a regex, otherwise 1.
+ */
+static int gdb_input_regex_input(struct scroller *scr, int key)
+{
+    int regex_icase = cgdbrc_get_int(CGDBRC_IGNORECASE);
+
+    /* Flag to indicate we're done with regex mode, need to switch back */
+    int done = 0;
+
+    /* Receive a regex from the user. */
+    switch (key)
+    {
+    case '\r':
+    case '\n':
+    case CGDB_KEY_CTRL_M:
+        /* Save for future searches via 'n' or 'N' */
+        ibuf_free(regex_last);
+        regex_last = ibuf_dup(regex_cur);
+
+        regex_direction_last = regex_direction_cur;
+        scr_search_regex(scr, ibuf_get(regex_last), 2,
+            regex_direction_last, regex_icase);
+        if_draw();
+        done = 1;
+        break;
+    case 8:
+    case 127:
+        /* Backspace or DEL key */
+        if (ibuf_length(regex_cur) == 0)
+        {
+            done = 1;
+            scr_search_regex(scr, "", 2,
+                regex_direction_cur, regex_icase);
+        }
+        else
+        {
+            ibuf_delchar(regex_cur);
+            scr_search_regex(scr, ibuf_get(regex_cur), 1,
+                regex_direction_cur, regex_icase);
+            if_draw();
+            update_status_win(WIN_REFRESH);
+        }
+        break;
+    default:
+        if (kui_term_is_cgdb_key(key))
+        {
+            const char *keycode = kui_term_get_keycode_from_cgdb_key(key);
+            int length = strlen(keycode), i;
+
+            for (i = 0; i < length; i++)
+                ibuf_addchar(regex_cur, keycode[i]);
+        }
+        else
+        {
+            ibuf_addchar(regex_cur, key);
+        }
+        scr_search_regex(scr, ibuf_get(regex_cur), 1,
+            regex_direction_cur, regex_icase);
+        if_draw();
+        update_status_win(WIN_REFRESH);
+    };
+
+    if (done)
+    {
+        gdb_win->in_search_mode = 0;
+
+        ibuf_free(regex_cur);
+        regex_cur = NULL;
+
+        sbc_kind = SBC_NORMAL;
+        if_set_focus(GDB);
+    }
+
+    return 0;
+}
+
 /* gdb_input: Handles user input to the GDB window.
  * ----------
  *
@@ -982,6 +1066,11 @@ static int tty_input(int key)
  */
 static int gdb_input(int key)
 {
+    if (gdb_win->in_search_mode)
+        return gdb_input_regex_input(gdb_win, key);
+
+    int key_handled = 1;
+
     /* Handle special keys */
     switch (key)
     {
@@ -992,33 +1081,6 @@ static int gdb_input(int key)
         scr_down(gdb_win, get_gdb_height() - 1);
         break;
 
-    case CGDB_KEY_HOME:
-        if (!gdb_win->in_scroll_mode)
-            return 1;
-    case CGDB_KEY_F11:
-        scr_home(gdb_win);
-        break;
-
-    case CGDB_KEY_END:
-        if (!gdb_win->in_scroll_mode)
-            return 1;
-    case CGDB_KEY_F12:
-        scr_end(gdb_win);
-        break;
-
-    case CGDB_KEY_UP:
-    case CGDB_KEY_CTRL_P:
-        if (!gdb_win->in_scroll_mode)
-            return 1;
-        scr_up(gdb_win, 1);
-        break;
-    case CGDB_KEY_DOWN:
-    case CGDB_KEY_CTRL_N:
-        if (!gdb_win->in_scroll_mode)
-            return 1;
-        scr_down(gdb_win, 1);
-        break;
-
     case CGDB_KEY_CTRL_L:
         /* Tell gdb_win to not draw text above this row */
         gdb_win->clear_row = gdb_win->current.r;
@@ -1026,18 +1088,79 @@ static int gdb_input(int key)
         if_draw();
 
         /* Sneaky return 1 here. Basically, this tricks readline to think
-             * that gdb did not handle the Ctrl-l. That way readline will also handle
-             * it. Because readline uses TERM=dumb, that means that it will clear a 
-             * single line and put out the prompt. */
+         * that gdb did not handle the Ctrl-l. That way readline will also handle
+         * it. Because readline uses TERM=dumb, that means that it will clear a 
+         * single line and put out the prompt. */
         return 1;
+
+    case CGDB_KEY_F11:
+        scr_home(gdb_win);
+        break;
+    case CGDB_KEY_F12:
+        scr_end(gdb_win);
+        break;
 
     default:
-        return 1;
+        key_handled = 0;
+        break;
     }
 
-    if_draw();
+    /* If this key wasn't handled, handle scroll mode keys if we're in scroll mode */
+    if (!key_handled && gdb_win->in_scroll_mode)
+    {
+        key_handled = 1;
 
-    return 0;
+        switch (key)
+        {
+        case CGDB_KEY_HOME:
+            scr_home(gdb_win);
+            break;
+        case CGDB_KEY_END:
+            scr_end(gdb_win);
+            break;
+
+        case CGDB_KEY_UP:
+        case CGDB_KEY_CTRL_P:
+            scr_up(gdb_win, 1);
+            break;
+        case CGDB_KEY_DOWN:
+        case CGDB_KEY_CTRL_N:
+            scr_down(gdb_win, 1);
+            break;
+
+        case 'n':
+            scr_search_regex(gdb_win, ibuf_get(regex_last), 2,
+                    regex_direction_last, cgdbrc_get_int(CGDBRC_IGNORECASE));
+            break;
+        case 'N':
+            scr_search_regex(gdb_win, ibuf_get(regex_last), 2,
+                    !regex_direction_last, cgdbrc_get_int(CGDBRC_IGNORECASE));
+            break;
+
+        case '/':
+        case '?':
+            /* Capturing regular expressions */
+            regex_cur = ibuf_init();
+            regex_direction_cur = ('/' == key);
+            orig_line_regex = gdb_win->current.r;
+
+            sbc_kind = SBC_REGEX;
+
+            scr_search_regex_init(gdb_win);
+            break;
+
+        default:
+            key_handled = 0;
+            break;
+        }
+    }
+
+    if (key_handled)
+    {
+        if_draw();
+        return 0;
+    }
+    return 1;
 }
 
 /**
@@ -1115,6 +1238,7 @@ static int status_bar_regex_input(struct sviewer *sview, int key)
         ibuf_free(regex_cur);
         regex_cur = NULL;
 
+        sbc_kind = SBC_NORMAL;
         if_set_focus(CGDB);
     }
 
@@ -1550,6 +1674,8 @@ int internal_if_input(int key, int *last_key)
     /* The cgdb mode key, puts the debugger into command mode */
     if (focus != CGDB && key == cgdb_mode_key)
     {
+        enum Focus new_focus = CGDB;
+
         /* Depending on which cgdb was in, it can free some memory here that
          * it was previously using. */
         if (focus == CGDB_STATUS_BAR && sbc_kind == SBC_NORMAL)
@@ -1564,8 +1690,20 @@ int internal_if_input(int key, int *last_key)
 
             src_win->cur->sel_rline = orig_line_regex;
             src_win->cur->sel_line = orig_line_regex;
+            sbc_kind = SBC_NORMAL;
         }
-        if_set_focus(CGDB);
+        else if (focus == GDB && sbc_kind == SBC_REGEX)
+        {
+            ibuf_free(regex_cur);
+            regex_cur = NULL;
+
+            gdb_win->in_search_mode = 0;
+            sbc_kind = SBC_NORMAL;
+
+            new_focus = GDB;
+        }
+
+        if_set_focus(new_focus);
         return 0;
     }
     /* If you are already in cgdb mode, the cgdb mode key does nothing */

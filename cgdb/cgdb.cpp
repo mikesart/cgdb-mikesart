@@ -881,6 +881,7 @@ static void send_key(int focus, char key)
         masterfd = pty_pair_get_masterfd(pty_pair);
         if (masterfd == -1)
             clog_error(CLOG_CGDB, "send_key error");
+
         size = write(masterfd, &key, sizeof(char));
         if (size != 1)
             clog_error(CLOG_CGDB, "send_key error");
