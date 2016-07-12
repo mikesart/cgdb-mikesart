@@ -1064,7 +1064,7 @@ static int gdb_input_regex_input(struct scroller *scr, int key)
  *                  1 if input to gdb or ...
  *                  -1        : Error resizing terminal -- terminal too small
  */
-static int gdb_input(int key)
+static int gdb_input(int key, int *last_key)
 {
     if (gdb_win->in_search_mode)
         return gdb_input_regex_input(gdb_win, key);
@@ -1110,22 +1110,67 @@ static int gdb_input(int key)
     {
         key_handled = 1;
 
+        /* Handle setting (mX) and going ('X) to gdb buffer marks */
+        if (last_key_pressed == 'm' || last_key_pressed == '\'')
+        {
+            int ret = 0;
+
+            if (last_key_pressed == 'm')
+                ret = scr_set_mark(gdb_win, key);
+            else if(last_key_pressed == '\'')
+                ret = scr_goto_mark(gdb_win, key);
+
+            if (ret)
+            {
+                *last_key = 0;
+                if_draw();
+            }
+            return 0;
+        }
+
         switch (key)
         {
+        /* Hitting q or i will break out of scroll mode. */
+        case 'q':
+        case 'i':
+            scr_end(gdb_win);
+            gdb_win->in_scroll_mode = 0;
+            break;
+        case 'g':
+            /* Hitting gg will go to top of buffer. */
+            if (last_key_pressed == 'g')
+                scr_home(gdb_win);
+            break;
+        case 'm':
+        case '\'':
+            /* Mark keys - ignore them */
+            break;
         case CGDB_KEY_HOME:
             scr_home(gdb_win);
             break;
+            /* Hitting G or End goes to end of buffer. */
+        case 'G':
         case CGDB_KEY_END:
             scr_end(gdb_win);
             break;
 
+        /* k, up, or ctrl+p moves up one line. */
+        case 'k':
         case CGDB_KEY_UP:
         case CGDB_KEY_CTRL_P:
             scr_up(gdb_win, 1);
             break;
+        case 'j':
         case CGDB_KEY_DOWN:
         case CGDB_KEY_CTRL_N:
             scr_down(gdb_win, 1);
+            break;
+
+        case CGDB_KEY_CTRL_U:
+            scr_up(gdb_win, get_gdb_height() - 1);
+            break;
+        case CGDB_KEY_CTRL_D:
+            scr_down(gdb_win, get_gdb_height() - 1);
             break;
 
         case 'n':
@@ -1556,6 +1601,10 @@ static int cgdb_input(int key, int *last_key)
 
     switch (key)
     {
+    case 's':
+        gdb_win->in_scroll_mode = 1;
+        if_set_focus(GDB);
+        return 0;
     case 'i':
         if_set_focus(GDB);
         return 0;
@@ -1718,7 +1767,7 @@ int internal_if_input(int key, int *last_key)
     case TTY:
         return tty_input(key);
     case GDB:
-        return gdb_input(key);
+        return gdb_input(key, last_key);
     case FILE_DLG:
     {
         char filedlg_file[MAX_LINE];

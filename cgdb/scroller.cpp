@@ -240,6 +240,12 @@ struct scroller *scr_new(int pos_r, int pos_c, int height, int width)
     /* Start with a single (blank) line */
     rv->lines = NULL;
     scroller_addline(rv, strdup(""), NULL, 0);
+
+    rv->jump_back_mark.r = -1;
+    rv->jump_back_mark.c = -1;
+    memset(rv->local_marks, 0xff, sizeof(rv->local_marks));
+    memset(rv->global_marks, 0xff, sizeof(rv->global_marks));
+
     return rv;
 }
 
@@ -343,8 +349,6 @@ void scr_end(struct scroller *scr)
 {
     scr->current.r = sbcount(scr->lines) - 1;
     scr->current.c = get_last_col(scr, scr->current.r);
-
-    scr->in_scroll_mode = 0;
 }
 
 static void scr_add_buf(struct scroller *scr, const char *buf, int tty)
@@ -424,7 +428,9 @@ static void scr_add_buf(struct scroller *scr, const char *buf, int tty)
         scroller_addline(scr, line, attrs, tty);
     }
 
+    /* Move to end of buffer and exit scroll mode */
     scr_end(scr);
+    scr->in_scroll_mode = 0;
 }
 
 void scr_add(struct scroller *scr, const char *buf, int tty)
@@ -453,7 +459,9 @@ void scr_add(struct scroller *scr, const char *buf, int tty)
 
     scr_add_buf(scr, buf, tty);
 
+    /* Move to end of buffer and exit scroll mode */
     scr_end(scr);
+    scr->in_scroll_mode = 0;
 
     free(tempbuf);
 }
@@ -536,6 +544,68 @@ int scr_search_regex(struct scroller *scr, const char *regex, int opt,
     /* Nothing found - go back to original line */
     scr->current.r = scr->search_r;
     scr->current.c = get_last_col(scr, scr->search_r);
+    return 0;
+}
+
+int scr_set_mark(struct scroller *scr, int key)
+{
+    if (key >= 'a' && key <= 'z')
+    {
+        /* Local buffer mark */
+        scr->local_marks[key - 'a'].r = scr->current.r;
+        scr->local_marks[key - 'a'].c = scr->current.c;
+        return 1;
+    }
+    else if (key >= 'A' && key <= 'Z')
+    {
+        /* Global buffer mark */
+        scr->global_marks[key - 'A'].r = scr->current.r;
+        scr->global_marks[key - 'A'].c = scr->current.c;
+        return 1;
+    }
+
+    return 0;
+}
+
+int scr_goto_mark(struct scroller *scr, int key)
+{
+    scroller_mark mark_temp;
+    scroller_mark *mark = NULL;
+
+    if (key >= 'a' && key <= 'z')
+    {
+        /* Local buffer mark */
+        mark = &scr->local_marks[key - 'a'];
+    }
+    else if (key >= 'A' && key <= 'Z')
+    {
+        /* Global buffer mark */
+        mark = &scr->global_marks[key - 'A'];
+    }
+    else if (key == '\'')
+    {
+        /* Jump back to where we last jumped from */
+        mark_temp = scr->jump_back_mark;
+        mark = &mark_temp;
+    }
+    else if (key == '.')
+    {
+        /* Jump to last line */
+        mark_temp.r = sbcount(scr->lines) - 1;
+        mark_temp.c = get_last_col(scr, scr->current.r);
+        mark = &mark_temp;
+    }
+
+    if (mark && (mark->r >= 0))
+    {
+        scr->jump_back_mark.r = scr->current.r;
+        scr->jump_back_mark.c = scr->current.c;
+
+        scr->current.r = mark->r;
+        scr->current.c = mark->c;
+        return 1;
+    }
+
     return 0;
 }
 
