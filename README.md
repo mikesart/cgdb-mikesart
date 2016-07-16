@@ -1,4 +1,4 @@
-### CGDB fork which adds features / fixes. Currently working with CGDB maintainer to hopefully get these merged back into mainline.
+### CGDB fork which adds features / fixes.
 
 Please let us know if you try any of the below and run into any issues or have any comments. Thanks!
 
@@ -24,6 +24,20 @@ Please let us know if you try any of the below and run into any issues or have a
 - Pull Armin Widegreen's rust syntax highlighting patch
 - Show disassembly when no source is available
 - Add ":set [no]dis" command to toggle source / disassembly
+- Add regex search to gdb output window
+- ESC+s (or s in source window) sets focus to gdb and enables scroller mode
+- Several keys now enabled in gdb window in scroller mode:  
+      m[A-Z]: set global mark  
+      m[a-z]: set local mark  
+      '[a-zA-Z]: jump to mark  
+      q, i: exit scroller mode  
+      '': jump to last jump location  
+      '.: jump to bottom of buffer  
+      Ctrl+U, Ctrl+D: page up, page down  
+      gg: jump to top of bufer  
+      G: jump to bottom of buffer  
+      k: up line  
+      j: down line  
 
 ### Minor tweaks / bug fixes
 - update configure version number
