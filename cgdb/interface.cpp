@@ -10,12 +10,6 @@
 #endif /* HAVE_CONFIG_H */
 
 /* System Includes */
-#if HAVE_CURSES_H
-#include <curses.h>
-#elif HAVE_NCURSES_CURSES_H
-#include <ncurses/curses.h>
-#endif /* HAVE_CURSES_H */
-
 #if HAVE_SIGNAL_H
 #include <signal.h>
 #endif
@@ -59,9 +53,11 @@
 #include <assert.h>
 
 /* Local Includes */
+#include "sys_win.h"
 #include "cgdb.h"
 #include "sys_util.h"
 #include "config.h"
+#include "tokenizer.h"
 #include "interface.h"
 #include "kui_term.h"
 #include "scroller.h"
@@ -120,9 +116,9 @@ static struct scroller *gdb_win = NULL; /* The GDB input/output window */
 static struct scroller *tty_win = NULL; /* The tty input/output window */
 static int tty_win_on = 0;              /* Flag: tty window being shown */
 static struct sviewer *src_win = NULL;  /* The source viewer window */
-static WINDOW *status_win = NULL;       /* The status line */
-static WINDOW *tty_status_win = NULL;   /* The tty status line */
-static WINDOW *vseparator_win = NULL;
+static SWINDOW *status_win = NULL;       /* The status line */
+static SWINDOW *tty_status_win = NULL;   /* The tty status line */
+static SWINDOW *vseparator_win = NULL;
 static enum Focus focus = GDB;     /* Which pane is currently focused */
 static struct winsize screen_size; /* Screen size */
 
@@ -170,23 +166,19 @@ static enum StatusBarCommandKind sbc_kind = SBC_NORMAL;
 static int init_curses()
 {
     char escdelay[] = "ESCDELAY=0";
+
     if (putenv(escdelay) == -1)
         fprintf(stderr, "(%s:%d) putenv failed\r\n", __FILE__, __LINE__);
 
-    initscr(); /* Start curses mode */
+    swin_initscr(); /* Start curses mode */
 
-    if ((curses_colors = has_colors()))
+    if ((curses_colors = swin_has_colors()))
     {
-        start_color();
-#ifdef NCURSES_VERSION
-        use_default_colors();
-#else
-        bkgdset(0);
-        bkgd(COLOR_WHITE);
-#endif
+        swin_start_color();
+        swin_use_default_colors();
     }
 
-    refresh(); /* Refresh the initial window once */
+    swin_refresh(); /* Refresh the initial window once */
     curses_initialized = 1;
 
     return 0;
@@ -373,24 +365,24 @@ static void separator_display(int draw)
 
     if (draw && !vseparator_win)
     {
-        vseparator_win = newwin(h, 1, y, x);
+        vseparator_win = swin_newwin(h, 1, y, x);
     }
     else if (!draw && vseparator_win)
     {
-        delwin(vseparator_win);
+        swin_delwin(vseparator_win);
         vseparator_win = NULL;
     }
 
     if (vseparator_win)
     {
         /* Move window to correct spot */
-        mvwin(vseparator_win, y, x);
+        swin_mvwin(vseparator_win, y, x);
 
         /* Draw vertical line in window */
-        wmove(vseparator_win, 0, 0);
-        wvline(vseparator_win, VERT_LINE, h);
+        swin_wmove(vseparator_win, 0, 0);
+        swin_wvline(vseparator_win, SWIN_SYM_VLINE, h);
 
-        wnoutrefresh(vseparator_win);
+        swin_wnoutrefresh(vseparator_win);
     }
 }
 
@@ -409,42 +401,42 @@ static void update_status_win(enum win_refresh dorefresh)
     /* Update the tty status bar */
     if (tty_win_on)
     {
-        wattron(tty_status_win, attr);
+        swin_wattron(tty_status_win, attr);
         for (pos = 0; pos < WIDTH; pos++)
-            mvwprintw(tty_status_win, 0, pos, " ");
+            swin_mvwprintw(tty_status_win, 0, pos, " ");
 
-        mvwprintw(tty_status_win, 0, 0, (char *)tgdb_tty_name(tgdb));
-        wattroff(tty_status_win, attr);
+        swin_mvwprintw(tty_status_win, 0, 0, (char *)tgdb_tty_name(tgdb));
+        swin_wattroff(tty_status_win, attr);
     }
 
     /* Print white background */
-    wattron(status_win, attr);
+    swin_wattron(status_win, attr);
     for (pos = 0; pos < WIDTH; pos++)
-        mvwprintw(status_win, 0, pos, " ");
+        swin_mvwprintw(status_win, 0, pos, " ");
     if (tty_win_on)
-        wattron(tty_status_win, attr);
+        swin_wattron(tty_status_win, attr);
     /* Show the user which window is focused */
     if (focus == GDB)
-        mvwprintw(status_win, 0, WIDTH - 1, "*");
+        swin_mvwprintw(status_win, 0, WIDTH - 1, "*");
     else if (focus == TTY && tty_win_on)
-        mvwprintw(tty_status_win, 0, WIDTH - 1, "*");
+        swin_mvwprintw(tty_status_win, 0, WIDTH - 1, "*");
     else if (focus == CGDB || focus == CGDB_STATUS_BAR)
-        mvwprintw(status_win, 0, WIDTH - 1, " ");
-    wattroff(status_win, attr);
+        swin_mvwprintw(status_win, 0, WIDTH - 1, " ");
+    swin_wattroff(status_win, attr);
     if (tty_win_on)
-        wattroff(tty_status_win, attr);
+        swin_wattroff(tty_status_win, attr);
 
     /* Print the regex that the user is looking for Forward */
     if (/*focus == CGDB_STATUS_BAR &&*/ sbc_kind == SBC_REGEX && regex_direction_cur)
     {
         if_display_message("/", dorefresh, WIDTH - 1, "%s", ibuf_get(regex_cur));
-        curs_set(1);
+        swin_curs_set(1);
     }
     /* Regex backwards */
     else if (/*focus == CGDB_STATUS_BAR &&*/ sbc_kind == SBC_REGEX)
     {
         if_display_message("?", dorefresh, WIDTH - 1, "%s", ibuf_get(regex_cur));
-        curs_set(1);
+        swin_curs_set(1);
     }
     /* A colon command typed at the status bar */
     else if (focus == CGDB_STATUS_BAR && sbc_kind == SBC_NORMAL)
@@ -454,7 +446,7 @@ static void update_status_win(enum win_refresh dorefresh)
         if (!command)
             command = "";
         if_display_message(":", dorefresh, WIDTH - 1, "%s", command);
-        curs_set(1);
+        swin_curs_set(1);
     }
     /* Default: Current Filename */
     else
@@ -472,9 +464,9 @@ static void update_status_win(enum win_refresh dorefresh)
     }
 
     if (dorefresh == WIN_REFRESH)
-        wrefresh(status_win);
+        swin_wrefresh(status_win);
     else
-        wnoutrefresh(status_win);
+        swin_wnoutrefresh(status_win);
 }
 
 void if_display_message(const char *msg, enum win_refresh dorefresh, int width, const char *fmt, ...)
@@ -487,7 +479,7 @@ void if_display_message(const char *msg, enum win_refresh dorefresh, int width, 
 
     hl_groups_get_attr(hl_groups_instance, HLG_STATUS_BAR, &attr);
 
-    curs_set(0);
+    swin_curs_set(0);
 
     if (!width)
         width = WIDTH;
@@ -513,17 +505,17 @@ void if_display_message(const char *msg, enum win_refresh dorefresh, int width, 
         snprintf(buf_display, sizeof(buf_display), "%s%s", msg, va_buf);
 
     /* Print white background */
-    wattron(status_win, attr);
+    swin_wattron(status_win, attr);
     for (pos = 0; pos < WIDTH; pos++)
-        mvwprintw(status_win, 0, pos, " ");
+        swin_mvwprintw(status_win, 0, pos, " ");
 
-    mvwprintw(status_win, 0, 0, "%s", buf_display);
-    wattroff(status_win, attr);
+    swin_mvwprintw(status_win, 0, 0, "%s", buf_display);
+    swin_wattroff(status_win, attr);
 
     if (dorefresh == WIN_REFRESH)
-        wrefresh(status_win);
+        swin_wrefresh(status_win);
     else
-        wnoutrefresh(status_win);
+        swin_wnoutrefresh(status_win);
 }
 
 /* if_draw: Draws the interface on the screen.
@@ -544,10 +536,10 @@ void if_draw(void)
     update_status_win(WIN_NO_REFRESH);
 
     if (get_src_height() != 0 && get_gdb_height() != 0)
-        wnoutrefresh(status_win);
+        swin_wnoutrefresh(status_win);
 
     if (tty_win_on)
-        wnoutrefresh(tty_status_win);
+        swin_wnoutrefresh(tty_status_win);
 
     if (get_src_height() > 0)
         source_display(src_win, focus == CGDB, WIN_NO_REFRESH);
@@ -564,9 +556,9 @@ void if_draw(void)
      * cgdb window. The cursor would stay in the gdb window 
      * on cygwin */
     if (get_src_height() > 0 && focus == CGDB)
-        wnoutrefresh(src_win->win);
+        swin_wnoutrefresh(src_win->win);
 
-    doupdate();
+    swin_doupdate();
 }
 
 /* validate_window_sizes:
@@ -661,13 +653,13 @@ static int if_layout()
     }
 
     /* Initialize the status bar window */
-    status_win = newwin(get_src_status_height(), get_src_status_width(),
+    status_win = swin_newwin(get_src_status_height(), get_src_status_width(),
         get_src_status_row(), get_src_status_col());
 
     /* Initialize the tty status bar window */
     if (tty_win_on)
         tty_status_win =
-            newwin(get_tty_status_height(), get_tty_status_width(),
+            swin_newwin(get_tty_status_height(), get_tty_status_width(),
                 get_tty_status_row(), get_tty_status_col());
 
     if_draw();
@@ -685,22 +677,15 @@ static int if_resize()
 {
     if (ioctl(fileno(stdout), TIOCGWINSZ, &screen_size) != -1)
     {
-#ifdef NCURSES_VERSION
-        if (screen_size.ws_row != LINES || screen_size.ws_col != COLS)
+        if (screen_size.ws_row != swin_lines() || screen_size.ws_col != swin_cols())
         {
-            resizeterm(screen_size.ws_row, screen_size.ws_col);
-            refresh();
+            swin_resizeterm(screen_size.ws_row, screen_size.ws_col);
+            swin_refresh();
+
             rl_resize(screen_size.ws_row, screen_size.ws_col);
             return if_layout();
         }
-#else
-        /* Stupid way to resize - should work on most systems */
-        endwin();
-        LINES = screen_size.ws_row;
-        COLS = screen_size.ws_col;
-        refresh();
-        source_hscroll(src_win, 0);
-#endif
+
         rl_resize(screen_size.ws_row, screen_size.ws_col);
         return if_layout();
     }
@@ -1558,8 +1543,8 @@ int if_init(void)
 
     if (ioctl(fileno(stdout), TIOCGWINSZ, &screen_size) == -1)
     {
-        screen_size.ws_row = LINES;
-        screen_size.ws_col = COLS;
+        screen_size.ws_row = swin_lines();
+        screen_size.ws_col = swin_cols();
     }
 
     /* Create the file dialog object */
@@ -1826,9 +1811,9 @@ void if_tty_print(const char *buf)
 
         /* Make sure cursor reappears in source window if focus is there */
         if (focus == CGDB)
-            wnoutrefresh(src_win->win);
+            swin_wnoutrefresh(src_win->win);
 
-        doupdate();
+        swin_doupdate();
     }
 }
 
@@ -1849,9 +1834,9 @@ void if_print(const char *buf, int source)
 
         /* Make sure cursor reappears in source window if focus is there */
         if (focus == CGDB)
-            wnoutrefresh(src_win->win);
+            swin_wnoutrefresh(src_win->win);
 
-        doupdate();
+        swin_doupdate();
     }
 }
 
@@ -1934,17 +1919,17 @@ void if_shutdown(void)
 {
     /* Shut down curses cleanly */
     if (curses_initialized)
-        endwin();
+        swin_endwin();
 
     if (status_win)
     {
-        delwin(status_win);
+        swin_delwin(status_win);
         status_win = NULL;
     }
 
     if (tty_status_win)
     {
-        delwin(tty_status_win);
+        swin_delwin(tty_status_win);
         tty_status_win = NULL;
     }
 
@@ -1968,7 +1953,7 @@ void if_shutdown(void)
 
     if (vseparator_win)
     {
-        delwin(vseparator_win);
+        swin_delwin(vseparator_win);
         vseparator_win = NULL;
     }
 }
