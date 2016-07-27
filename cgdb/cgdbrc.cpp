@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #endif /* HAVE_STDLIB_H */
 
+#include "sys_util.h"
 #include "sys_win.h"
 #include "cgdbrc.h"
 #include "command_lexer.h"

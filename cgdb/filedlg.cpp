@@ -18,11 +18,11 @@
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
+#include "sys_util.h"
 #include "sys_win.h"
 #include "filedlg.h"
 #include "cgdb.h"
 #include "cgdbrc.h"
-#include "sys_util.h"
 #include "highlight.h"
 #include "sources.h"
 #include "kui_term.h"
@@ -90,16 +90,14 @@ struct filedlg *filedlg_new(int pos_r, int pos_c, int height, int width)
     struct filedlg *fd;
 
     /* Allocate a new structure */
-    if ((fd = (struct filedlg *)malloc(sizeof(struct filedlg))) == NULL)
-        return NULL;
+    fd = (struct filedlg *)cgdb_malloc(sizeof(struct filedlg));
 
     /* Initialize the structure */
     fd->win = swin_newwin(height, width, pos_r, pos_c);
     swin_keypad(fd->win, 1);
 
     /* Initialize the buffer */
-    if ((fd->buf = (struct file_buffer *)malloc(sizeof(struct file_buffer))) == NULL)
-        return NULL;
+    fd->buf = (struct file_buffer *)cgdb_malloc(sizeof(struct file_buffer));
 
     fd->hlregex = NULL;
     fd->buf->files = NULL;

@@ -28,14 +28,15 @@
 EXTERN_C int tgetent(char *, const char *);
 EXTERN_C char *tgetstr(const char *, char **);
 
+#include "sys_util.h"
 #include "sys_win.h"
 #include "kui_term.h"
 
 #define MAXLINE 4096
 #define MAX_SEQ_LIST_SIZE 8
 
-/** 
- * This contains all of the ESC sequences this unit cares about. 
+/**
+ * This contains all of the ESC sequences this unit cares about.
  * It contains the correct information to get esc sequences out of both
  * termcap and terminfo.
  */
@@ -52,15 +53,35 @@ struct tlist
     /* the terminfo key sequence */
     const char *tiname_seq;
 } seqlist[] = {
-    { CGDB_KEY_END, "@7", NULL, "kend", NULL }, { CGDB_KEY_HOME, "kh", NULL, "khome", NULL }, { CGDB_KEY_HOME, "kH", NULL, "kll", NULL }, { CGDB_KEY_DC, "kD", NULL, "kdch1", NULL }, { CGDB_KEY_IC, "kI", NULL, "kich1", NULL }, { CGDB_KEY_NPAGE, "kN", NULL, "knp", NULL }, { CGDB_KEY_PPAGE, "kP", NULL, "kpp", NULL },
+    { CGDB_KEY_END, "@7", NULL, "kend", NULL },
+    { CGDB_KEY_HOME, "kh", NULL, "khome", NULL },
+    { CGDB_KEY_HOME, "kH", NULL, "kll", NULL },
+    { CGDB_KEY_DC, "kD", NULL, "kdch1", NULL },
+    { CGDB_KEY_IC, "kI", NULL, "kich1", NULL },
+    { CGDB_KEY_NPAGE, "kN", NULL, "knp", NULL },
+    { CGDB_KEY_PPAGE, "kP", NULL, "kpp", NULL },
     /* For arrow keys */
-    {
-        CGDB_KEY_DOWN, "kd", NULL, "kcud1", NULL },
-    { CGDB_KEY_LEFT, "kl", NULL, "kcub1", NULL }, { CGDB_KEY_RIGHT, "kr", NULL, "kcuf1", NULL }, { CGDB_KEY_UP, "ku", NULL, "kcuu1", NULL }, { CGDB_KEY_LEFT, "le", NULL, "cub1", NULL }, { CGDB_KEY_RIGHT, "nd", NULL, "cuf1", NULL }, { CGDB_KEY_UP, "up", NULL, "cuu1", NULL },
+    { CGDB_KEY_DOWN, "kd", NULL, "kcud1", NULL },
+    { CGDB_KEY_LEFT, "kl", NULL, "kcub1", NULL },
+    { CGDB_KEY_RIGHT, "kr", NULL, "kcuf1", NULL },
+    { CGDB_KEY_UP, "ku", NULL, "kcuu1", NULL },
+    { CGDB_KEY_LEFT, "le", NULL, "cub1", NULL },
+    { CGDB_KEY_RIGHT, "nd", NULL, "cuf1", NULL },
+    { CGDB_KEY_UP, "up", NULL, "cuu1", NULL },
     /* Function keys */
-    {
-        CGDB_KEY_F1, "k1", NULL, "kf1", NULL },
-    { CGDB_KEY_F2, "k2", NULL, "kf2", NULL }, { CGDB_KEY_F3, "k3", NULL, "kf3", NULL }, { CGDB_KEY_F4, "k4", NULL, "kf4", NULL }, { CGDB_KEY_F5, "k5", NULL, "kf5", NULL }, { CGDB_KEY_F6, "k6", NULL, "kf6", NULL }, { CGDB_KEY_F7, "k7", NULL, "kf7", NULL }, { CGDB_KEY_F8, "k8", NULL, "kf8", NULL }, { CGDB_KEY_F9, "k9", NULL, "kf9", NULL }, { CGDB_KEY_F10, "k;", NULL, "kf10", NULL }, { CGDB_KEY_F11, "F1", NULL, "kf11", NULL }, { CGDB_KEY_F12, "F2", NULL, "kf12", NULL }, { CGDB_KEY_ERROR, NULL, NULL, NULL, NULL }
+    { CGDB_KEY_F1, "k1", NULL, "kf1", NULL },
+    { CGDB_KEY_F2, "k2", NULL, "kf2", NULL },
+    { CGDB_KEY_F3, "k3", NULL, "kf3", NULL },
+    { CGDB_KEY_F4, "k4", NULL, "kf4", NULL },
+    { CGDB_KEY_F5, "k5", NULL, "kf5", NULL },
+    { CGDB_KEY_F6, "k6", NULL, "kf6", NULL },
+    { CGDB_KEY_F7, "k7", NULL, "kf7", NULL },
+    { CGDB_KEY_F8, "k8", NULL, "kf8", NULL },
+    { CGDB_KEY_F9, "k9", NULL, "kf9", NULL },
+    { CGDB_KEY_F10, "k;", NULL, "kf10", NULL },
+    { CGDB_KEY_F11, "F1", NULL, "kf11", NULL },
+    { CGDB_KEY_F12, "F2", NULL, "kf12", NULL },
+    { CGDB_KEY_ERROR, NULL, NULL, NULL, NULL }
 };
 
 /* This represents all of the hard coded key data.  */
@@ -72,27 +93,64 @@ struct keydata
     { CGDB_KEY_ESC, "\033" },
     /* Arrow bindings */
     /* These should be first, because readline hard codes them and when I
-             * walk this list to get the key bindings, I want these for the arrows */
-    {
-        CGDB_KEY_UP, "\033[A" },
-    { CGDB_KEY_DOWN, "\033[B" }, { CGDB_KEY_RIGHT, "\033[C" }, { CGDB_KEY_LEFT, "\033[D" }, { CGDB_KEY_HOME, "\033[H" }, { CGDB_KEY_END, "\033[F" },
+     * walk this list to get the key bindings, I want these for the arrows */
+    { CGDB_KEY_UP, "\033[A" },
+    { CGDB_KEY_DOWN, "\033[B" },
+    { CGDB_KEY_RIGHT, "\033[C" },
+    { CGDB_KEY_LEFT, "\033[D" },
+    { CGDB_KEY_HOME, "\033[H" },
+    { CGDB_KEY_END, "\033[F" },
     /* Arrow bindings, MSDOS */
-    {
-        CGDB_KEY_UP, "\033[0A" },
-    { CGDB_KEY_LEFT, "\033[0B" }, { CGDB_KEY_RIGHT, "\033[0C" }, { CGDB_KEY_DOWN, "\033[0D" }, { CGDB_KEY_UP, "\033OA" }, { CGDB_KEY_DOWN, "\033OB" }, { CGDB_KEY_RIGHT, "\033OC" }, { CGDB_KEY_LEFT, "\033OD" }, { CGDB_KEY_HOME, "\033OH" }, { CGDB_KEY_END, "\033OF" },
+    { CGDB_KEY_UP, "\033[0A" },
+    { CGDB_KEY_LEFT, "\033[0B" },
+    { CGDB_KEY_RIGHT, "\033[0C" },
+    { CGDB_KEY_DOWN, "\033[0D" },
+    { CGDB_KEY_UP, "\033OA" },
+    { CGDB_KEY_DOWN, "\033OB" },
+    { CGDB_KEY_RIGHT, "\033OC" },
+    { CGDB_KEY_LEFT, "\033OD" },
+    { CGDB_KEY_HOME, "\033OH" },
+    { CGDB_KEY_END, "\033OF" },
     /* Passed through to readline */
-    {
-        CGDB_KEY_BACKWARD_WORD, "\033[1;5D" },
-    { CGDB_KEY_FORWARD_WORD, "\033[1;5C" }, { CGDB_KEY_BACKWARD_WORD, "\033[1;3D" }, { CGDB_KEY_FORWARD_WORD, "\033[1;3C" }, { CGDB_KEY_BACKWARD_WORD, "\033b" }, { CGDB_KEY_FORWARD_WORD, "\033f" },
+    { CGDB_KEY_BACKWARD_WORD, "\033[1;5D" },
+    { CGDB_KEY_FORWARD_WORD, "\033[1;5C" },
+    { CGDB_KEY_BACKWARD_WORD, "\033[1;3D" },
+    { CGDB_KEY_FORWARD_WORD, "\033[1;3C" },
+    { CGDB_KEY_BACKWARD_WORD, "\033b" },
+    { CGDB_KEY_FORWARD_WORD, "\033f" },
     /* Ctrl bindings */
-    {
-        CGDB_KEY_CTRL_A, "\001" },
-    { CGDB_KEY_CTRL_B, "\002" }, { CGDB_KEY_CTRL_C, "\003" }, { CGDB_KEY_CTRL_D, "\004" }, { CGDB_KEY_CTRL_E, "\005" }, { CGDB_KEY_CTRL_F, "\006" }, { CGDB_KEY_CTRL_G, "\007" }, { CGDB_KEY_CTRL_H, "\010" }, { CGDB_KEY_CTRL_I, "\011" }, { CGDB_KEY_CTRL_J, "\012" }, { CGDB_KEY_CTRL_K, "\013" }, { CGDB_KEY_CTRL_L, "\014" }, { CGDB_KEY_CTRL_M, "\015" }, { CGDB_KEY_CTRL_N, "\016" }, { CGDB_KEY_CTRL_O, "\017" }, { CGDB_KEY_CTRL_P, "\020" }, { CGDB_KEY_CTRL_Q, "\021" }, { CGDB_KEY_CTRL_R, "\022" }, { CGDB_KEY_CTRL_S, "\023" }, { CGDB_KEY_CTRL_T, "\024" }, { CGDB_KEY_CTRL_U, "\025" }, { CGDB_KEY_CTRL_V, "\026" }, { CGDB_KEY_CTRL_W, "\027" }, { CGDB_KEY_CTRL_X, "\030" }, { CGDB_KEY_CTRL_Y, "\031" }, { CGDB_KEY_CTRL_Z, "\032" }, { CGDB_KEY_ERROR, NULL }
+    { CGDB_KEY_CTRL_A, "\001" },
+    { CGDB_KEY_CTRL_B, "\002" },
+    { CGDB_KEY_CTRL_C, "\003" },
+    { CGDB_KEY_CTRL_D, "\004" },
+    { CGDB_KEY_CTRL_E, "\005" },
+    { CGDB_KEY_CTRL_F, "\006" },
+    { CGDB_KEY_CTRL_G, "\007" },
+    { CGDB_KEY_CTRL_H, "\010" },
+    { CGDB_KEY_CTRL_I, "\011" },
+    { CGDB_KEY_CTRL_J, "\012" },
+    { CGDB_KEY_CTRL_K, "\013" },
+    { CGDB_KEY_CTRL_L, "\014" },
+    { CGDB_KEY_CTRL_M, "\015" },
+    { CGDB_KEY_CTRL_N, "\016" },
+    { CGDB_KEY_CTRL_O, "\017" },
+    { CGDB_KEY_CTRL_P, "\020" },
+    { CGDB_KEY_CTRL_Q, "\021" },
+    { CGDB_KEY_CTRL_R, "\022" },
+    { CGDB_KEY_CTRL_S, "\023" },
+    { CGDB_KEY_CTRL_T, "\024" },
+    { CGDB_KEY_CTRL_U, "\025" },
+    { CGDB_KEY_CTRL_V, "\026" },
+    { CGDB_KEY_CTRL_W, "\027" },
+    { CGDB_KEY_CTRL_X, "\030" },
+    { CGDB_KEY_CTRL_Y, "\031" },
+    { CGDB_KEY_CTRL_Z, "\032" },
+    { CGDB_KEY_ERROR, NULL }
 };
 
 /**
  * This is the main data structure in determining the string representation
- * of a keycode that can be used in a map command. All of the hard coded 
+ * of a keycode that can be used in a map command. All of the hard coded
  * keycodes that can be used in a map is stored here. Some keycodes can not
  * be hard coded and are read from the termcap/terminfo library.
  */
@@ -107,17 +165,102 @@ struct cgdb_keycode_data
     const char *key_as_string;
 } cgdb_keycodes[] = {
     /* Shift keys */
-    {
-        'A', "<S-a>", "<shift a>" },
-    { 'B', "<S-b>", "<shift b>" }, { 'C', "<S-c>", "<shift c>" }, { 'D', "<S-d>", "<shift d>" }, { 'E', "<S-e>", "<shift e>" }, { 'F', "<S-f>", "<shift f>" }, { 'G', "<S-g>", "<shift g>" }, { 'H', "<S-h>", "<shift h>" }, { 'I', "<S-i>", "<shift i>" }, { 'J', "<S-j>", "<shift j>" }, { 'K', "<S-k>", "<shift k>" }, { 'L', "<S-l>", "<shift l>" }, { 'M', "<S-m>", "<shift m>" }, { 'N', "<S-n>", "<shift n>" }, { 'O', "<S-o>", "<shift o>" }, { 'P', "<S-p>", "<shift p>" }, { 'Q', "<S-q>", "<shift q>" }, { 'R', "<S-r>", "<shift r>" }, { 'S', "<S-s>", "<shift s>" }, { 'T', "<S-t>", "<shift t>" }, { 'U', "<S-u>", "<shift u>" }, { 'V', "<S-v>", "<shift v>" }, { 'W', "<S-w>", "<shift w>" }, { 'X', "<S-x>", "<shift x>" }, { 'Y', "<S-y>", "<shift y>" }, { 'Z', "<S-z>", "<shift z>" },
+    { 'A', "<S-a>", "<shift a>" },
+    { 'B', "<S-b>", "<shift b>" },
+    { 'C', "<S-c>", "<shift c>" },
+    { 'D', "<S-d>", "<shift d>" },
+    { 'E', "<S-e>", "<shift e>" },
+    { 'F', "<S-f>", "<shift f>" },
+    { 'G', "<S-g>", "<shift g>" },
+    { 'H', "<S-h>", "<shift h>" },
+    { 'I', "<S-i>", "<shift i>" },
+    { 'J', "<S-j>", "<shift j>" },
+    { 'K', "<S-k>", "<shift k>" },
+    { 'L', "<S-l>", "<shift l>" },
+    { 'M', "<S-m>", "<shift m>" },
+    { 'N', "<S-n>", "<shift n>" },
+    { 'O', "<S-o>", "<shift o>" },
+    { 'P', "<S-p>", "<shift p>" },
+    { 'Q', "<S-q>", "<shift q>" },
+    { 'R', "<S-r>", "<shift r>" },
+    { 'S', "<S-s>", "<shift s>" },
+    { 'T', "<S-t>", "<shift t>" },
+    { 'U', "<S-u>", "<shift u>" },
+    { 'V', "<S-v>", "<shift v>" },
+    { 'W', "<S-w>", "<shift w>" },
+    { 'X', "<S-x>", "<shift x>" },
+    { 'Y', "<S-y>", "<shift y>" },
+    { 'Z', "<S-z>", "<shift z>" },
     /* The enum cgdb keys in order */
-    {
-        CGDB_KEY_ESC, "<Esc>", "CGDB_KEY_ESC" },
-    { CGDB_KEY_UP, "<Up>", "CGDB_KEY_UP" }, { CGDB_KEY_DOWN, "<Down>", "CGDB_KEY_DOWN" }, { CGDB_KEY_LEFT, "<Left>", "CGDB_KEY_LEFT" }, { CGDB_KEY_RIGHT, "<Right>", "CGDB_KEY_RIGHT" }, { CGDB_KEY_HOME, "<Home>", "CGDB_KEY_HOME" }, { CGDB_KEY_END, "<End>", "CGDB_KEY_END" }, { CGDB_KEY_PPAGE, "<PageUp>", "CGDB_KEY_PPAGE" }, { CGDB_KEY_NPAGE, "<PageDown>", "CGDB_KEY_NPAGE" }, { CGDB_KEY_DC, "<Del>", "CGDB_KEY_DC" }, { CGDB_KEY_IC, "<Insert>", "CGDB_KEY_IC" }, { CGDB_KEY_F1, "<F1>", "CGDB_KEY_F1" }, { CGDB_KEY_F2, "<F2>", "CGDB_KEY_F2" }, { CGDB_KEY_F3, "<F3>", "CGDB_KEY_F3" }, { CGDB_KEY_F4, "<F4>", "CGDB_KEY_F4" }, { CGDB_KEY_F5, "<F5>", "CGDB_KEY_F5" }, { CGDB_KEY_F6, "<F6>", "CGDB_KEY_F6" }, { CGDB_KEY_F7, "<F7>", "CGDB_KEY_F7" }, { CGDB_KEY_F8, "<F8>", "CGDB_KEY_F8" }, { CGDB_KEY_F9, "<F9>", "CGDB_KEY_F9" }, { CGDB_KEY_F10, "<F10>", "CGDB_KEY_F10" }, { CGDB_KEY_F11, "<F11>", "CGDB_KEY_F11" }, { CGDB_KEY_F12, "<F12>", "CGDB_KEY_F12" }, { CGDB_KEY_BACKWARD_WORD, "<BACKWARD-WORD>", "CGDB_KEY_BACKWARD_WORD" }, { CGDB_KEY_FORWARD_WORD, "<FORWARD-WORD>", "CGDB_KEY_FORWARD_WORD" }, { CGDB_KEY_CTRL_A, "<C-a>", "CGDB_KEY_CTRL_A" }, { CGDB_KEY_CTRL_B, "<C-b>", "CGDB_KEY_CTRL_B" }, { CGDB_KEY_CTRL_C, "<C-c>", "CGDB_KEY_CTRL_C" }, { CGDB_KEY_CTRL_D, "<C-d>", "CGDB_KEY_CTRL_D" }, { CGDB_KEY_CTRL_E, "<C-e>", "CGDB_KEY_CTRL_E" }, { CGDB_KEY_CTRL_F, "<C-f>", "CGDB_KEY_CTRL_F" }, { CGDB_KEY_CTRL_G, "<C-g>", "CGDB_KEY_CTRL_G" }, { CGDB_KEY_CTRL_H, "<C-h>", "CGDB_KEY_CTRL_H" }, { CGDB_KEY_CTRL_I, "<C-i>", "CGDB_KEY_CTRL_I" }, { CGDB_KEY_CTRL_J, "<C-j>", "CGDB_KEY_CTRL_J" }, { CGDB_KEY_CTRL_K, "<C-k>", "CGDB_KEY_CTRL_K" }, { CGDB_KEY_CTRL_L, "<C-l>", "CGDB_KEY_CTRL_L" }, { CGDB_KEY_CTRL_M, "<C-m>", "CGDB_KEY_CTRL_M" }, { CGDB_KEY_CTRL_N, "<C-n>", "CGDB_KEY_CTRL_N" }, { CGDB_KEY_CTRL_O, "<C-o>", "CGDB_KEY_CTRL_O" }, { CGDB_KEY_CTRL_P, "<C-p>", "CGDB_KEY_CTRL_P" }, { CGDB_KEY_CTRL_Q, "<C-q>", "CGDB_KEY_CTRL_Q" }, { CGDB_KEY_CTRL_R, "<C-r>", "CGDB_KEY_CTRL_R" }, { CGDB_KEY_CTRL_S, "<C-s>", "CGDB_KEY_CTRL_S" }, { CGDB_KEY_CTRL_T, "<C-t>", "CGDB_KEY_CTRL_T" }, { CGDB_KEY_CTRL_U, "<C-u>", "CGDB_KEY_CTRL_U" }, { CGDB_KEY_CTRL_V, "<C-v>", "CGDB_KEY_CTRL_V" }, { CGDB_KEY_CTRL_W, "<C-w>", "CGDB_KEY_CTRL_W" }, { CGDB_KEY_CTRL_X, "<C-x>", "CGDB_KEY_CTRL_X" }, { CGDB_KEY_CTRL_Y, "<C-y>", "CGDB_KEY_CTRL_Y" }, { CGDB_KEY_CTRL_Z, "<C-z>", "CGDB_KEY_CTRL_Z" }, { 0, "<Nul>", "<Zero>" }, { CGDB_KEY_CTRL_H, "<BS>", "<Backspace>" }, { CGDB_KEY_CTRL_I, "<Tab>", "<Tab>" }, { CGDB_KEY_CTRL_J, "<NL>", "<linefeed>" }, { CGDB_KEY_CTRL_L, "<FF>", "<formfeed>" }, { CGDB_KEY_CTRL_M, "<CR>", "<carriage return>" }, { CGDB_KEY_CTRL_M, "<Return>", "<carriage return>" }, { CGDB_KEY_CTRL_M, "<Enter>", "<carriage return>" }, { 32, "<Space>", "<space>" }, { 60, "<lt>", "<less-than>" }, { 92, "<Bslash>", "<backslash>" }, { 124, "<Bar>", "<vertical bar>" }, { 127, "<Del>", "<delete>" }, { CGDB_KEY_ERROR, "CGDB_KEY_ERROR", "CGDB_KEY_ERROR" }
+    { CGDB_KEY_ESC, "<Esc>", "CGDB_KEY_ESC" },
+    { CGDB_KEY_UP, "<Up>", "CGDB_KEY_UP" },
+    { CGDB_KEY_DOWN, "<Down>", "CGDB_KEY_DOWN" },
+    { CGDB_KEY_LEFT, "<Left>", "CGDB_KEY_LEFT" },
+    { CGDB_KEY_RIGHT, "<Right>", "CGDB_KEY_RIGHT" },
+    { CGDB_KEY_HOME, "<Home>", "CGDB_KEY_HOME" },
+    { CGDB_KEY_END, "<End>", "CGDB_KEY_END" },
+    { CGDB_KEY_PPAGE, "<PageUp>", "CGDB_KEY_PPAGE" },
+    { CGDB_KEY_NPAGE, "<PageDown>", "CGDB_KEY_NPAGE" },
+    { CGDB_KEY_DC, "<Del>", "CGDB_KEY_DC" },
+    { CGDB_KEY_IC, "<Insert>", "CGDB_KEY_IC" },
+    { CGDB_KEY_F1, "<F1>", "CGDB_KEY_F1" },
+    { CGDB_KEY_F2, "<F2>", "CGDB_KEY_F2" },
+    { CGDB_KEY_F3, "<F3>", "CGDB_KEY_F3" },
+    { CGDB_KEY_F4, "<F4>", "CGDB_KEY_F4" },
+    { CGDB_KEY_F5, "<F5>", "CGDB_KEY_F5" },
+    { CGDB_KEY_F6, "<F6>", "CGDB_KEY_F6" },
+    { CGDB_KEY_F7, "<F7>", "CGDB_KEY_F7" },
+    { CGDB_KEY_F8, "<F8>", "CGDB_KEY_F8" },
+    { CGDB_KEY_F9, "<F9>", "CGDB_KEY_F9" },
+    { CGDB_KEY_F10, "<F10>", "CGDB_KEY_F10" },
+    { CGDB_KEY_F11, "<F11>", "CGDB_KEY_F11" },
+    { CGDB_KEY_F12, "<F12>", "CGDB_KEY_F12" },
+    { CGDB_KEY_BACKWARD_WORD, "<BACKWARD-WORD>", "CGDB_KEY_BACKWARD_WORD" },
+    { CGDB_KEY_FORWARD_WORD, "<FORWARD-WORD>", "CGDB_KEY_FORWARD_WORD" },
+    { CGDB_KEY_CTRL_A, "<C-a>", "CGDB_KEY_CTRL_A" },
+    { CGDB_KEY_CTRL_B, "<C-b>", "CGDB_KEY_CTRL_B" },
+    { CGDB_KEY_CTRL_C, "<C-c>", "CGDB_KEY_CTRL_C" },
+    { CGDB_KEY_CTRL_D, "<C-d>", "CGDB_KEY_CTRL_D" },
+    { CGDB_KEY_CTRL_E, "<C-e>", "CGDB_KEY_CTRL_E" },
+    { CGDB_KEY_CTRL_F, "<C-f>", "CGDB_KEY_CTRL_F" },
+    { CGDB_KEY_CTRL_G, "<C-g>", "CGDB_KEY_CTRL_G" },
+    { CGDB_KEY_CTRL_H, "<C-h>", "CGDB_KEY_CTRL_H" },
+    { CGDB_KEY_CTRL_I, "<C-i>", "CGDB_KEY_CTRL_I" },
+    { CGDB_KEY_CTRL_J, "<C-j>", "CGDB_KEY_CTRL_J" },
+    { CGDB_KEY_CTRL_K, "<C-k>", "CGDB_KEY_CTRL_K" },
+    { CGDB_KEY_CTRL_L, "<C-l>", "CGDB_KEY_CTRL_L" },
+    { CGDB_KEY_CTRL_M, "<C-m>", "CGDB_KEY_CTRL_M" },
+    { CGDB_KEY_CTRL_N, "<C-n>", "CGDB_KEY_CTRL_N" },
+    { CGDB_KEY_CTRL_O, "<C-o>", "CGDB_KEY_CTRL_O" },
+    { CGDB_KEY_CTRL_P, "<C-p>", "CGDB_KEY_CTRL_P" },
+    { CGDB_KEY_CTRL_Q, "<C-q>", "CGDB_KEY_CTRL_Q" },
+    { CGDB_KEY_CTRL_R, "<C-r>", "CGDB_KEY_CTRL_R" },
+    { CGDB_KEY_CTRL_S, "<C-s>", "CGDB_KEY_CTRL_S" },
+    { CGDB_KEY_CTRL_T, "<C-t>", "CGDB_KEY_CTRL_T" },
+    { CGDB_KEY_CTRL_U, "<C-u>", "CGDB_KEY_CTRL_U" },
+    { CGDB_KEY_CTRL_V, "<C-v>", "CGDB_KEY_CTRL_V" },
+    { CGDB_KEY_CTRL_W, "<C-w>", "CGDB_KEY_CTRL_W" },
+    { CGDB_KEY_CTRL_X, "<C-x>", "CGDB_KEY_CTRL_X" },
+    { CGDB_KEY_CTRL_Y, "<C-y>", "CGDB_KEY_CTRL_Y" },
+    { CGDB_KEY_CTRL_Z, "<C-z>", "CGDB_KEY_CTRL_Z" },
+    { 0, "<Nul>", "<Zero>" },
+    { CGDB_KEY_CTRL_H, "<BS>", "<Backspace>" },
+    { CGDB_KEY_CTRL_I, "<Tab>", "<Tab>" },
+    { CGDB_KEY_CTRL_J, "<NL>", "<linefeed>" },
+    { CGDB_KEY_CTRL_L, "<FF>", "<formfeed>" },
+    { CGDB_KEY_CTRL_M, "<CR>", "<carriage return>" },
+    { CGDB_KEY_CTRL_M, "<Return>", "<carriage return>" },
+    { CGDB_KEY_CTRL_M, "<Enter>", "<carriage return>" },
+    { 32, "<Space>", "<space>" },
+    { 60, "<lt>", "<less-than>" },
+    { 92, "<Bslash>", "<backslash>" },
+    { 124, "<Bar>", "<vertical bar>" },
+    { 127, "<Del>", "<delete>" },
+    { CGDB_KEY_ERROR, "CGDB_KEY_ERROR", "CGDB_KEY_ERROR" }
 };
 
-/** 
- * This adds key bindings that many terminals use. 
+/**
+ * This adds key bindings that many terminals use.
  *
  * @return
  * 0 on success, or -1 on error
@@ -315,8 +458,8 @@ const char *kui_term_get_ascii_char_sequence_from_key(int key)
         }
     }
 
-    /* It wasn't one of the hardcoded values. The only thing left is the 
-     * termcap or terminfo entries. Try the termcap first, since that's 
+    /* It wasn't one of the hardcoded values. The only thing left is the
+     * termcap or terminfo entries. Try the termcap first, since that's
      * what readline uses. */
     for (i = 0; seqlist[i].key != CGDB_KEY_ERROR; ++i)
     {
@@ -364,11 +507,11 @@ int kui_term_string_to_key_array(const char *string, int **cgdb_key_array)
     length = strlen(string);
 
     /*
-     * Assertion 
+     * Assertion
      *
-     * The macro and output buffer will always be smaller than the input 
+     * The macro and output buffer will always be smaller than the input
      * buffer. So, to make life easy, they are always malloced to be the
-     * size of the input buffer. This may be a little wasteful, but it should 
+     * size of the input buffer. This may be a little wasteful, but it should
      * not be to bad. Later, if a better ADT is available, use it here.
      */
 
@@ -404,8 +547,8 @@ int kui_term_string_to_key_array(const char *string, int **cgdb_key_array)
             break;
         case KUI_MAP_STATE_MACRO:
 
-            /* Getting a macro start symbol within a macro means that from the 
-                 * first '<' until here was not a macro. Dump it into the 
+            /* Getting a macro start symbol within a macro means that from the
+                 * first '<' until here was not a macro. Dump it into the
                  * output buffer and start fresh, assumming this is the start
                  * of a new macro.
                  */
@@ -436,7 +579,7 @@ int kui_term_string_to_key_array(const char *string, int **cgdb_key_array)
                 if (cgdb_key == -1)
                     return -1;
 
-                /* The key doesn't exist, write the data into the 
+                /* The key doesn't exist, write the data into the
                      * buffer. */
                 if (cgdb_key == CGDB_KEY_ERROR)
                 {

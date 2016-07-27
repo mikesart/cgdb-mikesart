@@ -42,7 +42,6 @@ struct sviewer
     struct list_node *cur;                 /* Current node we're displaying */
     sviewer_mark global_marks[MARK_COUNT]; /* Global A-Z marks */
     sviewer_mark jump_back_mark;           /* Location where last jump occurred from */
-    SWINDOW *win;                          /* Curses window */
 
     uint64_t addr_frame; /* Current frame address */
     int regex_is_searching;
@@ -102,14 +101,9 @@ struct list_node
 /* source_new:  Create a new source viewer object.
  * -----------
  *
- *   pos_r:   Position of the viewer (row)
- *   pos_c:   Position of the viewer (column)
- *   height:  Height (in lines) of the viewer
- *   width:   Width (in columns) of the viewer
- *
  * Return Value:  A new sviewer object on success, NULL on failure.
  */
-struct sviewer *source_new(int pos_r, int pos_c, int height, int width);
+struct sviewer *source_new();
 
 /* source_add:  Add a file to the list of source files.
  * -----------
@@ -167,19 +161,7 @@ char *source_current_file(struct sviewer *sview);
  *
  * Return Value:  Zero on success, non-zero on error.
  */
-int source_display(struct sviewer *sview, int focus, enum win_refresh dorefresh);
-
-/* source_move:  Relocate the source window.
- * ------------
- *
- *   sview:   Source viewer object
- *   pos_r:   Position of the viewer (row)
- *   pos_c:   Position of the viewer (column)
- *   height:  Height (in lines) of the viewer
- *   width:   Width (in columns) of the viewer
- */
-void source_move(struct sviewer *sview,
-    int pos_r, int pos_c, int height, int width);
+int source_display(struct sviewer *sview, SWINDOW *win, int focus, enum win_refresh dorefresh);
 
 /* source_vscroll:  Change current position in source file.
  * --------------
@@ -195,7 +177,7 @@ void source_vscroll(struct sviewer *sview, int offset);
  *   sview:   Source viewer object
  *   offset:  Plus or minus number of lines to move
  */
-void source_hscroll(struct sviewer *sview, int offset);
+void source_hscroll(struct sviewer *sview, int width, int offset);
 
 /* source_set_sel_line:  Set current user-selected line
  * --------------------
@@ -317,13 +299,5 @@ int source_set_mark(struct sviewer *sview, int key);
  *   key: local mark char: a..z or global mark: A..Z
  */
 int source_goto_mark(struct sviewer *sview, int key);
-
-/* source_get_mark_char:  Return mark char for line.
- * --------------------
- *
- *   sview:  The source viewer object
- *   line: line to check for mark
- */
-int source_get_mark_char(struct sviewer *sview, int line);
 
 #endif

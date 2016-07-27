@@ -45,11 +45,12 @@ struct scroller
         int pos; /* Cursor position in last line */
     } current;
 
+    int width;   /* Current window width */
+
     int in_search_mode;
     struct hl_regex_info *hlregex;
     int regex_is_searching;
     int search_r;
-    SWINDOW *win; /* The scoller's own window */
 
     scroller_mark local_marks[MARK_COUNT]; /* Global A-Z marks */
     scroller_mark global_marks[MARK_COUNT]; /* Global A-Z marks */
@@ -63,14 +64,9 @@ struct scroller
 /* scr_new: Creates and initializes a new scroller
  * --------
  *
- *   pos_r:   Position on screen -- row
- *   pos_c:   Position on screen -- column
- *   height:  Height of the scroller on the screen (rows)
- *   width:   Width of the scroller on the screen (columns)
- *
  * Return Value: A pointer to a new scroller, or NULL on error.
  */
-struct scroller *scr_new(int pos_r, int pos_c, int height, int width);
+struct scroller *scr_new();
 
 /* scr_free: Releases the memory allocated by a scroller
  * ---------
@@ -117,18 +113,6 @@ void scr_end(struct scroller *scr);
  */
 void scr_add(struct scroller *scr, const char *buf, int tty);
 
-/* scr_move: Reposition the buffer on the screen
- * ---------
- *
- *   scr:     Pointer to the scroller object
- *   pos_r:   Position on screen -- row
- *   pos_c:   Position on screen -- column
- *   height:  Height of the scroller on the screen (rows)
- *   width:   Width of the scroller on the screen (columns)
- */
-void scr_move(struct scroller *scr,
-    int pos_r, int pos_c, int height, int width);
-
 /* scr_refresh: Refreshes the scroller on the screen, in case the caller
  * ------------ damages the screen area where the scroller is written (or,
  *              perhaps the terminal size has changed, and you wish to redraw).
@@ -136,7 +120,7 @@ void scr_move(struct scroller *scr,
  *   scr:    Pointer to the scroller object
  *   focus:  If the window has focus
  */
-void scr_refresh(struct scroller *scr, int focus, enum win_refresh dorefresh);
+void scr_refresh(struct scroller *scr, SWINDOW *win, int focus, enum win_refresh dorefresh);
 
 void scr_search_regex_init(struct scroller *scr);
 int scr_search_regex(struct scroller *scr, const char *regex, int opt,
