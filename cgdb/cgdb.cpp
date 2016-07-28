@@ -268,26 +268,26 @@ static int is_gdb_tui_command(const char *line)
 {
     size_t i;
     static const char *tui_commands[] =
-        {
-          "wh",
-          "wi",
-          "win",
-          "winh",
-          "winhe",
-          "winhei",
-          "winheig",
-          "winheigh",
-          "winheight",
-          "foc",
-          "focu",
-          "focus",
-          "la",
-          "lay",
-          "layo",
-          "layou",
-          "layout",
-          "tui" /* tui enable */
-        };
+    {
+      "wh",
+      "wi",
+      "win",
+      "winh",
+      "winhe",
+      "winhei",
+      "winheig",
+      "winheigh",
+      "winheight",
+      "foc",
+      "focu",
+      "focus",
+      "la",
+      "lay",
+      "layo",
+      "layou",
+      "layout",
+      "tui" /* tui enable */
+    };
 
     /* Skip leading white space */
     while (isspace(*line))
@@ -334,21 +334,12 @@ int run_shell_command(const char *command)
     tty_set_attributes(STDIN_FILENO, &term_attributes);
 
     /* NULL or empty string means invoke user's shell */
-    if (command == NULL || strlen(command) == 0)
+    if (!command || !command[0])
     {
-
         /* Check for SHELL environment variable */
         char *shell = getenv("SHELL");
 
-        if (shell == NULL)
-        {
-            /* Run /bin/sh instead */
-            rv = system("/bin/sh");
-        }
-        else
-        {
-            rv = system(shell);
-        }
+        rv = system(shell ? shell : "/bin/sh");
     }
     else
     {
@@ -359,8 +350,7 @@ int run_shell_command(const char *command)
     /* Press any key to continue... */
     fprintf(stderr, "Hit ENTER to continue...");
     while (fgetc(stdin) != '\n')
-    {
-    }
+        ;
 
     /* Turn off echo and put the terminal back into raw mode */
     tty_cbreak(STDIN_FILENO, &term_attributes);

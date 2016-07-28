@@ -364,27 +364,47 @@ static int get_gdb_width(void)
     return (screen_size.ws_col);
 }
 
+/*
+ * create_swindow: (re)create window with specified position and size.
+ */
+static void create_swindow(SWINDOW **win, int nlines, int ncols, int begin_y, int begin_x)
+{
+    if (*win)
+    {
+        int x = swin_getbegx(*win);
+        int y = swin_getbegy(*win);
+        int w = swin_getmaxx(*win);
+        int h = swin_getmaxy(*win);
+
+        /* If the window position + size hasn't changed, bail */
+        if (x == begin_x && y == begin_y && w == ncols && h == nlines)
+            return;
+
+        /* Delete the existing window */
+        swin_delwin(*win);
+        *win = NULL;
+    }
+
+    if ((nlines > 0) && (ncols > 0))
+    {
+        /* Create the ncurses window */
+        *win = swin_newwin(nlines, ncols, begin_y, begin_x);
+        swin_werase(*win);
+    }
+}
+
 static void separator_display(int draw)
 {
     int x = get_sep_col();
     int y = get_sep_row();
     int h = y + get_sep_height();
+    int w = draw ? 1 : 0;
 
-    if (draw && !vseparator_win)
-    {
-        vseparator_win = swin_newwin(h, 1, y, x);
-    }
-    else if (!draw && vseparator_win)
-    {
-        swin_delwin(vseparator_win);
-        vseparator_win = NULL;
-    }
+    /* Make sure our window is created at correct location (or destroyed if draw == 0) */
+    create_swindow(&vseparator_win, h, w, y, x);
 
     if (vseparator_win)
     {
-        /* Move window to correct spot */
-        swin_mvwin(vseparator_win, y, x);
-
         /* Draw vertical line in window */
         swin_wmove(vseparator_win, 0, 0);
         swin_wvline(vseparator_win, SWIN_SYM_VLINE, h);
@@ -601,35 +621,6 @@ static void validate_window_sizes(void)
         window_shift = max_window_size_shift;
     else if (window_shift < min_window_size_shift)
         window_shift = min_window_size_shift;
-}
-
-/*
- * create_swindow: (re)create window with specified position and size.
- */
-static void create_swindow(SWINDOW **win, int nlines, int ncols, int begin_y, int begin_x)
-{
-    if (*win)
-    {
-        int x = swin_getbegx(*win);
-        int y = swin_getbegy(*win);
-        int w = swin_getmaxx(*win);
-        int h = swin_getmaxy(*win);
-
-        /* If the window position + size hasn't changed, bail */
-        if (x == begin_x && y == begin_y && w == ncols && h == nlines)
-            return;
-
-        /* Delete the existing window */
-        swin_delwin(*win);
-        *win = NULL;
-    }
-
-    if (nlines > 0 && ncols > 0)
-    {
-        /* Create the ncurses window */
-        *win = swin_newwin(nlines, ncols, begin_y, begin_x);
-        swin_werase(*win);
-    }
 }
 
 /* if_layout: Update the layout of the screen based on current terminal size.
@@ -1647,20 +1638,14 @@ static int cgdb_input(int key, int *last_key)
         }
 
         if_layout();
-
         break;
     case CGDB_KEY_CTRL_T:
-        if (tgdb_tty_new(tgdb) == -1)
-        {
-            /* Error */
-        }
-        else
+        if (tgdb_tty_new(tgdb) != -1)
         {
             scr_free(tty_scroller);
             tty_scroller = NULL;
             if_layout();
         }
-
         break;
     case CGDB_KEY_CTRL_W:
         if (cur_split_orientation == SPLIT_HORIZONTAL)
@@ -1669,7 +1654,6 @@ static int cgdb_input(int key, int *last_key)
             cur_split_orientation = SPLIT_HORIZONTAL;
 
         if_layout();
-
         break;
     case CGDB_KEY_F1:
         if_display_help();
