@@ -40,38 +40,35 @@ static int logoindex = -1;
 /* Data Structures */
 /* --------------- */
 
-struct Logo {
+struct Logo
+{
    int h;                /* Height of logo */
    int w;                /* Width of logo */
    const char *data[15]; /* Increase the array size as necessary */
 };
 
+/*
+    With vim (note: check 'stty -a' for lnext if Ctrl+V doesn't work)
+
+    :read !figlet -f colossal cgdb | toilet -f term -F metal --export ansi
+    s/\\/\\\\/g     ; replace all \ with \\
+    s/"/\\"/g       ; replace all " with \"
+    s/^[/\\033/g    ; replace ^[ with \033, hit Ctrl+V,Ctrl+[ to get ^[
+    s/^/"/          ; add " at start of lines
+    s/$/",/         ; add ", at end of lines
+*/
 static struct Logo CGDB_LOGO[] =
 {
-    { 7, 38,
-        { "                          _|  _|      ",
-          "  _|_|_|    _|_|_|    _|_|_|  _|_|_|  ",
-          "_|        _|    _|  _|    _|  _|    _|",
-          "_|        _|    _|  _|    _|  _|    _|",
-          "  _|_|_|    _|_|_|    _|_|_|  _|_|_|  ",
-          "                _|                    ",
-          "            _|_|                      "
-        }
-    },
-
-    /* figlet -f reverse cgdb | toilet -f term -F metal --export ansi */
-    { 11, 27,
-        { "\033[0;1;34;40m================\033[0;34;40m============\033[0m",
-          "\033[0;1;34;40m================\033[0;34;40m==\033[0;37;40m  \033[0;34;40m==\033[0;37;40m  \033[0;34;40m====\033[0m",
-          "\033[0;1;34;40m================\033[0;34;40m==\033[0;37;40m  \033[0;34;40m==\033[0;37;40m  \033[0;34;40m====\033[0m",
-          "\033[0;1;34;40m================\033[0;34;40m==\033[0;37;40m  \033[0;34;40m==\033[0;37;40m  \033[0;34;40m====\033[0m",
-          "\033[0;1;34;40m==\033[0;37;40m   \033[0;1;34;40m====\033[0;37;40m   \033[0;1;34;40m====\033[0;34;40m==\033[0;37;40m  \033[0;34;40m==\033[0;37;40m  \033[0;34;40m====\033[0m",
-          "\033[0;1;34;40m=\033[0;37;40m  \033[0;1;34;40m=\033[0;37;40m  \033[0;1;34;40m==\033[0;37;40m  \033[0;1;34;40m=\033[0;37;40m  \033[0;1;34;40m===\033[0;37;40m    \033[0;34;40m==\033[0;37;40m    \033[0;34;40m==\033[0m",
-          "\033[0;1;34;40m=\033[0;37;40m  \033[0;1;34;40m======\033[0;37;40m    \033[0;1;34;40m==\033[0;37;40m  \033[0;34;40m=\033[0;37;40m  \033[0;34;40m==\033[0;37;40m  \033[0;34;40m=\033[0;37;40m  \033[0;34;40m=\033[0m",
-          "\033[0;1;34;40m=\033[0;37;40m  \033[0;1;34;40m========\033[0;37;40m  \033[0;1;34;40m==\033[0;37;40m  \033[0;34;40m=\033[0;37;40m  \033[0;34;40m==\033[0;37;40m  \033[0;34;40m=\033[0;37;40m  \033[0;34;40m=\033[0m",
-          "\033[0;1;34;40m=\033[0;37;40m  \033[0;1;34;40m=\033[0;37;40m  \033[0;1;34;40m==\033[0;37;40m  \033[0;1;34;40m=\033[0;37;40m  \033[0;1;34;40m==\033[0;37;40m  \033[0;34;40m=\033[0;37;40m  \033[0;34;40m==\033[0;37;40m  \033[0;34;40m=\033[0;37;40m  \033[0;34;40m=\033[0m",
-          "\033[0;1;34;40m==\033[0;37;40m   \033[0;1;34;40m====\033[0;37;40m   \033[0;1;34;40m====\033[0;37;40m    \033[0;34;40m==\033[0;37;40m    \033[0;34;40m==\033[0m",
-          "\033[0;1;34;40m================\033[0;34;40m============\033[0m"
+    /* echo cgdb | boxes -d peek -a c -s 20x7 | toilet --gay -f term */
+    { 7, 20,
+        {
+            "\033[0;1;35;95m  \033[0m       \033[0;1;36;96m_\033[0;1;34;94m\\|\033[0;1;35;95m/_\033[0m",
+            "         \033[0;1;36;96m(\033[0;1;34;94mo\033[0m \033[0;1;35;95mo)\033[0m",
+            " \033[0;1;35;95m+\033[0;1;31;91m--\033[0;1;33;93m--\033[0;1;32;92moO\033[0;1;36;96mO-\033[0;1;34;94m{_\033[0;1;35;95m}-\033[0;1;31;91mOO\033[0;1;33;93mo-\033[0;1;32;92m-+\033[0m",
+            " \033[0;1;35;95m|\033[0m                 \033[0;1;32;92m|\033[0m",
+            " \033[0;1;35;95m|\033[0m      \033[0;1;36;96mcg\033[0;1;34;94mdb\033[0m       \033[0;1;32;92m|\033[0m",
+            " \033[0;1;35;95m|\033[0m                 \033[0;1;32;92m|\033[0m",
+            " \033[0;1;35;95m+\033[0;1;31;91m--\033[0;1;33;93m--\033[0;1;32;92m--\033[0;1;36;96m--\033[0;1;34;94m--\033[0;1;35;95m--\033[0;1;31;91m--\033[0;1;33;93m--\033[0;1;32;92m*/\033[0m",
         }
     },
 
@@ -152,10 +149,14 @@ static void center_line(WINDOW *win, int row, int width, const char *data, int d
     sbpush(attrs, line_attr);
 
     /* Parse ansi escape color codes in string */
-    for (i = 0; i < datalen; i++) {
-        if (data[i] == '\033') {
+    for (i = 0; i < datalen; i++)
+    {
+        if (data[i] == '\033')
+        {
             int ansi_count = hl_ansi_get_color_attrs(hl_groups_instance, data + i, &attr, 1);
-            if (ansi_count) {
+
+            if (ansi_count)
+            {
                 line_attr.col = sbcount(line);
                 line_attr.attr = attr;
                 sbpush(attrs, line_attr);
@@ -189,7 +190,8 @@ void logo_display(WINDOW *win)
     int usage_height = CGDB_NUM_USAGE; /* Height of the usage message */
 
     /* Pick a random logoindex */
-    if (logoindex == -1) {
+    if (logoindex == -1)
+    {
         srand(time(NULL));
         logoindex = rand() % CGDB_NUM_LOGOS;
     }
@@ -206,12 +208,15 @@ void logo_display(WINDOW *win)
     if ((CGDB_LOGO[logoindex].h <= height - usage_height - 2)) {
         line = (height - CGDB_LOGO[logoindex].h - usage_height - 2) / 2;
 
-        for(i = 0; i < CGDB_LOGO[logoindex].h; i++) {
+        for(i = 0; i < CGDB_LOGO[logoindex].h; i++)
+        {
             center_line(win, line++, width,
                 CGDB_LOGO[logoindex].data[i], CGDB_LOGO[logoindex].w, attr);
         }
         line++;
-    } else {
+    }
+    else
+    {
         line = (height - usage_height) / 2;
     }
 
