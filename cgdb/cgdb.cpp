@@ -995,6 +995,7 @@ static void update_breakpoints(struct tgdb_response_breakpoints *response)
 /* This means a source file or line number changed */
 static void update_file_position(struct tgdb_response_file_position *response)
 {
+    bool source_loaded = false;
     struct sviewer *sview = if_get_sview();
     struct tgdb_file_position *tfp = response->file_position;
 
@@ -1007,12 +1008,16 @@ static void update_file_position(struct tgdb_response_file_position *response)
         int exe_line = sview->addr_frame ? tfp->line_number : -1;
 
         /* Update the file */
-        source_reload(sview, tfp->absolute_path, 0);
+        if ( source_reload(sview, tfp->absolute_path, 0) != -1 )
+        {
+            /* Show the source file at this line number */
+            if_show_file(tfp->absolute_path, tfp->line_number, exe_line);
 
-        /* Show the source file at this line number */
-        if_show_file(tfp->absolute_path, tfp->line_number, exe_line);
+            source_loaded = true;
+        }
     }
-    else if (sview->addr_frame)
+
+    if (!source_loaded && sview->addr_frame)
     {
         /* Try to show the disasm for the current $pc address */
         int ret = source_set_exec_addr(sview, 0x0);

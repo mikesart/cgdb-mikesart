@@ -1377,7 +1377,6 @@ int source_reload(struct sviewer *sview, const char *path, int force)
 
     if ((auto_source_reload || force) && dirty)
     {
-
         if (release_file_memory(sview->cur) == -1)
             return -1;
 
